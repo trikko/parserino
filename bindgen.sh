@@ -1,0 +1,1 @@
+tcc -E -I~/src/lexbor/source c/lexborh.c > source/parserino/c/lexbor.c
