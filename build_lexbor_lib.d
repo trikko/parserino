@@ -15,6 +15,15 @@ int main()
     auto path = tempDir.buildPath(tempDir(), "lexbor_build", "lexbor_bundle.zip");
     mkdirRecurse(dirName(path));
 
+    auto cmake = executeShell("cmake --help");
+
+    if (cmake.status != 0)
+    {
+        version(linux) stderr.writeln("Please install cmake on your system. For example on debian/ubuntu/... : `sudo apt install cmake`");
+        version(OSX) stderr.writeln("Please install cmake on your system. Try: `brew install cmake`");
+        return 1;
+    }
+
     stderr.writeln;
     stderr.writeln("-------------------------");
     stderr.writeln("-- One time deps build --");
@@ -45,7 +54,11 @@ int main()
 
     // Compiling
     stderr.writeln("- Compiling... (please wait, this will not be done anymore!)"); stderr.flush();
-    auto res = executeShell("cd " ~ dirName(path).buildPath("lexbor-" ~ commit) ~ " && cmake . -DLEXBOR_BUILD_TESTS=OFF -DLEXBOR_BUILD_EXAMPLES=OFF -DLEXBOR_BUILD_SEPARATELY=OFF -DLEXBOR_BUILD_SHARED=OFF -DLEXBOR_BUILD_STATIC=TRUE && make -j4");
+
+    string cmakeopt;
+    version(OSX) cmakeopt = " -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 ";
+
+    auto res = executeShell("cd " ~ dirName(path).buildPath("lexbor-" ~ commit) ~ " && cmake . -DLEXBOR_BUILD_TESTS=OFF -DLEXBOR_BUILD_EXAMPLES=OFF -DLEXBOR_BUILD_SEPARATELY=OFF -DLEXBOR_BUILD_SHARED=OFF -DLEXBOR_BUILD_STATIC=ON " ~ cmakeopt ~ " && make -j4");
 
     stderr.writeln("- Waiting for result..."); stderr.flush();
     auto outputFile = dirName(path).buildPath("lexbor-" ~ commit, "liblexbor_static.a");
@@ -53,7 +66,7 @@ int main()
     bool done = true;
 
     SysTime tm = Clock.currTime();
-    while(!outputFile.exists && !done)
+    while(!outputFile.exists && done)
     {
         import core.thread;
         Thread.sleep(150.dur!"msecs");
@@ -70,7 +83,7 @@ int main()
     else
     {
         stderr.writeln("--- BUILD FAIL ---\nCompiler output:\n", res.output);
-        return 1;
+        return 2;
     }
 
     return 0;
