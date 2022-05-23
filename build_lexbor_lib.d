@@ -56,7 +56,7 @@ int main()
     stderr.writeln("- Compiling... (please wait, this will not be done anymore!)"); stderr.flush();
 
     string cmakeopt;
-    version(OSX) cmakeopt = " -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 ";
+    version(OSX) cmakeopt = " -DCMAKE_OSX_DEPLOYMENT_TARGET=10.10 ";
 
     auto res = executeShell("cd " ~ dirName(path).buildPath("lexbor-" ~ commit) ~ " && cmake . -DLEXBOR_BUILD_TESTS=OFF -DLEXBOR_BUILD_EXAMPLES=OFF -DLEXBOR_BUILD_SEPARATELY=OFF -DLEXBOR_BUILD_SHARED=OFF -DLEXBOR_BUILD_STATIC=ON " ~ cmakeopt ~ " && make -j4");
 
