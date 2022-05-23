@@ -422,6 +422,9 @@ struct Element
 
     unittest
     {
+        scope(exit) assert(Document.RefCounter.refs.length == 0);
+        scope(exit) assert(Element.RefCounter.refs.length == 0);
+
         Document doc = "<b>hello</b><br><b>";
         import std.array;
         import std.algorithm : map;
@@ -430,8 +433,6 @@ struct Element
 
     @property pure @safe nothrow bool isValid() const { return element != null; }
     @property auto attributes()
-    in { assert(element !is null, "NULL ref: Element is not set."); }
-    do
     {
         onlyRealElements();
 
@@ -441,33 +442,50 @@ struct Element
             {
                 auto newRange = new AttributeRange(docPayload, element);
                 newRange.current = current;
+                newRange.destroyed = destroyed;
                 return newRange;
             }
 
             Attribute front() { return Attribute(ReturnLexborString!lxb_dom_attr_local_name_noi(current), ReturnLexborString!lxb_dom_attr_value_noi(current)); }
-            void popFront() { current = lxb_dom_element_next_attribute_noi(current); }
+            void popFront() { current = lxb_dom_element_next_attribute_noi(current); if (empty) unref(); }
 
             @property bool empty() { return current is null; }
 
             ~this() {
-                Element.RefCounter.remove(element);
-                Document.RefCounter.remove(docPayload);
+                unref();
             }
 
             private:
 
+            void unref() {
+
+                if (!destroyed)
+                {
+                    Element.RefCounter.remove(element);
+                    Document.RefCounter.remove(docPayload);
+                }
+
+                destroyed = true;
+            }
+
             @disable this();
+
             this(Document.DocumentPayload* docPayload, lxb_dom_element_t* e)
             {
                 this.docPayload = docPayload;
                 element = e;
                 current = lxb_dom_element_first_attribute_noi(element);
 
-                Document.RefCounter.add(docPayload);
-                Element.RefCounter.add(e);
+                if (!empty)
+                {
+                    Document.RefCounter.add(docPayload);
+                    Element.RefCounter.add(e);
+                }
+                else destroyed = true;
             }
 
 
+            bool destroyed = false;
             lxb_dom_attr_t* current = null;
 
             Document.DocumentPayload*     docPayload;
@@ -538,8 +556,7 @@ struct Element
     }
 
 
-    @property string name()
-    do { onlyValidElements(); return ReturnLexborString!lxb_dom_element_local_name(element); }
+    @property string name() { onlyValidElements(); return ReturnLexborString!lxb_dom_element_local_name(element); }
 
     unittest
     {
@@ -877,7 +894,6 @@ struct Element
 
         string output;
         lxb_html_serialize_deep_cb(&(element.node), &cb, &output);
-
         return output;
     }
 
@@ -1137,6 +1153,16 @@ struct Element
     @property auto descendants(VisitOrder order = VisitOrder.Normal)(bool returnAllElements = false) { onlyRealElements(); return new ChildrenElementRange!order(docPayload, element, true, returnAllElements); }
     @property auto children(VisitOrder order = VisitOrder.Normal)(bool returnAllElements = false) { onlyRealElements(); return new ChildrenElementRange!order(docPayload, element, false, returnAllElements); }
 
+    unittest
+    {
+        Document d = "<p><b>test</b>testo</p>";
+
+        import std.array;
+        Element[] c = d.body.firstChild.children(true).array;
+        assert(c.length == 2);
+        assert(c[0] == "<b>test</b>");
+        assert(c[1] == "testo");
+    }
 
     unittest
     {
@@ -1500,6 +1526,7 @@ class ChildrenElementRange(VisitOrder order = VisitOrder.Normal)
     {
         auto newRange = new ChildrenElementRange!order(docPayload, element, recursive, returnAllElements);
         newRange.current = current;
+        newRange.destroyed = destroyed;
         return newRange;
     }
 
@@ -1548,8 +1575,10 @@ class ChildrenElementRange(VisitOrder order = VisitOrder.Normal)
             auto type = cast(int)current.node.type;
 
             if (type == cast(int)lxb_dom_node_type_t.LXB_DOM_NODE_TYPE_ELEMENT) break;
-            else if (returnAllElements && type == cast(int)lxb_dom_node_type_t.LXB_DOM_NODE_TYPE_COMMENT) break;
+            else if (returnAllElements) break;
         }
+
+        if (empty) unref();
     }
 
     @property bool empty()
@@ -1558,11 +1587,21 @@ class ChildrenElementRange(VisitOrder order = VisitOrder.Normal)
     }
 
     ~this() {
-        Element.RefCounter.remove(element);
-        Document.RefCounter.remove(docPayload);
+        unref();
     }
 
     private:
+
+    void unref()
+    {
+        if (!destroyed)
+        {
+            Element.RefCounter.remove(element);
+            Document.RefCounter.remove(docPayload);
+        }
+
+        destroyed = true;
+    }
 
     @disable this();
 
@@ -1582,15 +1621,19 @@ class ChildrenElementRange(VisitOrder order = VisitOrder.Normal)
 
         if (current != null && current.node.type != lxb_dom_node_type_t.LXB_DOM_NODE_TYPE_ELEMENT && returnAllElements == false)
             popFront();
+
+        if (empty)
+            unref();
     }
 
+    bool destroyed = false;
     bool recursive;
     bool returnAllElements;
 
     lxb_dom_element_t* current = null;
 
-    Document.DocumentPayload* docPayload;
-    lxb_dom_element_t*       element;
+    Document.DocumentPayload*   docPayload;
+    lxb_dom_element_t*          element;
 }
 
 
@@ -1604,19 +1647,31 @@ class SelectorElementRange
 
         if (fiber.state == Fiber.State.TERM)
             current = null;
+
+        if (empty)
+            unref();
     }
 
     @property bool empty() { return current is null; }
 
     ~this() {
-
-        lxb_selectors_destroy(selectors,true);
-        lxb_css_selector_list_destroy_memory(list);
-        Element.RefCounter.remove(element);
-        Document.RefCounter.remove(docPayload);
+        unref();
     }
 
     private:
+
+    void unref()
+    {
+        if (!destroyed)
+        {
+            lxb_selectors_destroy(selectors,true);
+            lxb_css_selector_list_destroy_memory(list);
+            Element.RefCounter.remove(element);
+            Document.RefCounter.remove(docPayload);
+        }
+
+        destroyed = true;
+    }
 
     @disable this();
 
@@ -1655,6 +1710,9 @@ class SelectorElementRange
 
         fiber = new CBFiber();
         fiber.call();
+
+        if (empty)
+            unref();
     }
 
     class CBFiber : Fiber {
@@ -1670,6 +1728,7 @@ class SelectorElementRange
         }
     }
 
+    bool destroyed              = false;
     Fiber fiber                 = null;
 
     lxb_dom_element_t* current  = null;
