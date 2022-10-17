@@ -1,6 +1,7 @@
 # parserino [![Build & Test](https://github.com/trikko/parserino/actions/workflows/d.yml/badge.svg)](https://github.com/trikko/parserino/actions/workflows/d.yml)
 * HTML5 parser based on [Lexbor](https://github.com/lexbor/lexbor)
 * Super-fast parsing & dom editing
+* Lazy ranges to browse dom faster.
 * Every method is unit-tested on Linux and MacOS
 
 # how it works
