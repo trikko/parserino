@@ -4,6 +4,10 @@
 * Lazy ranges to browse dom faster.
 * Every method is unit-tested on Linux and MacOS
 
+# documentation
+* struct [Document](https://parserino.dpldocs.info/parserino.Document.html)
+* struct [Element](https://parserino.dpldocs.info/parserino.Element.html)
+
 # how it works
 
 ```d
