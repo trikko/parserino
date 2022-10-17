@@ -673,72 +673,136 @@ struct Element
     /// Prepend an element
     void prependSibling(E = Element)(auto ref E el)
     {
+        import std.array : array;
         onlyValidElements();
 
         import std.traits;
-        static if (isSomeString!E)
+        static if (is(E == FragmentString))
         {
-            Element e = owner.createElement("#text");
-            e.innerText = el;
+            Element root = owner.fragment(el);
+            foreach(ref e; root.children(false).array)
+                prependSibling(e);
         }
-        else alias e = el;
+        else
+        {
+            static if (isSomeString!E)
+            {
+                Element e = owner.createElement("#text");
+                e.innerText = el;
+            }
+            else alias e = el;
 
-        e.remove();
-        lxb_dom_node_insert_before(&(element.node), &(e.element.node));
+            e.remove();
+            lxb_dom_node_insert_before(&(element.node), &(e.element.node));
+        }
     }
 
     /// Append an element
     void appendSibling(E = Element)(auto ref E el)
     {
+        import std.array : array;
         onlyValidElements();
 
         import std.traits;
-        static if (isSomeString!E)
+        static if (is(E == FragmentString))
         {
-            Element e = owner.createElement("#text");
-            e.innerText = el;
+            Element root = owner.fragment(el);
+            foreach(ref e; root.children!(VisitOrder.Reverse)(false).array)
+                appendSibling(e);
         }
-        else alias e = el;
+        else
+        {
+            static if (isSomeString!E)
+            {
+                Element e = owner.createElement("#text");
+                e.innerText = el;
+            }
+            else alias e = el;
 
-        e.remove();
-        lxb_dom_node_insert_after(&(element.node), &(e.element.node));
+            e.remove();
+            lxb_dom_node_insert_after(&(element.node), &(e.element.node));
+        }
     }
 
     /// Put a new child in the first position
     void prependChild(E = Element)(auto ref E el)
     {
+        import std.array : array;
         onlyRealElements();
 
         import std.traits;
-        static if (isSomeString!E)
+        static if (is(E == FragmentString))
         {
-            Element e = owner.createElement("#text");
-            e.innerText = el;
+            Element root = owner.fragment(el);
+            foreach(ref e; root.children!(VisitOrder.Reverse)(false).array)
+                prependChild(e);
         }
-        else alias e = el;
+        else
+        {
+            static if (isSomeString!E)
+            {
+                Element e = owner.createElement("#text");
+                e.innerText = el;
+            }
+            else alias e = el;
 
-        e.remove();
-        auto last = element.node.first_child;
-        if (last == null) lxb_dom_node_insert_child(&(element.node), &(e.element.node));
-        else lxb_dom_node_insert_before(last, &(e.element.node));
+            e.remove();
+            auto last = element.node.first_child;
+            if (last == null) lxb_dom_node_insert_child(&(element.node), &(e.element.node));
+            else lxb_dom_node_insert_before(last, &(e.element.node));
+        }
     }
 
     /// Put a new child in the last position
     void appendChild(E = Element)(auto ref E el)
     {
+        import std.array : array;
         onlyRealElements();
 
         import std.traits;
-        static if (isSomeString!E)
+
+        static if (is(E == FragmentString))
         {
-            Element e = owner.createElement("#text");
-            e.innerText = el;
+            Element root = owner.fragment(el);
+            foreach(ref e; root.children(false).array)
+                appendChild(e);
         }
-        else alias e = el;
-        e.remove();
-        auto last = element.node.last_child;
-        if (last == null) lxb_dom_node_insert_child(&(element.node), &(e.element.node));
-        else lxb_dom_node_insert_after(last, &(e.element.node));
+        else
+        {
+            static if (isSomeString!E)
+            {
+                Element e = owner.createElement("#text");
+                e.innerText = el;
+            }
+            else alias e = el;
+            e.remove();
+            auto last = element.node.last_child;
+            if (last == null) lxb_dom_node_insert_child(&(element.node), &(e.element.node));
+            else lxb_dom_node_insert_after(last, &(e.element.node));
+        }
+    }
+
+    ///
+    unittest
+    {
+        Document doc = "<p>";
+        Element p = doc.byTagName("p").front;
+        p.prependSibling("<a>first-before</a><a><b>second</b></a>".asFragment);
+        p.appendSibling("<a>first-after</a><a><b>second</b></a>".asFragment);
+        assert(doc.toString() == `<html><head></head><body><a>first-before</a><a><b>second</b></a><p></p><a>first-after</a><a><b>second</b></a></body></html>`);
+    }
+
+    ///
+    unittest
+    {
+        Document doc = `<p id="start">`;
+
+        Element p = doc.byTagName("p").front;
+        p.appendChild("<p>post</p><p>post1</p>".asFragment);
+        p.prependChild("<p>pre</p><p>pre1</p>".asFragment);
+        p.appendChild("<p>text</p>");
+
+        assert(doc.body.toString == `<body><p id="start"><p>pre</p><p>pre1</p><p>post</p><p>post1</p>&lt;p&gt;text&lt;/p&gt;</p></body>`);
     }
 
 
@@ -827,41 +891,6 @@ struct Element
         assert(e == "<a></a>");
     }
 
-    /// Prepend a html fragment
-    void prependFragment(S = string)(auto ref S html)
-    {
-        onlyValidElements();
-
-        import std.array;
-        Element root = owner.fragment(html);
-
-        foreach(ref e; root.children(true).array)
-            prependSibling(e);
-    }
-
-    /// Append a html fragment
-    void appendFragment(S = string)(auto ref S html)
-    {
-        onlyValidElements();
-
-        import std.array;
-        Element root = owner.fragment(html);
-        foreach(ref e; root.children!(VisitOrder.Reverse)(true).array)
-            appendSibling(e);
-    }
-
-    ///
-    unittest
-    {
-        Document doc = "<p>";
-
-        import std.stdio;
-        Element p = doc.byTagName("p").front;
-        p.prependFragment("<b>hello</b><p><i>world</i></p>");
-        p.appendFragment("<b>next</b><p><i>part</i></p>");
-
-        assert(doc.body.toString == `<body><b>hello</b><p><i>world</i></p><p></p><b>next</b><p><i>part</i></p></body>`);
-    }
 
     /// Replace this element with another one
     void replaceWith(E = Element)(auto ref E e)
@@ -1866,6 +1895,17 @@ unittest
     assert(doc.bySelector("p i").frontOrInit == null);
     assert(doc.bySelector("p i").frontOr(div).name == "div");
     assert(doc.bySelector("p i").frontOr(div).id == "test");
+}
+
+private struct FragmentString
+{
+    string fragment;
+    alias fragment this;
+}
+
+auto asFragment(string s)
+{
+    return cast(FragmentString)s;
 }
 
 private auto CallWithLexborString(alias T, A...)(A params, string str) { return T(params, str.representation.ptr, str.representation.length); }
