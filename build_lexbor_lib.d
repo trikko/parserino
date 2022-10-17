@@ -5,7 +5,7 @@ import std;
 int main()
 {
 
-    enum commit = "9c6915b98b0c33ac140bc85cc2c9b9eb0a93751b";
+    enum commit = "447cec843e0017a4b0924e9f0d8eff52824d1fa4";
 
     // Ok, already done.
     if (exists("liblexbor_parserino.a"))
@@ -58,7 +58,7 @@ int main()
     string cmakeopt;
     version(OSX) cmakeopt = " -DCMAKE_OSX_DEPLOYMENT_TARGET=10.10 ";
 
-    auto res = executeShell("cd " ~ dirName(path).buildPath("lexbor-" ~ commit) ~ " && cmake . -DLEXBOR_BUILD_TESTS=OFF -DLEXBOR_BUILD_EXAMPLES=OFF -DLEXBOR_BUILD_SEPARATELY=OFF -DLEXBOR_BUILD_SHARED=OFF -DLEXBOR_BUILD_STATIC=ON " ~ cmakeopt ~ " && make -j4");
+    auto res = executeShell("cd " ~ dirName(path).buildPath("lexbor-" ~ commit) ~ " && cmake . -DLEXBOR_BUILD_TESTS=OFF -DLEXBOR_BUILD_EXAMPLES=OFF -DLEXBOR_BUILD_SEPARATELY=OFF -DLEXBOR_BUILD_SHARED=OFF -DLEXBOR_BUILD_STATIC=ON " ~ cmakeopt ~ " && make");
 
     stderr.writeln("- Waiting for result..."); stderr.flush();
     auto outputFile = dirName(path).buildPath("lexbor-" ~ commit, "liblexbor_static.a");

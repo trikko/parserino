@@ -14,11 +14,12 @@ enum VisitOrder
     Reverse
 }
 
+/// The HTML5 Document
 struct Document
 {
+    /// C-tor
     this(const string html) { parse(html); }
 
-    @property pure @safe nothrow bool isValid() const { return payload != null && payload.document != null; }
     bool opEquals(const typeof(null) o) const @safe nothrow pure { return !isValid; }
     bool opEquals(D = Document)(const auto ref D d) const
     {
@@ -37,7 +38,10 @@ struct Document
         }
     }
 
+    /// Is this a valid html5 document?
+    @property pure @safe nothrow bool isValid() const { return payload != null && payload.document != null; }
 
+    ///
     unittest
     {
         scope(exit) assert(Document.RefCounter.refs.length == 0);
@@ -64,7 +68,7 @@ struct Document
 
     }
 
-
+    /// Recreate the document from source
     private void parse(const string html)
     {
         if(payload != null)
@@ -85,6 +89,7 @@ struct Document
         CallWithLexborString!lxb_html_document_parse(payload.document, html);
     }
 
+    /// Return document as html string
     string toString() const
     {
         extern(C) lxb_status_t cb(const lxb_char_t *data, size_t len, void *ctx)
@@ -109,9 +114,12 @@ struct Document
         assert(doc == "<html><head></head><body></body></html>");
     }
 
+    /// The content of <title>
     @property string title() { return titleImpl(false); }
-    @property void title(const string s) { CallWithLexborString!lxb_html_document_title_set(payload.document, s); }
     @property string rawTitle() { return titleImpl(true); }
+
+    /// Set the content of <title>
+    @property void title(const string s) { CallWithLexborString!lxb_html_document_title_set(payload.document, s); }
 
     unittest
     {
@@ -125,10 +133,16 @@ struct Document
         assert(doc.title == "Goodbye");
     }
 
+    /// Create a html element
     Element createElement(string tagName) { return Element(payload, lxb_dom_document_create_element(&(payload.document.dom_document), tagName.representation.ptr, tagName.representation.length, null)); }
+
+    /// Create a text element
     Element createText(string text) { Element e = createElement("#text"); e.innerText = text; return e; }
+
+    /// Create a comment
     Element createComment(string text) {  Element e = createElement("!--"); e.innerText = text; return e; }
 
+    ///
     unittest
     {
         scope(exit) assert(Document.RefCounter.refs.length == 0);
@@ -161,7 +175,10 @@ struct Document
         assert(html == "<html><head></head><body></body></html>");
     }
 
+    /// The <body> element
     @property Element body() { return Element(payload, cast(lxb_dom_element_t*)lxb_html_document_body_element_noi(payload.document)); }
+
+    /// The <head> element
     @property Element head() { return Element(payload, cast(lxb_dom_element_t*)lxb_html_document_head_element_noi(payload.document)); }
 
     unittest
@@ -176,10 +193,19 @@ struct Document
         assert(doc.body.innerText == "Text");
     }
 
+    /// Get an element by id
     Element byId(string id) { return Element(payload, payload.document.dom_document.element).byId(id); }
+
+    /// A lazy range of elements filtered by class
     auto byClass(string name) { return Element(payload, payload.document.dom_document.element).byClass(name); }
+
+    /// A lazy range of elements filtered by tag name
     auto byTagName(string name) { return Element(payload, payload.document.dom_document.element).byTagName(name); }
+
+    /// A lazy range of elements filtered by comment text
     auto byComment(string comment) { return Element(payload, payload.document.dom_document.element).byComment(comment); }
+
+    /// A lazy range of elements filtered using a css selector
     auto bySelector(string selector) { return Element(payload, payload.document.dom_document.element).bySelector(selector); }
 
     this(ref return scope typeof(this) rhs)
@@ -307,7 +333,7 @@ struct Document
         RefCounter.remove(payload);
     }
 
-
+    /// Create a document fragment from source
     Element fragment(const string html)
     {
         Element element = createElement("div");
@@ -315,6 +341,7 @@ struct Document
         return Element(payload, node);
     }
 
+    ///
     unittest
     {
         scope(exit) assert(Document.RefCounter.refs.length == 0);
@@ -389,6 +416,7 @@ struct Document
 
 struct Element
 {
+    /// A simple key/value struct representing a html attribute
     struct Attribute
     {
         string name;
@@ -409,6 +437,7 @@ struct Element
             throw new Exception("Can't call `" ~ fname ~ "` for a node with type " ~ name());
     }
 
+    /// The owner of this element
     @property Document owner()
     {
         Document doc;
@@ -418,6 +447,7 @@ struct Element
         return doc;
     }
 
+    /// Is this element empty?
     @property bool isEmpty() { onlyValidElements(); return lxb_dom_node_is_empty(&element.node); }
 
     unittest
@@ -431,7 +461,10 @@ struct Element
         assert(doc.body.children.map!(x => x.isEmpty()).array == [false, true, true]);
     }
 
+    /// Is this element valid?
     @property pure @safe nothrow bool isValid() const { return element != null; }
+
+    /// Return a lazy range of attributes for this element
     @property auto attributes()
     {
         onlyRealElements();
@@ -495,11 +528,19 @@ struct Element
         return new AttributeRange(docPayload, element);
     }
 
+    /// Check if an attribute exists
     @property bool hasAttribute(string attr) { onlyRealElements(); return CallWithLexborString!lxb_dom_element_has_attribute(element, attr); }
+
+    /// Remove an attribute from this element
     @property void removeAttribute(string attr) { onlyRealElements(); CallWithLexborString!lxb_dom_element_remove_attribute(element, attr); }
+
+    /// Set an attribute for this element
     @property void setAttribute(string name, string value) { onlyRealElements(); lxb_dom_element_set_attribute(element, name.representation.ptr, name.representation.length, value.representation.ptr, value.representation.length); }
+
+    /// Get an attribute
     @property string getAttribute(string attr) { onlyRealElements(); return ReturnLexborString!(lxb_dom_element_get_attribute)(element, attr.representation.ptr, attr.representation.length); }
 
+    /// The id of this element (if present)
     @property string id()
     {
         onlyRealElements();
@@ -507,7 +548,7 @@ struct Element
         return ReturnLexborString!lxb_dom_attr_value_noi(element.attr_id);
     }
 
-
+    /// All the classes of this element
     @property auto classes()
     {
         onlyRealElements();
@@ -556,6 +597,7 @@ struct Element
     }
 
 
+    /// Tag
     @property string name() { onlyValidElements(); return ReturnLexborString!lxb_dom_element_local_name(element); }
 
     unittest
@@ -587,6 +629,7 @@ struct Element
         }
     }
 
+    /// Clone this element
     Element dup(bool deep = true)
     {
         onlyValidElements();
@@ -601,6 +644,7 @@ struct Element
         return e;
     }
 
+    ///
     unittest
     {
         import std.array;
@@ -626,7 +670,7 @@ struct Element
         assert(g.descendants.map!(x=>x.name).array == ["i", "b"]);
     }
 
-
+    /// Prepend an element
     void prependSibling(E = Element)(auto ref E el)
     {
         onlyValidElements();
@@ -643,6 +687,7 @@ struct Element
         lxb_dom_node_insert_before(&(element.node), &(e.element.node));
     }
 
+    /// Append an element
     void appendSibling(E = Element)(auto ref E el)
     {
         onlyValidElements();
@@ -659,6 +704,7 @@ struct Element
         lxb_dom_node_insert_after(&(element.node), &(e.element.node));
     }
 
+    /// Put a new child in the first position
     void prependChild(E = Element)(auto ref E el)
     {
         onlyRealElements();
@@ -677,6 +723,7 @@ struct Element
         else lxb_dom_node_insert_before(last, &(e.element.node));
     }
 
+    /// Put a new child in the last position
     void appendChild(E = Element)(auto ref E el)
     {
         onlyRealElements();
@@ -709,6 +756,7 @@ struct Element
 
     void opOpAssign(string op)(auto ref Element e) if (op == "~") { onlyRealElements(); appendChild(e); }
 
+    /// Remove this element from the document
     bool remove()
     {
         onlyValidElements();
@@ -779,6 +827,7 @@ struct Element
         assert(e == "<a></a>");
     }
 
+    /// Prepend a html fragment
     void prependFragment(S = string)(auto ref S html)
     {
         onlyValidElements();
@@ -790,6 +839,7 @@ struct Element
             prependSibling(e);
     }
 
+    /// Append a html fragment
     void appendFragment(S = string)(auto ref S html)
     {
         onlyValidElements();
@@ -800,6 +850,7 @@ struct Element
             appendSibling(e);
     }
 
+    ///
     unittest
     {
         Document doc = "<p>";
@@ -812,6 +863,7 @@ struct Element
         assert(doc.body.toString == `<body><b>hello</b><p><i>world</i></p><p></p><b>next</b><p><i>part</i></p></body>`);
     }
 
+    /// Replace this element with another one
     void replaceWith(E = Element)(auto ref E e)
     {
         onlyValidElements();
@@ -823,6 +875,7 @@ struct Element
         remove();
     }
 
+    /// Copy another element here
     void copyFrom(E = Element)(auto ref E e, bool deep = true)
     {
         onlyRealElements();
@@ -881,7 +934,10 @@ struct Element
 
     }
 
+    /// Set the html content of this element
     @property void innerHTML(string html) { onlyValidElements(); CallWithLexborString!lxb_html_element_inner_html_set(cast(lxb_html_element_t*)element, html); }
+
+    /// Get the content of this element
     @property string innerHTML()
     {
         onlyRealElements();
@@ -897,9 +953,13 @@ struct Element
         return output;
     }
 
+    /// Set the inner text of this element (replacing html)
     @property string innerText() { onlyValidElements(); return ReturnLexborString!lxb_dom_node_text_content(&(element.node)); }
+
+    /// Get the inner text of this element (ignoring html tags)
     @property void innerText(string text) { onlyValidElements(); CallWithLexborString!lxb_dom_node_text_content_set(&(element.node), text); }
 
+    ///
     unittest
     {
         import std.array;
@@ -923,6 +983,7 @@ struct Element
 
     }
 
+    /// See_also: Document.byId
     Element byId(string id)
     {
         onlyRealElements();
@@ -941,6 +1002,7 @@ struct Element
         else return r.front;
     }
 
+    /// See_also: Document.byClass
     auto byClass(string name)
     {
         onlyRealElements();
@@ -954,6 +1016,7 @@ struct Element
         });
     }
 
+    /// See_also: Document.byTagName
     auto byTagName(string name)
     {
         onlyRealElements();
@@ -964,6 +1027,7 @@ struct Element
         });
     }
 
+    /// See_also: Document.byComment
     auto byComment(string comment)
     {
         onlyRealElements();
@@ -971,8 +1035,26 @@ struct Element
         return byTagName("!--").filter!(x => x.innerText == comment);
     }
 
+    /// See_also: Document.bySelector
     auto bySelector(string selector) { onlyRealElements(); return new SelectorElementRange(docPayload, element, selector); }
 
+    ///
+    unittest
+    {
+        Document doc = Document(
+        `<html><body>
+            <ul><li>one</li><li id="this">two</li></ul>
+            <h4>title</h4>
+            <ul><li>three</li><li>four</li><li>five</li></ul>
+        `);
+
+        import std.array;
+        Element[] res = doc.bySelector("h4+ul li:nth-of-type(2), #this").array;
+
+        assert(res.length == 2);
+        assert(res[0].innerText == "four");
+        assert(res[1].innerText == "two");
+    }
 
     unittest
     {
@@ -1014,23 +1096,9 @@ struct Element
         }
     }
 
-    unittest
-    {
-        Document doc = Document(
-        `<html><body>
-            <ul><li>one</li><li id="this">two</li></ul>
-            <h4>title</h4>
-            <ul><li>three</li><li>four</li><li>five</li></ul>
-        `);
 
-        import std.array;
-        Element[] res = doc.bySelector("h4+ul li:nth-of-type(2), #this").array;
 
-        assert(res.length == 2);
-        assert(res[0].innerText == "four");
-        assert(res[1].innerText == "two");
-    }
-
+    /// The next element in the document
     @property Element next(bool includeAllElements = false)
     {
         onlyValidElements();
@@ -1054,6 +1122,7 @@ struct Element
         return Element(docPayload, cast(lxb_dom_element_t*)el);
     }
 
+    /// The previous element in the document
     @property Element prev(bool includeAllElements = false)
     {
         onlyValidElements();
@@ -1077,6 +1146,7 @@ struct Element
         return Element(docPayload, cast(lxb_dom_element_t*)el);
     }
 
+    /// The parent element
     @property Element parent() { onlyValidElements(); return Element(docPayload,cast(lxb_dom_element_t*) element.node.parent); }
 
     unittest
@@ -1095,6 +1165,7 @@ struct Element
         assert(i.next(true).innerText == "ohh");
     }
 
+    /// The first child
     @property Element firstChild(bool includeAllElements = false)
     {
         onlyValidElements();
@@ -1118,6 +1189,7 @@ struct Element
         return Element(docPayload, cast(lxb_dom_element_t*)el);
     }
 
+    /// The last child
     @property Element lastChild(bool includeAllElements = false)
     {
         onlyValidElements();
@@ -1150,18 +1222,21 @@ struct Element
         assert(d.body.firstChild.lastChild(true) == "text");
     }
 
+    /// All the children contained in this element. (deep search)
     @property auto descendants(VisitOrder order = VisitOrder.Normal)(bool returnAllElements = false) { onlyRealElements(); return new ChildrenElementRange!order(docPayload, element, true, returnAllElements); }
+    /// All the children contained in this element. (non-deep search)
     @property auto children(VisitOrder order = VisitOrder.Normal)(bool returnAllElements = false) { onlyRealElements(); return new ChildrenElementRange!order(docPayload, element, false, returnAllElements); }
 
+    ///
     unittest
     {
-        Document d = "<p><b>test</b>testo</p>";
+        Document d = "<p><b>test</b>test2</p>";
 
         import std.array;
         Element[] c = d.body.firstChild.children(true).array;
         assert(c.length == 2);
         assert(c[0] == "<b>test</b>");
-        assert(c[1] == "testo");
+        assert(c[1] == "test2");
     }
 
     unittest
@@ -1175,7 +1250,10 @@ struct Element
         assert(p.children(true).empty == false);
 
     }
+
     alias canFind = contains;
+
+    ///
     @property bool contains(E = Element)(auto ref E e, bool deep = true)
     {
         onlyRealElements();
@@ -1193,7 +1271,9 @@ struct Element
         return false;
     }
 
+    ///
     @property bool isAncestorOf(E = element)(auto ref E e) { onlyRealElements(); return this.contains(e); }
+    ///
     @property bool isDescendantOf(E = element)(auto ref E e) { return e.contains(this); }
 
     unittest
@@ -1303,7 +1383,9 @@ struct Element
 
     }
 
+    ///
     @property string outerHTML() { onlyValidElements(); return toString(); }
+    ///
     @property void outerHTML(string html)
     {
         onlyValidElements();
@@ -1316,7 +1398,7 @@ struct Element
         remove();
     }
 
-
+    ///
     unittest
     {
         Document d = "<html><a><p>";
@@ -1328,6 +1410,7 @@ struct Element
         assert(d.body.descendants.front.name == "a");
     }
 
+    ///
     string toString(bool deep = true) const
     {
         onlyValidElements();
@@ -1402,7 +1485,7 @@ struct Element
     {
         import std.exception;
 	    Element e;
-        assertThrown(e = `<a href="ciao.html>pippone</a>`);
+        assertThrown(e = `<a href="hmm.html>blah</a>`);
     }
 
     unittest
@@ -1743,6 +1826,7 @@ class SelectorElementRange
 import std.range : isInputRange, ElementType;
 import std.traits : ReturnType;
 
+/// Get the first element of a range or throw an exception
 auto frontOrThrow(T)(T range)
 if (isInputRange!T)
 {
@@ -1750,6 +1834,7 @@ if (isInputRange!T)
     else return range.front;
 }
 
+/// Get the first element of a range or return the second args
 auto frontOr(T, El)(T range, El fallback)
 if (isInputRange!T && is(El == ElementType!T))
 {
@@ -1757,6 +1842,7 @@ if (isInputRange!T && is(El == ElementType!T))
     else return range.front;
 }
 
+/// Get the first element of a range or return Element.init
 auto frontOrInit(T)(T range)
 if (isInputRange!T)
 {
