@@ -113,14 +113,14 @@ version(Windows)
         import core.sys.windows.windows;
         import std.traits;
         import std.stdio;
-        import std.file : thisExePath;
+        import std.file : thisExePath, getcwd;
         import std.path : buildPath,dirName;
         import std.string : toStringz;
 
         HINSTANCE handle = LoadLibraryA(buildPath(thisExePath.dirName, "lexbor.dll").toStringz);
 
         if (handle == null)
-            handle = LoadLibraryA("./lexbor.dll");
+            handle = LoadLibraryA(buildPath(getcwd(), "lexbor.dll").toStringz);
 
         if (handle == null)
             throw new Exception("Can't find lexbor.dll.");
