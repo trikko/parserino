@@ -1835,10 +1835,7 @@ class SelectorElementRange
         selectors = lxb_selectors_create();
         lxb_selectors_init(selectors);
         list = CallWithLexborString!lxb_css_selectors_parse(docPayload.parser, selector);
-/*
-        if(docPayload.parser.status != lexbor_status_t.LXB_STATUS_OK)
-            throw new Exception("Invalid selector: ", selector);
-*/
+
         Document.RefCounter.add(docPayload);
         Element.RefCounter.add(element);
 
