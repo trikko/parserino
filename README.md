@@ -2,7 +2,7 @@
 * HTML5 parser based on [Lexbor](https://github.com/lexbor/lexbor)
 * Super-fast parsing & dom editing
 * Lazy ranges to browse dom faster.
-* Every method is unit-tested on Linux and MacOS
+* Every method is unit-tested on Linux, MacOS, Windows
 
 # documentation
 * struct [Document](https://parserino.dpldocs.info/parserino.Document.html)
