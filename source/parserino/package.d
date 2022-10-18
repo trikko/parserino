@@ -66,8 +66,8 @@ struct Document
     ///
     unittest
     {
-        scope(exit) assert(Document.RefCounter.refs.length == 0);
-        scope(exit) assert(Element.RefCounter.refs.length == 0);
+        version(DigitalMars) scope(exit) assert(Document.RefCounter.refs.length == 0);
+        version(DigitalMars) scope(exit) assert(Element.RefCounter.refs.length == 0);
 
         Document doc = Document("<html><body>");
         Document doc2;
@@ -128,8 +128,8 @@ struct Document
 
     unittest
     {
-        scope(exit) assert(Document.RefCounter.refs.length == 0);
-        scope(exit) assert(Element.RefCounter.refs.length == 0);
+        version(DigitalMars) scope(exit) assert(Document.RefCounter.refs.length == 0);
+        version(DigitalMars) scope(exit) assert(Element.RefCounter.refs.length == 0);
 
         Document doc;
         doc.parse("<html>");
@@ -145,8 +145,8 @@ struct Document
 
     unittest
     {
-        scope(exit) assert(Document.RefCounter.refs.length == 0);
-        scope(exit) assert(Element.RefCounter.refs.length == 0);
+        version(DigitalMars) scope(exit) assert(Document.RefCounter.refs.length == 0);
+        version(DigitalMars) scope(exit) assert(Element.RefCounter.refs.length == 0);
 
         Document doc = Document("<html><head><title>Hello World!&gt;");
         assert(doc.title == "Hello World!>");
@@ -167,8 +167,8 @@ struct Document
     ///
     unittest
     {
-        scope(exit) assert(Document.RefCounter.refs.length == 0);
-        scope(exit) assert(Element.RefCounter.refs.length == 0);
+        version(DigitalMars) scope(exit) assert(Document.RefCounter.refs.length == 0);
+        version(DigitalMars) scope(exit) assert(Element.RefCounter.refs.length == 0);
 
 
         Document d = `<p>`;
@@ -185,8 +185,8 @@ struct Document
 
     unittest
     {
-        scope(exit) assert(Document.RefCounter.refs.length == 0);
-        scope(exit) assert(Element.RefCounter.refs.length == 0);
+        version(DigitalMars) scope(exit) assert(Document.RefCounter.refs.length == 0);
+        version(DigitalMars) scope(exit) assert(Element.RefCounter.refs.length == 0);
 
         Document doc = Document("<html>");
         Element e = doc.createElement("title");
@@ -205,8 +205,8 @@ struct Document
 
     unittest
     {
-        scope(exit) assert(Document.RefCounter.refs.length == 0);
-        scope(exit) assert(Element.RefCounter.refs.length == 0);
+        version(DigitalMars) scope(exit) assert(Document.RefCounter.refs.length == 0);
+        version(DigitalMars) scope(exit) assert(Element.RefCounter.refs.length == 0);
 
         Document doc = Document("<html><body>Text");
 
@@ -277,8 +277,8 @@ struct Document
 
     unittest
     {
-        scope(exit) assert(Document.RefCounter.refs.length == 0);
-        scope(exit) assert(Element.RefCounter.refs.length == 0);
+        version(DigitalMars) scope(exit) assert(Document.RefCounter.refs.length == 0);
+        version(DigitalMars) scope(exit) assert(Element.RefCounter.refs.length == 0);
 
         Document doc = "<p>";
         Document doc2;
@@ -298,8 +298,8 @@ struct Document
 
     unittest
     {
-        scope(exit) assert(Document.RefCounter.refs.length == 0);
-        scope(exit) assert(Element.RefCounter.refs.length == 0);
+        version(DigitalMars) scope(exit) assert(Document.RefCounter.refs.length == 0);
+        version(DigitalMars) scope(exit) assert(Element.RefCounter.refs.length == 0);
 
         Document doc = "<html><p>";
         assert(doc == "<html><head></head><body><p></p></body></html>");
@@ -311,8 +311,8 @@ struct Document
 
     unittest
     {
-        scope(exit) assert(Document.RefCounter.refs.length == 0);
-        scope(exit) assert(Element.RefCounter.refs.length == 0);
+        version(DigitalMars) scope(exit) assert(Document.RefCounter.refs.length == 0);
+        version(DigitalMars) scope(exit) assert(Element.RefCounter.refs.length == 0);
 
         Document doc = Document("<html>");
         assert(doc.isValid);
@@ -366,8 +366,8 @@ struct Document
     ///
     unittest
     {
-        scope(exit) assert(Document.RefCounter.refs.length == 0);
-        scope(exit) assert(Element.RefCounter.refs.length == 0);
+        version(DigitalMars) scope(exit) assert(Document.RefCounter.refs.length == 0);
+        version(DigitalMars) scope(exit) assert(Element.RefCounter.refs.length == 0);
 
         Document doc = Document("<html>");
         Element e = doc.fragment("<p><b>hello</b>world");
@@ -474,8 +474,8 @@ struct Element
 
     unittest
     {
-        scope(exit) assert(Document.RefCounter.refs.length == 0);
-        scope(exit) assert(Element.RefCounter.refs.length == 0);
+        version(DigitalMars) scope(exit) assert(Document.RefCounter.refs.length == 0);
+        version(DigitalMars) scope(exit) assert(Element.RefCounter.refs.length == 0);
 
         Document doc = "<b>hello</b><br><b>";
         import std.array;
