@@ -849,7 +849,10 @@ struct Element
 
         if (element.node.parent == null) return false;
 
+        import std.stdio;
+        writeln("pre");
         lxb_dom_node_remove(&(element.node));
+        writeln("post");
         return true;
     }
 
@@ -915,11 +918,20 @@ struct Element
 
 
     /// Replace this element with another one
-    void replaceWith(E = Element)(auto ref E e)
+    void replaceWith(E = Element)(auto ref E el)
     {
         onlyValidElements();
 
-        assert(e != this);
+        assert(el != this);
+
+        import std.traits : isSomeString;
+
+        static if (isSomeString!E)
+        {
+            Element e = owner.createElement("#text");
+            e.innerText = el;
+        }
+        else alias e = el;
 
         e.remove();
         prependSibling(e);
@@ -1692,6 +1704,13 @@ class ChildrenElementRange(VisitOrder order = VisitOrder.Normal)
                     if (cast(lxb_dom_element*)current.node.parent == element) { current = null; break; }
                     else
                     {
+                        // Node removed during browsing, exit
+                        if (current.node.parent == null)
+                        {
+                            current = null;
+                            break;
+                        }
+
                         static if (order == VisitOrder.Reverse) auto candidate = cast(lxb_dom_element*)(current.node.parent.prev);
                         else auto candidate = cast(lxb_dom_element*)(current.node.parent.next);
 
