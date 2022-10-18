@@ -848,11 +848,7 @@ struct Element
         onlyValidElements();
 
         if (element.node.parent == null) return false;
-
-        import std.stdio;
-        writeln("pre");
         lxb_dom_node_remove(&(element.node));
-        writeln("post");
         return true;
     }
 
