@@ -1087,11 +1087,12 @@ struct Element
     }
 
     /// See_also: Document.byComment
-    auto byComment(string comment)
+    auto byComment(string comment, bool stripSpaces = true)
     {
+        import std.string : strip;
         onlyRealElements();
 
-        return byTagName("!--").filter!(x => x.innerText == comment);
+        return byTagName("!--").filter!(x => stripSpaces?(x.innerText.strip == comment.strip):(x.innerText == comment));
     }
 
     /// See_also: Document.bySelector
