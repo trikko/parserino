@@ -647,6 +647,7 @@ struct Element
         }
     }
 
+    alias clone = dup;
     /// Clone this element
     Element dup(bool deep = true)
     {
@@ -682,7 +683,7 @@ struct Element
         assert(g.attributes.array == [Attribute("data-a", "a"), Attribute("data-b", "b")]);
         assert(g.descendants.map!(x=>x.name).array == []);
 
-        g = e.dup(true);
+        g = e.clone(true);
         assert(g.name == "p");
         assert(g.attributes.array == [Attribute("data-a", "a"), Attribute("data-b", "b")]);
         assert(g.descendants.map!(x=>x.name).array == ["i", "b"]);
