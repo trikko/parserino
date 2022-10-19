@@ -1,3 +1,6 @@
+/+ dub.sdl:
+	name "build_lib"
++/
 module build_lexbor_lib;
 
 import std;
