@@ -270,10 +270,7 @@ struct Document
         return this;
     }
 
-    auto opCast(string)() const
-    {
-        return toString();
-    }
+    auto opCast(string)() const { return toString(); }
 
     unittest
     {
@@ -432,7 +429,6 @@ struct Document
         __gshared size_t[DocumentPayload*] refs;
     }
 
-    alias toString this;
 }
 
 
@@ -1659,7 +1655,6 @@ struct Element
             __gshared size_t[lxb_dom_element_t*] refs;
         }
 
-    alias toString this;
 }
 
 
