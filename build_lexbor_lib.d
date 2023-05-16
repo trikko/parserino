@@ -14,7 +14,7 @@ int main()
     }
     else
     {
-        enum commit = "447cec843e0017a4b0924e9f0d8eff52824d1fa4";
+        enum commit = "74f28d6df42759dbb708bed1cae8ec59205a473b";
 
         // Ok, already done.
         if (exists("liblexbor_parserino.a"))
