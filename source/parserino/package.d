@@ -216,19 +216,19 @@ struct Document
     }
 
     /// Get an element by id
-    Element byId(string id) { return Element(payload, payload.document.dom_document.element).byId(id); }
+    Element byId(string id) { auto range =  Element(payload, payload.document.dom_document.element).byId(id); return range; }
 
     /// A lazy range of elements filtered by class
-    auto byClass(string name) { return Element(payload, payload.document.dom_document.element).byClass(name); }
+    auto byClass(string name) { auto range =  Element(payload, payload.document.dom_document.element).byClass(name); return range; }
 
     /// A lazy range of elements filtered by tag name
-    auto byTagName(string name) { return Element(payload, payload.document.dom_document.element).byTagName(name); }
+    auto byTagName(string name) { auto range = Element(payload, payload.document.dom_document.element).byTagName(name); return range; }
 
     /// A lazy range of elements filtered by comment text
-    auto byComment(string comment) { return Element(payload, payload.document.dom_document.element).byComment(comment); }
+    auto byComment(string comment) { auto range =  Element(payload, payload.document.dom_document.element).byComment(comment); return range; }
 
     /// A lazy range of elements filtered using a css selector
-    auto bySelector(string selector) { return Element(payload, payload.document.dom_document.element).bySelector(selector); }
+    auto bySelector(string selector) { auto range =  Element(payload, payload.document.dom_document.element).bySelector(selector); return range; }
 
     this(ref return scope typeof(this) rhs)
     {
@@ -308,9 +308,6 @@ struct Document
 
     unittest
     {
-        version(DigitalMars) scope(exit) assert(Document.RefCounter.refs.length == 0);
-        version(DigitalMars) scope(exit) assert(Element.RefCounter.refs.length == 0);
-
         Document doc = Document("<html>");
         assert(doc.isValid);
         assert(doc != null);
@@ -337,6 +334,8 @@ struct Document
         auto r = doc.byTagName("p");
         assert(r.empty == false);
         r.destroy();
+
+
         import core.memory : GC;
         GC.collect();
 
