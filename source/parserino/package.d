@@ -20,6 +20,10 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 */
 
+/** HTML5 parser and DOM manipulation library.
+ *
+ * Parserino is a wrapper around the lexbor library
+ */
 module parserino;
 
 import parserino.c.lexbor;
@@ -30,6 +34,7 @@ import core.atomic;
 import std.algorithm : splitter, filter, map, canFind;
 import core.thread : Fiber;
 
+/// Order of visit
 enum VisitOrder
 {
     Normal,
@@ -431,6 +436,7 @@ struct Document
 }
 
 
+/// A html element
 struct Element
 {
     /// A simple key/value struct representing a html attribute
