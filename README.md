@@ -10,6 +10,8 @@
 
 # how it works
 
+<sub>Check also the [examples](https://github.com/trikko/parserino/tree/master/examples) folder</sub>
+
 ```d
 import parserino;
 
@@ -36,8 +38,8 @@ void main()
    auto newElement = doc.createElement("a");
    newElement.setAttribute("href", "third.html");
    newElement.innerText("third");
-   doc.body.appendChild(newElement);   
-   
+   doc.body.appendChild(newElement);
+
    // You can use selector to select an element
    doc
    .bySelector("div a")    // Select all <a> inside a <div>
