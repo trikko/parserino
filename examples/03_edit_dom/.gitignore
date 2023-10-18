@@ -1,0 +1,16 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/edit_dom
+edit_dom.so
+edit_dom.dylib
+edit_dom.dll
+edit_dom.a
+edit_dom.lib
+edit_dom-test-*
+*.exe
+*.pdb
+*.o
+*.obj
+*.lst

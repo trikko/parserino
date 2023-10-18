@@ -1,0 +1,16 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/search
+search.so
+search.dylib
+search.dll
+search.a
+search.lib
+search-test-*
+*.exe
+*.pdb
+*.o
+*.obj
+*.lst
