@@ -1,0 +1,16 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/wikipedia_scraper
+wikipedia_scraper.so
+wikipedia_scraper.dylib
+wikipedia_scraper.dll
+wikipedia_scraper.a
+wikipedia_scraper.lib
+wikipedia_scraper-test-*
+*.exe
+*.pdb
+*.o
+*.obj
+*.lst
