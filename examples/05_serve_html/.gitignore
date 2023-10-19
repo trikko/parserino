@@ -1,0 +1,16 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/serve
+serve.so
+serve.dylib
+serve.dll
+serve.a
+serve.lib
+serve-test-*
+*.exe
+*.pdb
+*.o
+*.obj
+*.lst

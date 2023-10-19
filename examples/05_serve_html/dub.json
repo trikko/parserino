@@ -1,0 +1,11 @@
+{
+	"authors": [
+		"Andrea Fontana"
+	],
+	"dependencies": {
+		"serverino": "~>0.4.7",
+		"parserino" : { "path" : "../../" }
+	},
+	"license": "proprietary",
+	"name": "serve"
+}

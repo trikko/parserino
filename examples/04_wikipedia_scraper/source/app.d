@@ -31,4 +31,5 @@ void main()
 	// Print the title and the link of each element
 	foreach(l; internalLinks)
 		writeln(" - ", l.getAttribute("title"), " => https://en.wikipedia.org", l.getAttribute("href"));
+
 }
