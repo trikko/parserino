@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+		<title>Struct Document</title>
+		<link rel="stylesheet" href="../css/style.min.css"/>
+		<script type="text/javascript" src="../js/script.min.js"></script>
+	</head>
+	<body onload="setupDdox();">
+		<header></header>
+		<nav id="main-nav">
+			<div>
+				<noscript>
+					<p style="color: red">The search functionality needs JavaScript enabled</p>
+				</noscript>
+				<div id="symbolSearchPane" style="display: none">
+					<form action="#" method="GET">
+						<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(24);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" autofocus/>
+					</form>
+					<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../";
+document.getElementById('symbolSearchPane').style.display = 'block';</script>
+				</div>
+				<ul class="tree-view">
+					<li>
+						<div class="module selected">
+							<a href="../parserino.html">parserino</a>
+						</div>
+					</li>
+				</ul>
+			</div>
+			<p id="main-nav-footer">
+				Built with
+				<a href="https://github.com/MartinNowak/scod">scod</a>
+			</p>
+		</nav>
+		<div id="main-contents">
+			<div>
+				<h1>Struct Document</h1><p>The HTML5 Document
+</p>
+				<div class="prototype">
+					<code class="lang-d">
+						<div class="single-prototype">
+				<span class="kwd">struct</span> <span class="typ">Document</span>
+				<span class="pun">;</span>
+						</div>
+					</code>
+				</div>
+				
+				<section><h2>Constructors</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Document.this.html" class="public">
+									<code>this</code>
+								</a>
+								<span class="tableEntryAnnotation">(html)</span>
+							</td>
+							<td>Build a document from source
+</td>
+						</tr>
+					</table>
+				</section>
+				<section><h2>Properties</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Type</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Document.body.html" class="public property"><code>body</code></a><span class="tableEntryAnnotation">[get]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../parserino/Element.html"><span class="typ">Element</span></a></code></td><td>The <code class="lang-d"><span class="pun">&lt;</span><span class="pln">body</span><span class="pun">&gt;</span></code> element
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Document.head.html" class="public property"><code>head</code></a><span class="tableEntryAnnotation">[get]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../parserino/Element.html"><span class="typ">Element</span></a></code></td><td>The <code class="lang-d"><span class="pun">&lt;</span><span class="pln">head</span><span class="pun">&gt;</span></code> element
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Document.isValid.html" class="public property"><code>isValid</code></a><span class="tableEntryAnnotation">[get]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">bool</span></code></td><td>Is this a valid html5 document?
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Document.title.html" class="public property"><code>title</code></a><span class="tableEntryAnnotation">[get]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">string</span></code></td><td>The content of <code class="lang-d"><span class="pun">&lt;</span><span class="pln">title</span><span class="pun">&gt;</span></code> tag
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Document.title.html" class="public property"><code>title</code></a><span class="tableEntryAnnotation">[set]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="kwd">const</span><span class="pun">(</span><span class="typ">string</span><span class="pun">)</span></code></td><td>Set the content of <code class="lang-d"><span class="pun">&lt;<a href="../parserino/Document.title.html"></span><span class="pln">title</span></a><span class="pun">&gt;</span></code> tag
+</td>
+						</tr>
+					</table>
+				</section>
+				<section><h2>Methods</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Document.byClass.html" class="public">
+									<code>byClass</code>
+								</a>
+								<span class="tableEntryAnnotation">(name)</span>
+							</td>
+							<td>A lazy range of elements filtered by class
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Document.byComment.html" class="public">
+									<code>byComment</code>
+								</a>
+								<span class="tableEntryAnnotation">(comment)</span>
+							</td>
+							<td>A lazy range of elements identified by an adjacent comment
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Document.byId.html" class="public">
+									<code>byId</code>
+								</a>
+								<span class="tableEntryAnnotation">(id)</span>
+							</td>
+							<td>Get an element by id
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Document.bySelector.html" class="public">
+									<code>bySelector</code>
+								</a>
+								<span class="tableEntryAnnotation">(selector)</span>
+							</td>
+							<td>A lazy range of elements filtered using a css selector
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Document.byTagName.html" class="public">
+									<code>byTagName</code>
+								</a>
+								<span class="tableEntryAnnotation">(name)</span>
+							</td>
+							<td>A lazy range of elements filtered by tag name
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Document.createComment.html" class="public">
+									<code>createComment</code>
+								</a>
+								<span class="tableEntryAnnotation">(text)</span>
+							</td>
+							<td>Create a comment
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Document.createElement.html" class="public">
+									<code>createElement</code>
+								</a>
+								<span class="tableEntryAnnotation">(tagName)</span>
+							</td>
+							<td>Create a html element
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Document.createText.html" class="public">
+									<code>createText</code>
+								</a>
+								<span class="tableEntryAnnotation">(text)</span>
+							</td>
+							<td>Create a text element
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Document.fragment.html" class="public">
+									<code>fragment</code>
+								</a>
+								<span class="tableEntryAnnotation">(html)</span>
+							</td>
+							<td>Create a document fragment from source
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Document.opCast.html" class="public">
+									<code>opCast</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>You can cast a document to a string
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Document.toString.html" class="public">
+									<code>toString</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>Return document as html string
+</td>
+						</tr>
+					</table>
+				</section>
+				
+			</div>
+			<footer>
+				<div id="license-info">
+					
+					
+					
+				</div>
+			</footer>
+		</div>
+	</body>
+</html>

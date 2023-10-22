@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+		<title>Module parserino</title>
+		<link rel="stylesheet" href="./css/style.min.css"/>
+		<script type="text/javascript" src="./js/script.min.js"></script>
+	</head>
+	<body onload="setupDdox();">
+		<header></header>
+		<nav id="main-nav">
+			<div>
+				<noscript>
+					<p style="color: red">The search functionality needs JavaScript enabled</p>
+				</noscript>
+				<div id="symbolSearchPane" style="display: none">
+					<form action="#" method="GET">
+						<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(24);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" autofocus/>
+					</form>
+					<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="./symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "./";
+document.getElementById('symbolSearchPane').style.display = 'block';</script>
+				</div>
+				<ul class="tree-view">
+					<li>
+						<div class="module selected">
+							<a href="./parserino.html">parserino</a>
+						</div>
+					</li>
+				</ul>
+			</div>
+			<p id="main-nav-footer">
+				Built with
+				<a href="https://github.com/MartinNowak/scod">scod</a>
+			</p>
+		</nav>
+		<div id="main-contents">
+			<div>
+				<h1>Module parserino</h1><p>HTML5 parser and DOM manipulation library.
+</p><section><p>Parserino is a fast html5 parser and DOM manipulation library based on the lexbor library.
+ It's written in D and it's designed to be easy to use and fast.
+</p>
+<pre class="code"><code class="lang-d"><span class="kwd">import </span><span class="pln">parserino</span><span class="pun">;
+</span><span class="typ">void </span><span class="pln">main</span><span class="pun">()
+{
+   </span><span class="kwd">auto </span><span class="pln">doc </span><span class="pun">= <a href="./parserino/Document.html"></span><span class="typ">Document</span></a><span class="pun">(</span><span class="str">"&lt;html&gt;&lt;body&gt;&lt;p&gt;Hello World!&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;"</span><span class="pun">);
+   </span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">doc<wbr/></span><span class="pun">.</span><span class="pln">body<wbr/></span><span class="pun">.</span><span class="pln">firstChild<wbr/></span><span class="pun">.</span><span class="pln">innerText </span><span class="pun">== </span><span class="str">"Hello World!"</span><span class="pun">);
+   </span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">doc<wbr/></span><span class="pun">.</span><span class="pln">byTagName</span><span class="pun">(</span><span class="str">"p"</span><span class="pun">)<wbr/>.</span><span class="pln">front<wbr/></span><span class="pun">.</span><span class="pln">innerText </span><span class="pun">== </span><span class="str">"Hello World!"</span><span class="pun">);
+}</span></code></pre>
+<p> The main two types you will use are <code class="lang-d"><a href="./parserino/Document.html" title="parserino.Document"><span class="typ">Document</span></a></code> and <code class="lang-d"><a href="./parserino/Element.html" title="parserino.Element"><span class="typ">Element</span></a></code>.
+</p>
+</section>
+
+				<section></section>
+				<section>
+					<h2>Functions</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<code>
+									<a id="asFragment" class="public" href="./parserino/asFragment.html">asFragment</a><span class="tableEntryAnnotation">(s)</span>
+								</code>
+							</td>
+							<td>Create a fragment from a string. The fragment is not attached to any document by default.
+ The fragment is not a valid element or document, it's just a piece of html you can add to a document.
+</td>
+						</tr>
+						<tr>
+							<td>
+								<code>
+									<a id="frontOr" class="public" href="./parserino/frontOr.html">frontOr</a><span class="tableEntryAnnotation">(range, fallback)</span>
+								</code>
+							</td>
+							<td>Get the first element of a range or return the second args
+</td>
+						</tr>
+						<tr>
+							<td>
+								<code>
+									<a id="frontOrInit" class="public" href="./parserino/frontOrInit.html">frontOrInit</a><span class="tableEntryAnnotation">(range)</span>
+								</code>
+							</td>
+							<td>Get the first element of a range or return Element.init
+</td>
+						</tr>
+						<tr>
+							<td>
+								<code>
+									<a id="frontOrThrow" class="public" href="./parserino/frontOrThrow.html">frontOrThrow</a><span class="tableEntryAnnotation">(range)</span>
+								</code>
+							</td>
+							<td>Get the first element of a range or throw an exception
+</td>
+						</tr>
+					</table>
+				</section>
+				<section>
+					<h2>Classes</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<code>
+									<a id="ChildrenElementRange" class="public" href="./parserino/ChildrenElementRange.html">ChildrenElementRange</a>
+								</code>
+							</td>
+							<td>A lazy range of elements
+</td>
+						</tr>
+						<tr>
+							<td>
+								<code>
+									<a id="SelectorElementRange" class="public" href="./parserino/SelectorElementRange.html">SelectorElementRange</a>
+								</code>
+							</td>
+							<td>A lazy range of elements
+</td>
+						</tr>
+					</table>
+				</section>
+				<section>
+					<h2>Structs</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<code>
+									<a id="Document" class="public" href="./parserino/Document.html">Document</a>
+								</code>
+							</td>
+							<td>The HTML5 Document
+</td>
+						</tr>
+						<tr>
+							<td>
+								<code>
+									<a id="Element" class="public" href="./parserino/Element.html">Element</a>
+								</code>
+							</td>
+							<td>A html element
+</td>
+						</tr>
+					</table>
+				</section>
+				<section>
+					<h2>Enums</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<code>
+									<a id="VisitOrder" class="public" href="./parserino/VisitOrder.html">VisitOrder</a>
+								</code>
+							</td>
+							<td>Order of visit
+</td>
+						</tr>
+					</table>
+				</section>
+			</div>
+			<footer>
+				<div id="license-info">
+					
+					
+					
+				</div>
+			</footer>
+		</div>
+	</body>
+</html>

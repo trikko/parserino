@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+		<title>Function Element.children</title>
+		<link rel="stylesheet" href="../css/style.min.css"/>
+		<script type="text/javascript" src="../js/script.min.js"></script>
+	</head>
+	<body onload="setupDdox();">
+		<header></header>
+		<nav id="main-nav">
+			<div>
+				<noscript>
+					<p style="color: red">The search functionality needs JavaScript enabled</p>
+				</noscript>
+				<div id="symbolSearchPane" style="display: none">
+					<form action="#" method="GET">
+						<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(24);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" autofocus/>
+					</form>
+					<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../";
+document.getElementById('symbolSearchPane').style.display = 'block';</script>
+				</div>
+				<ul class="tree-view">
+					<li>
+						<div class="module selected">
+							<a href="../parserino.html">parserino</a>
+						</div>
+					</li>
+				</ul>
+			</div>
+			<p id="main-nav-footer">
+				Built with
+				<a href="https://github.com/MartinNowak/scod">scod</a>
+			</p>
+		</nav>
+		<div id="main-contents">
+			<div>
+				<h1>Function Element.children</h1><p>All the children contained in this element. (non-deep search)
+</p>
+				<div class="prototype">
+					<code class="lang-d">
+						<div class="single-prototype">
+				<span class="kwd">auto</span> <span class="pln">children</span>(<a href="../parserino/VisitOrder.html"><span class="typ">VisitOrder</span></a> order<span class="pln"> </span><span class="pun">= </span><span class="typ">VisitOrder<wbr/></span><span class="pun">.</span><span class="typ">Normal</span>)
+				<span class="pun">(</span>
+				<br/>
+				&nbsp;&nbsp;<span class="typ">bool</span> <span class="pln">returnAllElements</span> <span class="pun">=</span> <span class="kwd">false</span>
+				<br/>
+				<span class="pun">)</span><span class="pln"> </span><span class="kwd">@property</span><span class="pun">;</span>
+						</div>
+					</code>
+				</div>
+				
+				<section><h2>Example</h2>
+
+<pre class="code"><code class="lang-d"><a href="../parserino/Document.html"><span class="typ">Document</span></a><span class="pln"> d </span><span class="pun">= </span><span class="str">"&lt;p&gt;&lt;b&gt;test&lt;/b&gt;test2&lt;/p&gt;"</span><span class="pun">;
+
+</span><span class="kwd">import </span><span class="pln">std<wbr/></span><span class="pun">.</span><span class="pln">array</span><span class="pun">;
+<a href="../parserino/Element.html"></span><span class="typ">Element</span></a><span class="pun">[] </span><span class="pln">c </span><span class="pun">= </span><span class="pln">d<wbr/></span><span class="pun">.</span><span class="pln">body<wbr/></span><span class="pun">.</span><span class="pln">firstChild<wbr/></span><span class="pun">.</span><span class="pln">children</span><span class="pun">(</span><span class="kwd">true</span><span class="pun">)<wbr/>.</span><span class="pln">array</span><span class="pun">;
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">c<wbr/></span><span class="pun">.</span><span class="pln">length </span><span class="pun">== </span><span class="lit">2</span><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">c</span><span class="pun">[</span><span class="lit">0</span><span class="pun">] == </span><span class="str">"&lt;b&gt;test&lt;/b&gt;"</span><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">c</span><span class="pun">[</span><span class="lit">1</span><span class="pun">] == </span><span class="str">"test2"</span><span class="pun">);
+
+</span></code></pre>
+</section>
+
+			</div>
+			<footer>
+				<div id="license-info">
+					
+					
+					
+				</div>
+			</footer>
+		</div>
+	</body>
+</html>

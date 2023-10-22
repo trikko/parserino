@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+		<title>Function asFragment</title>
+		<link rel="stylesheet" href="../css/style.min.css"/>
+		<script type="text/javascript" src="../js/script.min.js"></script>
+	</head>
+	<body onload="setupDdox();">
+		<header></header>
+		<nav id="main-nav">
+			<div>
+				<noscript>
+					<p style="color: red">The search functionality needs JavaScript enabled</p>
+				</noscript>
+				<div id="symbolSearchPane" style="display: none">
+					<form action="#" method="GET">
+						<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(24);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" autofocus/>
+					</form>
+					<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../";
+document.getElementById('symbolSearchPane').style.display = 'block';</script>
+				</div>
+				<ul class="tree-view">
+					<li>
+						<div class="module selected">
+							<a href="../parserino.html">parserino</a>
+						</div>
+					</li>
+				</ul>
+			</div>
+			<p id="main-nav-footer">
+				Built with
+				<a href="https://github.com/MartinNowak/scod">scod</a>
+			</p>
+		</nav>
+		<div id="main-contents">
+			<div>
+				<h1>Function asFragment</h1><p>Create a fragment from a string. The fragment is not attached to any document by default.
+ The fragment is not a valid element or document, it's just a piece of html you can add to a document.
+</p>
+				<div class="prototype">
+					<code class="lang-d">
+						<div class="single-prototype">
+				<span class="pln">parserino<wbr/></span><span class="pun">.</span><span class="typ">FragmentString</span> <span class="pln">asFragment</span>
+				<span class="pun">(</span>
+				<br/>
+				&nbsp;&nbsp;<span class="kwd">scope return </span><span class="typ">string</span> <span class="pln">s</span>
+				<br/>
+				<span class="pun">)</span><span class="pln"> </span><span class="kwd">pure nothrow @nogc @safe</span><span class="pun">;</span>
+						</div>
+					</code>
+				</div>
+				<section><pre class="code"><code class="lang-d"><span class="kwd">auto </span><span class="pln">fragment </span><span class="pun">= </span><span class="str">"&lt;b&gt;hello&lt;/b&gt;"<wbr/></span><span class="pun">.</span><span class="pln">asFragment</span><span class="pun">;
+</span><span class="pln">doc<wbr/></span><span class="pun">.</span><span class="pln">body<wbr/></span><span class="pun">.</span><span class="pln">appendChild</span><span class="pun">(</span><span class="pln">fragment</span><span class="pun">);</span></code></pre>
+</section>
+
+				
+			</div>
+			<footer>
+				<div id="license-info">
+					
+					
+					
+				</div>
+			</footer>
+		</div>
+	</body>
+</html>

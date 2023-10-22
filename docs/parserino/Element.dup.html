@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+		<title>Function Element.dup</title>
+		<link rel="stylesheet" href="../css/style.min.css"/>
+		<script type="text/javascript" src="../js/script.min.js"></script>
+	</head>
+	<body onload="setupDdox();">
+		<header></header>
+		<nav id="main-nav">
+			<div>
+				<noscript>
+					<p style="color: red">The search functionality needs JavaScript enabled</p>
+				</noscript>
+				<div id="symbolSearchPane" style="display: none">
+					<form action="#" method="GET">
+						<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(24);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" autofocus/>
+					</form>
+					<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../";
+document.getElementById('symbolSearchPane').style.display = 'block';</script>
+				</div>
+				<ul class="tree-view">
+					<li>
+						<div class="module selected">
+							<a href="../parserino.html">parserino</a>
+						</div>
+					</li>
+				</ul>
+			</div>
+			<p id="main-nav-footer">
+				Built with
+				<a href="https://github.com/MartinNowak/scod">scod</a>
+			</p>
+		</nav>
+		<div id="main-contents">
+			<div>
+				<h1>Function Element.dup</h1><p>Clone this element
+</p>
+				<div class="prototype">
+					<code class="lang-d">
+						<div class="single-prototype">
+				<a href="../parserino/Element.html"><span class="typ">Element</span></a> <span class="pln">dup</span>
+				<span class="pun">(</span>
+				<br/>
+				&nbsp;&nbsp;<span class="typ">bool</span> <span class="pln">deep</span> <span class="pun">=</span> <span class="kwd">true</span>
+				<br/>
+				<span class="pun">)</span><span class="pun">;</span>
+						</div>
+					</code>
+				</div>
+				
+				<section><h2>Example</h2>
+
+<pre class="code"><code class="lang-d"><span class="kwd">import </span><span class="pln">std<wbr/></span><span class="pun">.</span><span class="pln">array</span><span class="pun">;
+</span><span class="kwd">import </span><span class="pln">std<wbr/></span><span class="pun">.</span><span class="pln">algorithm </span><span class="pun">: </span><span class="pln">map</span><span class="pun">;
+
+<a href="../parserino/Document.html"></span><span class="typ">Document</span></a><span class="pln"> doc </span><span class="pun">= <a href="../parserino/Document.html"></span><span class="typ">Document</span></a><span class="pun">(</span><span class="str">`&lt;html&gt;&lt;p data-a="a" data-b="b"&gt;&lt;i&gt;&lt;/i&gt;&lt;b&gt;&lt;/b&gt;`</span><span class="pun">);
+<a href="../parserino/Element.html"></span><span class="typ">Element</span></a><span class="pln"> e </span><span class="pun">= </span><span class="pln">doc<wbr/></span><span class="pun">.</span><span class="pln">byTagName</span><span class="pun">(</span><span class="str">"p"</span><span class="pun">)<wbr/>.</span><span class="pln">front</span><span class="pun">;
+<a href="../parserino/Element.html"></span><span class="typ">Element</span></a><span class="pln"> f </span><span class="pun">= </span><span class="pln">e</span><span class="pun">;
+<a href="../parserino/Element.html"></span><span class="typ">Element</span></a><span class="pln"> g </span><span class="pun">= </span><span class="pln">e<wbr/></span><span class="pun">.</span><span class="pln">dup</span><span class="pun">(</span><span class="kwd">false</span><span class="pun">);
+<a href="../parserino/Element.html"></span><span class="typ">Element</span></a><span class="pln"> h </span><span class="pun">= </span><span class="pln">g</span><span class="pun">;
+
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">e</span><span class="pun">!=</span><span class="pln">g</span><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">f</span><span class="pun">!=</span><span class="pln">g</span><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">g</span><span class="pun">==</span><span class="pln">h</span><span class="pun">);
+
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">g<wbr/></span><span class="pun">.</span><span class="pln">name </span><span class="pun">== </span><span class="str">"p"</span><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">g<wbr/></span><span class="pun">.</span><span class="pln">attributes<wbr/></span><span class="pun">.</span><span class="pln">array </span><span class="pun">== [<a href="../parserino/Element.Attribute.html"></span><span class="typ">Attribute</span></a><span class="pun">(</span><span class="str">"data-a"</span><span class="pun">, </span><span class="str">"a"</span><span class="pun">), <a href="../parserino/Element.Attribute.html"></span><span class="typ">Attribute</span></a><span class="pun">(</span><span class="str">"data-b"</span><span class="pun">, </span><span class="str">"b"</span><span class="pun">)]);
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">g<wbr/></span><span class="pun">.</span><span class="pln">descendants<wbr/></span><span class="pun">.</span><span class="pln">map</span><span class="pun">!(</span><span class="pln">x</span><span class="pun">=&gt;</span><span class="pln">x<wbr/></span><span class="pun">.</span><span class="pln">name</span><span class="pun">)<wbr/>.</span><span class="pln">array </span><span class="pun">== []);
+
+</span><span class="pln">g </span><span class="pun">= </span><span class="pln">e<wbr/></span><span class="pun">.</span><span class="pln">clone</span><span class="pun">(</span><span class="kwd">true</span><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">g<wbr/></span><span class="pun">.</span><span class="pln">name </span><span class="pun">== </span><span class="str">"p"</span><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">g<wbr/></span><span class="pun">.</span><span class="pln">attributes<wbr/></span><span class="pun">.</span><span class="pln">array </span><span class="pun">== [<a href="../parserino/Element.Attribute.html"></span><span class="typ">Attribute</span></a><span class="pun">(</span><span class="str">"data-a"</span><span class="pun">, </span><span class="str">"a"</span><span class="pun">), <a href="../parserino/Element.Attribute.html"></span><span class="typ">Attribute</span></a><span class="pun">(</span><span class="str">"data-b"</span><span class="pun">, </span><span class="str">"b"</span><span class="pun">)]);
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">g<wbr/></span><span class="pun">.</span><span class="pln">descendants<wbr/></span><span class="pun">.</span><span class="pln">map</span><span class="pun">!(</span><span class="pln">x</span><span class="pun">=&gt;</span><span class="pln">x<wbr/></span><span class="pun">.</span><span class="pln">name</span><span class="pun">)<wbr/>.</span><span class="pln">array </span><span class="pun">== [</span><span class="str">"i"</span><span class="pun">, </span><span class="str">"b"</span><span class="pun">]);
+
+</span></code></pre>
+</section>
+
+			</div>
+			<footer>
+				<div id="license-info">
+					
+					
+					
+				</div>
+			</footer>
+		</div>
+	</body>
+</html>

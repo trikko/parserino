@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+		<title>Function Document.createComment</title>
+		<link rel="stylesheet" href="../css/style.min.css"/>
+		<script type="text/javascript" src="../js/script.min.js"></script>
+	</head>
+	<body onload="setupDdox();">
+		<header></header>
+		<nav id="main-nav">
+			<div>
+				<noscript>
+					<p style="color: red">The search functionality needs JavaScript enabled</p>
+				</noscript>
+				<div id="symbolSearchPane" style="display: none">
+					<form action="#" method="GET">
+						<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(24);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" autofocus/>
+					</form>
+					<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../";
+document.getElementById('symbolSearchPane').style.display = 'block';</script>
+				</div>
+				<ul class="tree-view">
+					<li>
+						<div class="module selected">
+							<a href="../parserino.html">parserino</a>
+						</div>
+					</li>
+				</ul>
+			</div>
+			<p id="main-nav-footer">
+				Built with
+				<a href="https://github.com/MartinNowak/scod">scod</a>
+			</p>
+		</nav>
+		<div id="main-contents">
+			<div>
+				<h1>Function Document.createComment</h1><p>Create a comment
+</p>
+				<div class="prototype">
+					<code class="lang-d">
+						<div class="single-prototype">
+				<a href="../parserino/Element.html"><span class="typ">Element</span></a> <span class="pln">createComment</span>
+				<span class="pun">(</span>
+				<br/>
+				&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">text</span>
+				<br/>
+				<span class="pun">)</span><span class="pun">;</span>
+						</div>
+					</code>
+				</div>
+				
+				<section><h2>Example</h2>
+
+<pre class="code"><code class="lang-d"><span class="kwd">version</span><span class="pun">(</span><span class="typ">DigitalMars</span><span class="pun">) </span><span class="kwd">scope</span><span class="pun">(</span><span class="pln">exit</span><span class="pun">) </span><span class="kwd">assert</span><span class="pun">(</span><span class="typ">Document<wbr/></span><span class="pun">.</span><span class="typ">RefCounter<wbr/></span><span class="pun">.</span><span class="pln">refs<wbr/></span><span class="pun">.</span><span class="pln">length </span><span class="pun">== </span><span class="lit">0</span><span class="pun">);
+</span><span class="kwd">version</span><span class="pun">(</span><span class="typ">DigitalMars</span><span class="pun">) </span><span class="kwd">scope</span><span class="pun">(</span><span class="pln">exit</span><span class="pun">) </span><span class="kwd">assert</span><span class="pun">(</span><span class="typ">Element<wbr/></span><span class="pun">.</span><span class="typ">RefCounter<wbr/></span><span class="pun">.</span><span class="pln">refs<wbr/></span><span class="pun">.</span><span class="pln">length </span><span class="pun">== </span><span class="lit">0</span><span class="pun">);
+
+
+<a href="../parserino/Document.html"></span><span class="typ">Document</span></a><span class="pln"> d </span><span class="pun">= </span><span class="str">`&lt;p&gt;`</span><span class="pun">;
+
+<a href="../parserino/Element.html"></span><span class="typ">Element</span></a><span class="pln"> p </span><span class="pun">= </span><span class="pln">d<wbr/></span><span class="pun">.</span><span class="pln">body<wbr/></span><span class="pun">.</span><span class="pln">firstChild</span><span class="pun">;
+<a href="../parserino/Element.html"></span><span class="typ">Element</span></a><span class="pln"> t </span><span class="pun">= </span><span class="pln">d<wbr/></span><span class="pun">.</span><span class="pln">createText</span><span class="pun">(</span><span class="str">"this is a test"</span><span class="pun">);
+<a href="../parserino/Element.html"></span><span class="typ">Element</span></a><span class="pln"> c </span><span class="pun">= </span><span class="pln">d<wbr/></span><span class="pun">.</span><span class="pln">createComment</span><span class="pun">(</span><span class="str">"this is a comment"</span><span class="pun">);
+</span><span class="pln">p<wbr/></span><span class="pun">.</span><span class="pln">appendChild</span><span class="pun">(</span><span class="pln">t</span><span class="pun">);
+</span><span class="pln">p<wbr/></span><span class="pun">.</span><span class="pln">appendChild</span><span class="pun">(</span><span class="pln">c</span><span class="pun">);
+
+
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">p </span><span class="pun">== </span><span class="str">"&lt;p&gt;this is a test&lt;!--this is a comment--&gt;&lt;/p&gt;"</span><span class="pun">);
+
+</span></code></pre>
+</section>
+
+			</div>
+			<footer>
+				<div id="license-info">
+					
+					
+					
+				</div>
+			</footer>
+		</div>
+	</body>
+</html>

@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+		<title>Struct Element</title>
+		<link rel="stylesheet" href="../css/style.min.css"/>
+		<script type="text/javascript" src="../js/script.min.js"></script>
+	</head>
+	<body onload="setupDdox();">
+		<header></header>
+		<nav id="main-nav">
+			<div>
+				<noscript>
+					<p style="color: red">The search functionality needs JavaScript enabled</p>
+				</noscript>
+				<div id="symbolSearchPane" style="display: none">
+					<form action="#" method="GET">
+						<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(24);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" autofocus/>
+					</form>
+					<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../";
+document.getElementById('symbolSearchPane').style.display = 'block';</script>
+				</div>
+				<ul class="tree-view">
+					<li>
+						<div class="module selected">
+							<a href="../parserino.html">parserino</a>
+						</div>
+					</li>
+				</ul>
+			</div>
+			<p id="main-nav-footer">
+				Built with
+				<a href="https://github.com/MartinNowak/scod">scod</a>
+			</p>
+		</nav>
+		<div id="main-contents">
+			<div>
+				<h1>Struct Element</h1><p>A html element
+</p>
+				<div class="prototype">
+					<code class="lang-d">
+						<div class="single-prototype">
+				<span class="kwd">struct</span> <span class="typ">Element</span>
+				<span class="pun">;</span>
+						</div>
+					</code>
+				</div>
+				
+				<section><h2>Properties</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Type</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.children.html" class="public property"><code>children</code></a><span class="tableEntryAnnotation">[set]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="kwd">auto</span></code></td><td>All the children contained in this element. (non-deep search)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.contains.html" class="public property"><code>contains</code></a><span class="tableEntryAnnotation">[set]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">bool</span></code></td><td>Check if this element contains another one
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.descendants.html" class="public property"><code>descendants</code></a><span class="tableEntryAnnotation">[set]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="kwd">auto</span></code></td><td>All the children contained in this element. (deep search)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.firstChild.html" class="public property"><code>firstChild</code></a><span class="tableEntryAnnotation">[set]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../parserino/Element.html"><span class="typ">Element</span></a></code></td><td>The first child
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.getAttribute.html" class="public property"><code>getAttribute</code></a><span class="tableEntryAnnotation">[set]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">string</span></code></td><td>Get an attribute
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.hasAttribute.html" class="public property"><code>hasAttribute</code></a><span class="tableEntryAnnotation">[set]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">bool</span></code></td><td>Check if an attribute exists
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.id.html" class="public property"><code>id</code></a><span class="tableEntryAnnotation">[get]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">string</span></code></td><td>The id of this element (if present)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.innerHTML.html" class="public property"><code>innerHTML</code></a><span class="tableEntryAnnotation">[set]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">string</span></code></td><td>Set the html content of this element
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.innerHTML.html" class="public property"><code>innerHTML</code></a><span class="tableEntryAnnotation">[get]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">string</span></code></td><td>Get the content of this element
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.innerText.html" class="public property"><code>innerText</code></a><span class="tableEntryAnnotation">[get]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">string</span></code></td><td>Set the inner text of this element (replacing html)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.innerText.html" class="public property"><code>innerText</code></a><span class="tableEntryAnnotation">[set]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">string</span></code></td><td>Get the inner text of this element (ignoring html tags)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.isAncestorOf.html" class="public property"><code>isAncestorOf</code></a><span class="tableEntryAnnotation">[set]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">bool</span></code></td><td>Check if this element is the ancestor of another one
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.isDescendantOf.html" class="public property"><code>isDescendantOf</code></a><span class="tableEntryAnnotation">[set]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">bool</span></code></td><td>Check if this element is the descendant of another one
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.isEmpty.html" class="public property"><code>isEmpty</code></a><span class="tableEntryAnnotation">[get]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">bool</span></code></td><td>Is this element empty?
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.isValid.html" class="public property"><code>isValid</code></a><span class="tableEntryAnnotation">[get]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">bool</span></code></td><td>Is this element valid?
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.lastChild.html" class="public property"><code>lastChild</code></a><span class="tableEntryAnnotation">[set]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../parserino/Element.html"><span class="typ">Element</span></a></code></td><td>The last child
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.name.html" class="public property"><code>name</code></a><span class="tableEntryAnnotation">[get]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">string</span></code></td><td>The tag name of this element. For example "p" or "div"
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.next.html" class="public property"><code>next</code></a><span class="tableEntryAnnotation">[set]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../parserino/Element.html"><span class="typ">Element</span></a></code></td><td>The next element in the document
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.outerHTML.html" class="public property"><code>outerHTML</code></a><span class="tableEntryAnnotation">[get]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">string</span></code></td><td>The outer html of this element
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.outerHTML.html" class="public property"><code>outerHTML</code></a><span class="tableEntryAnnotation">[set]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">string</span></code></td><td>Set the outer html of this element
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.owner.html" class="public property"><code>owner</code></a><span class="tableEntryAnnotation">[get]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../parserino/Document.html"><span class="typ">Document</span></a></code></td><td>The owner of this element
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.parent.html" class="public property"><code>parent</code></a><span class="tableEntryAnnotation">[get]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../parserino/Element.html"><span class="typ">Element</span></a></code></td><td>The parent element
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.prev.html" class="public property"><code>prev</code></a><span class="tableEntryAnnotation">[set]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../parserino/Element.html"><span class="typ">Element</span></a></code></td><td>The previous element in the document
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.removeAttribute.html" class="public property"><code>removeAttribute</code></a><span class="tableEntryAnnotation">[set]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">string</span></code></td><td>Remove an attribute from this element
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.setAttribute.html" class="public property"><code>setAttribute</code></a><span class="tableEntryAnnotation">[set]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">string</span></code></td><td>Set an attribute for this element
+</td>
+						</tr>
+					</table>
+				</section>
+				<section><h2>Methods</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.appendChild.html" class="public">
+									<code>appendChild</code>
+								</a>
+								<span class="tableEntryAnnotation">(el)</span>
+							</td>
+							<td>Put a new child in the last position
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.appendSibling.html" class="public">
+									<code>appendSibling</code>
+								</a>
+								<span class="tableEntryAnnotation">(el)</span>
+							</td>
+							<td>Append an element
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.attributes.html" class="public">
+									<code>attributes</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>Return a lazy range of attributes for this element
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.byClass.html" class="public">
+									<code>byClass</code>
+								</a>
+								<span class="tableEntryAnnotation">(name)</span>
+							</td>
+							<td>Search for elements by class
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.byComment.html" class="public">
+									<code>byComment</code>
+								</a>
+								<span class="tableEntryAnnotation">(comment, stripSpaces)</span>
+							</td>
+							<td>Search for elements by comment
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.byId.html" class="public">
+									<code>byId</code>
+								</a>
+								<span class="tableEntryAnnotation">(id)</span>
+							</td>
+							<td>Search for elements by id
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.bySelector.html" class="public">
+									<code>bySelector</code>
+								</a>
+								<span class="tableEntryAnnotation">(selector)</span>
+							</td>
+							<td>Search for elements by selector
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.byTagName.html" class="public">
+									<code>byTagName</code>
+								</a>
+								<span class="tableEntryAnnotation">(name)</span>
+							</td>
+							<td>Search for elements by tag name
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.classes.html" class="public">
+									<code>classes</code>
+								</a>
+								<span class="tableEntryAnnotation">(, )</span>
+							</td>
+							<td>All the classes of this element
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.copyFrom.html" class="public">
+									<code>copyFrom</code>
+								</a>
+								<span class="tableEntryAnnotation">(e, deep)</span>
+							</td>
+							<td>Copy another element here
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.dup.html" class="public">
+									<code>dup</code>
+								</a>
+								<span class="tableEntryAnnotation">(deep)</span>
+							</td>
+							<td>Clone this element
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.prependChild.html" class="public">
+									<code>prependChild</code>
+								</a>
+								<span class="tableEntryAnnotation">(el)</span>
+							</td>
+							<td>Put a new child in the first position
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.prependSibling.html" class="public">
+									<code>prependSibling</code>
+								</a>
+								<span class="tableEntryAnnotation">(el)</span>
+							</td>
+							<td>Prepend an element
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.remove.html" class="public">
+									<code>remove</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>Remove this element from the document
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.replaceWith.html" class="public">
+									<code>replaceWith</code>
+								</a>
+								<span class="tableEntryAnnotation">(el)</span>
+							</td>
+							<td>Replace this element with another one
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.toString.html" class="public">
+									<code>toString</code>
+								</a>
+								<span class="tableEntryAnnotation">(deep)</span>
+							</td>
+							<td>Convert this element to a string
+</td>
+						</tr>
+					</table>
+				</section>
+				<section><h2>Inner structs</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Element.Attribute.html" class="public">
+									<code>Attribute</code>
+								</a>
+							</td>
+							<td>A simple key/value struct representing a html attribute
+</td>
+						</tr>
+					</table>
+				</section>
+				
+			</div>
+			<footer>
+				<div id="license-info">
+					
+					
+					
+				</div>
+			</footer>
+		</div>
+	</body>
+</html>

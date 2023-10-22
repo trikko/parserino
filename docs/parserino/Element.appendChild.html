@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+		<title>Function Element.appendChild</title>
+		<link rel="stylesheet" href="../css/style.min.css"/>
+		<script type="text/javascript" src="../js/script.min.js"></script>
+	</head>
+	<body onload="setupDdox();">
+		<header></header>
+		<nav id="main-nav">
+			<div>
+				<noscript>
+					<p style="color: red">The search functionality needs JavaScript enabled</p>
+				</noscript>
+				<div id="symbolSearchPane" style="display: none">
+					<form action="#" method="GET">
+						<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(24);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" autofocus/>
+					</form>
+					<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../";
+document.getElementById('symbolSearchPane').style.display = 'block';</script>
+				</div>
+				<ul class="tree-view">
+					<li>
+						<div class="module selected">
+							<a href="../parserino.html">parserino</a>
+						</div>
+					</li>
+				</ul>
+			</div>
+			<p id="main-nav-footer">
+				Built with
+				<a href="https://github.com/MartinNowak/scod">scod</a>
+			</p>
+		</nav>
+		<div id="main-contents">
+			<div>
+				<h1>Function Element.appendChild</h1><p>Put a new child in the last position
+</p>
+				<div class="prototype">
+					<code class="lang-d">
+						<div class="single-prototype">
+				<span class="typ">void</span> <span class="pln">appendChild</span>(E)
+				<span class="pun">(</span>
+				<br/>
+				&nbsp;&nbsp;<span class="kwd">auto ref </span><span class="pln">E</span> <span class="pln">el</span>
+				<br/>
+				<span class="pun">)</span><span class="pun">;</span>
+						</div>
+					</code>
+				</div>
+				
+				<section><h2>Example</h2>
+
+<pre class="code"><code class="lang-d"><a href="../parserino/Document.html"><span class="typ">Document</span></a><span class="pln"> doc </span><span class="pun">= </span><span class="str">"&lt;p&gt;"</span><span class="pun">;
+<a href="../parserino/Element.html"></span><span class="typ">Element</span></a><span class="pln"> p </span><span class="pun">= </span><span class="pln">doc<wbr/></span><span class="pun">.</span><span class="pln">byTagName</span><span class="pun">(</span><span class="str">"p"</span><span class="pun">)<wbr/>.</span><span class="pln">front</span><span class="pun">;
+</span><span class="pln">p<wbr/></span><span class="pun">.</span><span class="pln">prependSibling</span><span class="pun">(</span><span class="str">"&lt;a&gt;first-before&lt;/a&gt;&lt;a&gt;&lt;b&gt;second&lt;/b&gt;&lt;/a&gt;"<a href="../parserino/asFragment.html"></span><wbr/><span class="pun">.</span><span class="pln">asFragment</span></a><span class="pun">);
+</span><span class="pln">p<wbr/></span><span class="pun">.</span><span class="pln">appendSibling</span><span class="pun">(</span><span class="str">"&lt;a&gt;first-after&lt;/a&gt;&lt;a&gt;&lt;b&gt;second&lt;/b&gt;&lt;/a&gt;"<a href="../parserino/asFragment.html"></span><wbr/><span class="pun">.</span><span class="pln">asFragment</span></a><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">doc<wbr/></span><span class="pun">.</span><span class="pln">toString</span><span class="pun">() == </span><span class="str">`&lt;html&gt;&lt;head&gt;&lt;/head&gt;&lt;body&gt;&lt;a&gt;first-before&lt;/a&gt;&lt;a&gt;&lt;b&gt;second&lt;/b&gt;&lt;/a&gt;&lt;p&gt;&lt;/p&gt;&lt;a&gt;first-after&lt;/a&gt;&lt;a&gt;&lt;b&gt;second&lt;/b&gt;&lt;/a&gt;&lt;/body&gt;&lt;/html&gt;`</span><span class="pun">);
+
+</span></code></pre>
+</section>
+<section><h2>Example</h2>
+
+<pre class="code"><code class="lang-d"><a href="../parserino/Document.html"><span class="typ">Document</span></a><span class="pln"> doc </span><span class="pun">= </span><span class="str">`&lt;p id="start"&gt;`</span><span class="pun">;
+
+<a href="../parserino/Element.html"></span><span class="typ">Element</span></a><span class="pln"> p </span><span class="pun">= </span><span class="pln">doc<wbr/></span><span class="pun">.</span><span class="pln">byTagName</span><span class="pun">(</span><span class="str">"p"</span><span class="pun">)<wbr/>.</span><span class="pln">front</span><span class="pun">;
+</span><span class="pln">p<wbr/></span><span class="pun">.</span><span class="pln">appendChild</span><span class="pun">(</span><span class="str">"&lt;p&gt;post&lt;/p&gt;&lt;p&gt;post1&lt;/p&gt;"<a href="../parserino/asFragment.html"></span><wbr/><span class="pun">.</span><span class="pln">asFragment</span></a><span class="pun">);
+</span><span class="pln">p<wbr/></span><span class="pun">.</span><span class="pln">prependChild</span><span class="pun">(</span><span class="str">"&lt;p&gt;pre&lt;/p&gt;&lt;p&gt;pre1&lt;/p&gt;"<a href="../parserino/asFragment.html"></span><wbr/><span class="pun">.</span><span class="pln">asFragment</span></a><span class="pun">);
+</span><span class="pln">p<wbr/></span><span class="pun">.</span><span class="pln">appendChild</span><span class="pun">(</span><span class="str">"&lt;p&gt;text&lt;/p&gt;"</span><span class="pun">);
+
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">doc<wbr/></span><span class="pun">.</span><span class="pln">body<wbr/></span><span class="pun">.</span><span class="pln">toString </span><span class="pun">== </span><span class="str">`&lt;body&gt;&lt;p id="start"&gt;&lt;p&gt;pre&lt;/p&gt;&lt;p&gt;pre1&lt;/p&gt;&lt;p&gt;post&lt;/p&gt;&lt;p&gt;post1&lt;/p&gt;&amp;lt;p&amp;gt;text&amp;lt;/p&amp;gt;&lt;/p&gt;&lt;/body&gt;`</span><span class="pun">);
+
+</span></code></pre>
+</section>
+
+			</div>
+			<footer>
+				<div id="license-info">
+					
+					
+					
+				</div>
+			</footer>
+		</div>
+	</body>
+</html>

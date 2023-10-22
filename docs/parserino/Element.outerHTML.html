@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+		<title>Element.outerHTML - multiple declarations</title>
+		<link rel="stylesheet" href="../css/style.min.css"/>
+		<script type="text/javascript" src="../js/script.min.js"></script>
+	</head>
+	<body onload="setupDdox();">
+		<header></header>
+		<nav id="main-nav">
+			<div>
+				<noscript>
+					<p style="color: red">The search functionality needs JavaScript enabled</p>
+				</noscript>
+				<div id="symbolSearchPane" style="display: none">
+					<form action="#" method="GET">
+						<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(24);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" autofocus/>
+					</form>
+					<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../";
+document.getElementById('symbolSearchPane').style.display = 'block';</script>
+				</div>
+				<ul class="tree-view">
+					<li>
+						<div class="module selected">
+							<a href="../parserino.html">parserino</a>
+						</div>
+					</li>
+				</ul>
+			</div>
+			<p id="main-nav-footer">
+				Built with
+				<a href="https://github.com/MartinNowak/scod">scod</a>
+			</p>
+		</nav>
+		<div id="main-contents">
+			<div>
+				<h1>Element.outerHTML - multiple declarations</h1>
+				<nav class="page-nav">
+					<ul>
+						<li>
+							<a href="#0">
+								Function <code>Element.outerHTML</code>
+							</a>
+						</li>
+						<li>
+							<a href="#1">
+								Function <code>Element.outerHTML</code>
+							</a>
+						</li>
+					</ul>
+				</nav><h2 id="0">Function Element.outerHTML</h2><p>The outer html of this element
+</p>
+				<div class="prototype">
+					<code class="lang-d">
+						<div class="single-prototype">
+				<span class="typ">string</span> <span class="pln">outerHTML</span><span class="pun">(</span><span class="pun">)</span><span class="pln"> </span><span class="kwd">@property</span><span class="pun">;</span>
+						</div>
+					</code>
+				</div>
+				
+				<h2 id="1">Function Element.outerHTML</h2><p>Set the outer html of this element
+</p>
+				<div class="prototype">
+					<code class="lang-d">
+						<div class="single-prototype">
+				<span class="typ">void</span> <span class="pln">outerHTML</span>
+				<span class="pun">(</span>
+				<br/>
+				&nbsp;&nbsp;<span class="typ">string</span> <span class="pln">html</span>
+				<br/>
+				<span class="pun">)</span><span class="pln"> </span><span class="kwd">@property</span><span class="pun">;</span>
+						</div>
+					</code>
+				</div>
+				
+				<section><h3>Example</h3>
+
+<pre class="code"><code class="lang-d"><a href="../parserino/Document.html"><span class="typ">Document</span></a><span class="pln"> d </span><span class="pun">= </span><span class="str">"&lt;html&gt;&lt;a&gt;&lt;p&gt;"</span><span class="pun">;
+
+</span><span class="kwd">auto </span><span class="pln">p </span><span class="pun">= </span><span class="pln">d<wbr/></span><span class="pun">.</span><span class="pln">byTagName</span><span class="pun">(</span><span class="str">"p"</span><span class="pun">)<wbr/>.</span><span class="pln">front</span><span class="pun">;
+</span><span class="pln">p<wbr/></span><span class="pun">.</span><span class="pln">outerHTML </span><span class="pun">= </span><span class="str">"&lt;div&gt;&lt;a&gt;"</span><span class="pun">;
+
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">p<wbr/></span><span class="pun">.</span><span class="pln">name </span><span class="pun">== </span><span class="str">"p"</span><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">d<wbr/></span><span class="pun">.</span><span class="pln">body<wbr/></span><span class="pun">.</span><span class="pln">descendants<wbr/></span><span class="pun">.</span><span class="pln">front<wbr/></span><span class="pun">.</span><span class="pln">name </span><span class="pun">== </span><span class="str">"a"</span><span class="pun">);
+
+</span></code></pre>
+</section>
+
+			</div>
+			<footer>
+				<div id="license-info">
+					
+					
+					
+				</div>
+			</footer>
+		</div>
+	</body>
+</html>
