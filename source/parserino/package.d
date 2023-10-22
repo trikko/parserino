@@ -154,11 +154,11 @@ struct Document
         assert(doc == "<html><head></head><body></body></html>");
     }
 
-    /// The content of <title>
+    /// The content of `<title>` tag
     @property string title() { return titleImpl(false); }
     @property string rawTitle() { return titleImpl(true); }
 
-    /// Set the content of <title>
+    /// Set the content of `<title>` tag
     @property void title(const string s) { CallWithLexborString!lxb_html_document_title_set(payload.document, s); }
 
     unittest
@@ -215,10 +215,10 @@ struct Document
         assert(html == "<html><head></head><body></body></html>");
     }
 
-    /// The <body> element
+    /// The `<body>` element
     @property Element body() { return Element(payload, cast(lxb_dom_element_t*)lxb_html_document_body_element_noi(payload.document)); }
 
-    /// The <head> element
+    /// The `<head>` element
     @property Element head() { return Element(payload, cast(lxb_dom_element_t*)lxb_html_document_head_element_noi(payload.document)); }
 
     unittest
