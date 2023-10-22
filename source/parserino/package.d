@@ -22,7 +22,18 @@ OTHER DEALINGS IN THE SOFTWARE.
 
 /** HTML5 parser and DOM manipulation library.
  *
- * Parserino is a wrapper around the lexbor library
+ * Parserino is a fast html5 parser and DOM manipulation library based on the lexbor library.
+ * It's written in D and it's designed to be easy to use and fast.
+ * ---
+ * import parserino;
+ * void main()
+ * {
+ *    auto doc = Document("<html><body><p>Hello World!</p></body></html>");
+ *    assert(doc.body.firstChild.innerText == "Hello World!");
+ *    assert(doc.byTagName("p").front.innerText == "Hello World!");
+ * }
+ * ---
+ * The main two types you will use are `parserino.Document` and `parserino.Element`.
  */
 module parserino;
 
@@ -37,14 +48,16 @@ import core.thread : Fiber;
 /// Order of visit
 enum VisitOrder
 {
-    Normal,
-    Reverse
+    Normal, /// Normal
+    Reverse /// Reverse
 }
+
+
 
 /// The HTML5 Document
 struct Document
 {
-    /// C-tor
+    /// Build a document from source
     this(const string html) { parse(html); }
 
     bool opEquals(const typeof(null) o) const @safe nothrow pure { return !isValid; }
@@ -95,7 +108,7 @@ struct Document
 
     }
 
-    /// Recreate the document from source
+
     private void parse(const string html)
     {
         if(payload != null)
@@ -229,7 +242,13 @@ struct Document
     /// A lazy range of elements filtered by tag name
     auto byTagName(string name) { auto range = Element(payload, payload.document.dom_document.element).byTagName(name); return range; }
 
-    /// A lazy range of elements filtered by comment text
+    /++ A lazy range of elements identified by an adjacent comment
+    + ---
+    + Document doc = "<div><!--hello--><p></p></div>";
+    + Element e = doc.byComment("hello").front;
+    + assert(e.next.name == "p");
+    + ---
+    +/
     auto byComment(string comment) { auto range =  Element(payload, payload.document.dom_document.element).byComment(comment); return range; }
 
     /// A lazy range of elements filtered using a css selector
@@ -275,6 +294,12 @@ struct Document
         return this;
     }
 
+    /++ You can cast a document to a string
+    + ---
+    + string html = cast(string) doc;
+    + assert(doc == html);
+    + ---
+    +/
     auto opCast(string)() const { return toString(); }
 
     unittest
@@ -442,8 +467,8 @@ struct Element
     /// A simple key/value struct representing a html attribute
     struct Attribute
     {
-        string name;
-        string value;
+        string name;    /// Name of the attribute. For example "href"
+        string value;   /// Value of the attribute. For example "https://dlang.org"
     }
 
     private void onlyValidElements(string fname = __FUNCTION__) const
@@ -620,7 +645,7 @@ struct Element
     }
 
 
-    /// Tag
+    /// The tag name of this element. For example "p" or "div"
     @property string name() { onlyValidElements(); return ReturnLexborString!lxb_dom_element_local_name(element); }
 
     unittest
@@ -1044,7 +1069,9 @@ struct Element
 
     }
 
-    /// See_also: Document.byId
+    /++ Search for elements by id
+      +  See_also: `parserino.Document.byId`
+    +/
     Element byId(string id)
     {
         onlyRealElements();
@@ -1063,7 +1090,9 @@ struct Element
         else return r.front;
     }
 
-    /// See_also: Document.byClass
+    /++ Search for elements by class
+    + See_also: `parserino.Document.byClass`
+    +/
     auto byClass(string name)
     {
         onlyRealElements();
@@ -1077,7 +1106,9 @@ struct Element
         });
     }
 
-    /// See_also: Document.byTagName
+    /++ Search for elements by tag name
+    + See_also: `parserino.Document.byTagName`
+    +/
     auto byTagName(string name)
     {
         onlyRealElements();
@@ -1088,7 +1119,14 @@ struct Element
         });
     }
 
-    /// See_also: Document.byComment
+    /++ Search for elements by comment
+    + ---
+    + Document doc = "<div><!--hello--><p></p></div>";
+    + Element e = doc.byComment("hello").front;
+    + assert(e.next.name == "p");
+    + ---
+    + See_also: `parserino.Document.byComment`
+    +/
     auto byComment(string comment, bool stripSpaces = true)
     {
         import std.string : strip;
@@ -1097,7 +1135,9 @@ struct Element
         return byTagName("!--").filter!(x => stripSpaces?(x.innerText.strip == comment.strip):(x.innerText == comment));
     }
 
-    /// See_also: Document.bySelector
+    /++ Search for elements by selector
+    + See_also: `parserino.Document.bySelector`
+    +/
     auto bySelector(string selector) { onlyRealElements(); return new SelectorElementRange(docPayload, element, selector); }
 
     ///
@@ -1315,7 +1355,7 @@ struct Element
 
     alias canFind = contains;
 
-    ///
+    /// Check if this element contains another one
     @property bool contains(E = Element)(auto ref E e, bool deep = true)
     {
         onlyRealElements();
@@ -1333,9 +1373,9 @@ struct Element
         return false;
     }
 
-    ///
+    /// Check if this element is the ancestor of another one
     @property bool isAncestorOf(E = element)(auto ref E e) { onlyRealElements(); return this.contains(e); }
-    ///
+    /// Check if this element is the descendant of another one
     @property bool isDescendantOf(E = element)(auto ref E e) { return e.contains(this); }
 
     unittest
@@ -1445,9 +1485,9 @@ struct Element
 
     }
 
-    ///
+    /// The outer html of this element
     @property string outerHTML() { onlyValidElements(); return toString(); }
-    ///
+    /// Set the outer html of this element
     @property void outerHTML(string html)
     {
         onlyValidElements();
@@ -1472,7 +1512,7 @@ struct Element
         assert(d.body.descendants.front.name == "a");
     }
 
-    ///
+    /// Convert this element to a string
     string toString(bool deep = true) const
     {
         onlyValidElements();
@@ -1663,7 +1703,7 @@ struct Element
 
 }
 
-
+/// A lazy range of elements
 class ChildrenElementRange(VisitOrder order = VisitOrder.Normal)
 {
     ChildrenElementRange save()
@@ -1787,7 +1827,7 @@ class ChildrenElementRange(VisitOrder order = VisitOrder.Normal)
     lxb_dom_element_t*          element;
 }
 
-
+/// A lazy range of elements
 class SelectorElementRange
 {
     Element front() { return Element(docPayload, current); }
@@ -1915,6 +1955,7 @@ if (isInputRange!T)
     else return range.front;
 }
 
+///
 unittest
 {
     import std.exception : assertThrown;
@@ -1939,6 +1980,13 @@ private struct FragmentString
     alias fragment this;
 }
 
+/++ Create a fragment from a string. The fragment is not attached to any document by default.
++ The fragment is not a valid element or document, it's just a piece of html you can add to a document.
++ ---
++ auto fragment = "<b>hello</b>".asFragment;
++ doc.body.appendChild(fragment);
++ ---
++/
 auto asFragment(string s)
 {
     return cast(FragmentString)s;
