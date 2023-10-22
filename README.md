@@ -5,8 +5,7 @@
 * Every method is unit-tested on Linux, MacOS, Windows
 
 # documentation
-* struct [Document](https://parserino.dpldocs.info/parserino.Document.html)
-* struct [Element](https://parserino.dpldocs.info/parserino.Element.html)
+All docs are available [here](https://trikko.github.io/parserino/)
 
 # how it works
 
