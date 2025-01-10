@@ -1154,8 +1154,8 @@ struct Element
         Element[] res = doc.bySelector("h4+ul li:nth-of-type(2), #this").array;
 
         assert(res.length == 2);
-        assert(res[0].innerText == "four");
-        assert(res[1].innerText == "two");
+        assert(res[0].innerText == "two");
+        assert(res[1].innerText == "four");
     }
 
     unittest
