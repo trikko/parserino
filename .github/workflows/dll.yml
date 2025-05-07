@@ -1,0 +1,42 @@
+name: Build Lexbor DLL
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Lexbor Version'
+        required: true
+        default: 'e01ece21c216a1ef0147cefcd77782d2d25d7d4a'
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake gcc g++ mingw-w64
+
+    - name: Clone repository lexbor
+      uses: actions/checkout@v4
+      with:
+        repository: lexbor/lexbor
+        ref:  ${{ github.event.inputs.version }}
+        path: lexbor
+
+    - name: Configure and build with CMake
+      working-directory: ./lexbor
+      run: |
+        cmake . -DCMAKE_SYSTEM_NAME=Windows -DCMAKE_CROSSCOMPILING=true -DCMAKE_C_COMPILER=x86_64-w64-mingw32-gcc -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-g++ -DLEXBOR_BUILD_TESTS=OFF -DLEXBOR_BUILD_EXAMPLES=OFF -DLEXBOR_BUILD_SEPARATELY=OFF -DLEXBOR_BUILD_STATIC=OFF -DLEXBOR_BUILD_SHARED=ON
+        make -j$(nproc)
+
+    - name: Rename DLL
+      working-directory: ./lexbor
+      run: |
+        mv liblexbor.dll lexbor.dll
+
+    - name: Upload DLL as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: lexbor-dll
+        path: ./lexbor/lexbor.dll
