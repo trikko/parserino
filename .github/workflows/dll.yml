@@ -6,7 +6,7 @@ on:
       version:
         description: 'Lexbor Version'
         required: true
-        default: 'e01ece21c216a1ef0147cefcd77782d2d25d7d4a'
+        default: '7fb22cf5664a331d7c24b113489e566767c9c25a'
 jobs:
   build:
     runs-on: ubuntu-latest

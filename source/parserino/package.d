@@ -254,7 +254,7 @@ struct Document
     /// A lazy range of elements filtered using a css selector
     auto bySelector(string selector) { auto range =  Element(payload, payload.document.dom_document.element).bySelector(selector); return range; }
 
-    this(ref return scope typeof(this) rhs)
+    this(ref scope typeof(this) rhs)
     {
         if (rhs.payload == null) return;
         payload = rhs.payload;
@@ -1534,11 +1534,21 @@ struct Element
         return output;
     }
 
-    this(ref return scope typeof(this) rhs)
+    this(ref typeof(this) rhs)
     {
         if (rhs.element == null) return;
         element = rhs.element;
         docPayload = rhs.docPayload;
+
+        Element.RefCounter.add(element);
+        Document.RefCounter.add(docPayload);
+    }
+
+    this(ref const typeof(this) rhs)
+    {
+        if (rhs.element == null) return;
+        element = cast(lxb_dom_element_t*)rhs.element;
+        docPayload = cast(Document.DocumentPayload*)rhs.docPayload;
 
         Element.RefCounter.add(element);
         Document.RefCounter.add(docPayload);
@@ -1631,6 +1641,29 @@ struct Element
 
         docPayload = rhs.docPayload;
         element = rhs.element;
+
+        if (docPayload != null)
+            Document.RefCounter.add(docPayload);
+
+        if (element != null)
+            Element.RefCounter.add(element);
+
+        if (oldElement != null)
+            Element.RefCounter.add(oldElement);
+
+        if (oldPayload != null)
+            Document.RefCounter.remove(oldPayload);
+
+        return this;
+    }
+
+    auto opAssign(ref const typeof(this) rhs)
+    {
+        auto oldPayload = docPayload;
+        auto oldElement = element;
+
+        docPayload = cast(Document.DocumentPayload*)rhs.docPayload;
+        element = cast(lxb_dom_element_t*)rhs.element;
 
         if (docPayload != null)
             Document.RefCounter.add(docPayload);
