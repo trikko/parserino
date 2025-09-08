@@ -22,7 +22,7 @@ jobs:
         dc: [ldc-latest, dmd-latest]
         exclude:
         - os: macos-14
-          dc: dmd-2.110.0
+          dc: dmd-latest
         - os: macos-13
           dc: ldc-latest
     
