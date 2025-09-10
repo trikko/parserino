@@ -23,10 +23,11 @@ jobs:
         RUN apk add vim gcc musl-dev ldc dub llvm-libunwind-static openssl-libs-static gzip git upx cmake make
         WORKDIR /app
         RUN git clone https://github.com/lexbor/lexbor.git
+        WORKDIR /app/lexbor
         RUN git checkout ${{ github.event.inputs.version }}
         RUN cmake . -DLEXBOR_BUILD_TESTS=OFF -DLEXBOR_BUILD_EXAMPLES=OFF -DLEXBOR_BUILD_SEPARATELY=OFF -DLEXBOR_BUILD_SHARED=OFF -DLEXBOR_BUILD_STATIC=ON
         RUN make -j3
-        CMD mv liblexbor.a liblexbor_parserino_x86_64.a" > Dockerfile
+        CMD mv liblexbor.a ../liblexbor_parserino_x86_64.a" > Dockerfile
 
         docker build -t builder-image .
 
