@@ -1,0 +1,50 @@
+name: Build parserino libx86_64
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Lexbor Version'
+        required: true
+        default: '7fb22cf5664a331d7c24b113489e566767c9c25a'
+jobs:
+  build-and-export:
+    runs-on: ubuntu-latest
+
+    steps:
+    # Checkout the repository
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    # Set up Docker build
+    - name: Build Docker image
+      run: |
+        echo "FROM alpine:latest
+        RUN apk add vim gcc musl-dev ldc dub llvm-libunwind-static openssl-libs-static gzip git upx cmake make
+        WORKDIR /app
+        RUN git clone https://github.com/lexbor/lexbor.git
+        RUN git checkout ${{ github.event.inputs.version }}
+        RUN cmake . -DLEXBOR_BUILD_TESTS=OFF -DLEXBOR_BUILD_EXAMPLES=OFF -DLEXBOR_BUILD_SEPARATELY=OFF -DLEXBOR_BUILD_SHARED=OFF -DLEXBOR_BUILD_STATIC=ON
+        RUN make -j3
+        CMD mv liblexbor.a liblexbor_parserino_x86_64.a" > Dockerfile
+
+        docker build -t builder-image .
+
+    # Run the Docker container to build the project
+    - name: Run Docker container and build project
+      run: |
+        docker run --name builder-container builder-image || true
+
+    # Copy compiled file from Docker container to host
+    - name: Copy compiled binary
+      run: |
+        docker cp builder-container:/app/liblexbor_parserino_x86_64.a .
+        docker rm builder-container
+
+
+    # Upload the binary as an artifact
+    - name: Upload binary as artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: lexbor_parserino_x86_64.
+        path: liblexbor_parserino_x86_64.a
