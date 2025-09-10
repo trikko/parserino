@@ -11,7 +11,7 @@ configuration "linux-prebuilt-lexbor" {
 }
 
 configuration "windows-prebuilt-lexbor" {
-   platform "windows-x86_64"
+   platform "windows"
    copyFiles "dll/*.dll" platform="windows"
 }
 
