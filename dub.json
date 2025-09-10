@@ -1,0 +1,34 @@
+{
+	"configurations": [
+
+		{
+			"name": "linux-prebuilt-lexbor",
+			"platforms": ["linux-x86_64"],
+			"lflags": ["-L$PACKAGE_DIR"],
+			"libs": ["lexbor_parserino_x86_64"],
+			"targetType": "library"
+		},
+
+		{
+			"name": "windows-prebuilt-lexbor",
+			"platforms": ["windows-x86_64"],
+			"copyFiles-windows": ["dll/*.dll"],
+			"targetType": "library"
+		},
+
+		{
+			"name": "fallback-lexbor",
+			"platforms": ["posix"],
+			"lflags": ["-L$PACKAGE_DIR"],
+			"libs": ["lexbor_parserino"],
+			"preBuildCommands": [ "dub --single build_lexbor_lib.d"],
+			"targetType": "library"
+		}
+	],
+
+	"authors": [ "Andrea Fontana" ],
+	"copyright": "Copyright © 2022-2025, Andrea Fontana",
+	"description": "A super-fast HTML (HTML5!) parser and DOM editor, for D",
+	"license": "MIT",
+	"name": "parserino"
+}
