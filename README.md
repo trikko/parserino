@@ -7,6 +7,11 @@
 # documentation
 All docs are available [here](https://trikko.github.io/parserino/)
 
+### LLM-Friendly Documentation
+If you are using an LLM (like Gemini, Claude, or ChatGPT) to help you write code with Parserino, you can point it to these files for a concise API overview:
+- [docs/llms.txt](docs/llms.txt) - Core API overview and quick start.
+- [docs/llms-full.txt](docs/llms-full.txt) - Detailed API reference with examples.
+
 # how it works
 
 <sub>Check also the [examples](https://github.com/trikko/parserino/tree/master/examples) folder</sub>

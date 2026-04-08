@@ -1,0 +1,67 @@
+# Parserino: Fast HTML5 Parser and DOM Manipulation for D
+
+Parserino is a high-performance HTML5 parser and DOM manipulation library for the D programming language, built on the Lexbor engine.
+
+## Core Concepts
+
+- **Document**: The main entry point for parsing and managing HTML content.
+- **Element**: Represents a single node in the DOM tree (tags, text, comments).
+- **Lazy Ranges**: Most search methods (`byTagName`, `bySelector`, etc.) return lazy ranges, allowing for efficient memory usage and partial document processing.
+
+## Installation & Basic Usage
+
+Add `parserino` to your `dub.json` or `dub.sdl`.
+
+```d
+import parserino;
+void main() {
+    auto doc = Document("<html><body><p>Hello World!</p></body></html>");
+    assert(doc.body.firstChild.innerText == "Hello World!");
+}
+```
+
+## API Reference
+
+### Document
+- `this(string html)`: Parses HTML string into a DOM tree.
+- `title`, `title(string)`: Get or set the document title.
+- `body`, `head`: Properties to access the `<body>` and `<head>` elements.
+- `createElement(string tag)`: Creates a new element.
+- `createText(string text)`: Creates a text node.
+- `createComment(string text)`: Creates a comment node.
+- `fragment(string html)`: Parses a string into an unattached DOM fragment.
+- `toString()`: Serializes the entire document back to HTML.
+- **Search Methods**: `byId(id)`, `byClass(class)`, `byTagName(tag)`, `bySelector(css)`, `byComment(text)`.
+
+### Element
+- `name`: The tag name (e.g., "div", "p", "#text", "!--").
+- `id`, `classes`: Shortcuts for `id` and `class` attributes.
+- `attributes`: A range of `Attribute` (struct with `name` and `value`).
+- `getAttribute(name)`, `setAttribute(name, value)`, `hasAttribute(name)`, `removeAttribute(name)`.
+- `innerHTML`, `innerText`, `outerHTML`: Get or set content. Setting `innerHTML` parses the string as HTML.
+- `appendChild(node)`, `prependChild(node)`: Add children nodes. Accepts `Element`, `string` (as text), or `FragmentString`.
+- `appendSibling(node)`, `prependSibling(node)`: Add siblings.
+- `remove()`: Removes the element from its parent.
+- `replaceWith(node)`: Replaces the current element with another.
+- `parent`, `next`, `prev`, `firstChild`, `lastChild`: Navigation properties.
+- `children(VisitOrder)`, `descendants(VisitOrder)`: Ranges for traversing children (immediate) or descendants (recursive).
+
+### Range Helpers
+Since many operations return ranges, Parserino provides convenient helpers:
+- `frontOrThrow(range)`: Returns the first element of the range. Throws an `Exception` if the range is empty.
+- `frontOr(range, fallback)`: Returns the first element or a provided `fallback` element if empty.
+- `frontOrInit(range)`: Returns the first element or `Element.init` (an invalid element) if empty.
+
+### Fragment Handling
+To insert raw HTML strings as DOM nodes (instead of plain text), use `.asFragment`:
+```d
+doc.body.appendChild("<p>New Paragraph</p>".asFragment);
+```
+
+## Examples
+Explore the `examples/` directory for practical implementations:
+- `01_hello_world`: Basic parsing and editing.
+- `02_search_elements`: Using `byTagName` and CSS selectors.
+- `03_edit_dom`: Adding fragments and creating new elements.
+- `04_wikipedia_scraper`: Real-world scraping with lazy filtering and CSS selectors.
+- `05_serve_html`: Integration with web servers.

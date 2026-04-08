@@ -1,0 +1,123 @@
+# Parserino: Fast HTML5 Parser and DOM Manipulation for D
+
+Parserino is a high-performance HTML5 parser and DOM manipulation library for the D programming language, built on the Lexbor engine.
+
+## Core Types
+
+### `Document`
+The root of the DOM tree. Created from an HTML string.
+
+- `this(string html)`: Constructor.
+- `bool isValid`: True if the document is successfully parsed.
+- `string title`: Property to get or set the content of the `<title>` tag.
+- `Element head`: Returns the `<head>` element.
+- `Element body`: Returns the `<body>` element.
+- `Element createElement(string tagName)`: Creates a new element with the specified tag name.
+- `Element createText(string text)`: Creates a text node.
+- `Element createComment(string text)`: Creates a comment node (`<!-- text -->`).
+- `Element fragment(string html)`: Creates a document fragment from a string.
+- `string toString()`: Serializes the entire document back to HTML.
+- `byId(string id)`: Finds an element by its ID (throws if not found).
+- `byClass(string name)`: Returns a lazy range of elements with the specified class.
+- `byTagName(string name)`: Returns a lazy range of elements with the specified tag name.
+- `bySelector(string selector)`: Returns a lazy range of elements matching a CSS selector.
+- `byComment(string comment)`: Returns a lazy range of comment nodes matching the specified text.
+
+### `Element`
+Represents a node in the DOM.
+
+- `bool isValid`: True if the element is not null.
+- `string name`: The tag name (e.g., "div", "p", "#text", "!--").
+- `string id`: The `id` attribute value.
+- `auto classes`: A range of classes (split by space).
+- `auto attributes`: A range of `Attribute` structs (containing `name` and `value`).
+- `bool hasAttribute(string attr)`: Checks for attribute existence.
+- `string getAttribute(string attr)`: Retrieves an attribute's value.
+- `void setAttribute(string name, string value)`: Sets or updates an attribute.
+- `void removeAttribute(string attr)`: Removes an attribute.
+- `string innerHTML`: Get/set the HTML content inside the element.
+- `string innerText`: Get/set the text content (strips tags on get, escapes on set).
+- `string outerHTML`: Get/set the HTML including the element itself.
+- `void appendChild(T)(T el)`: Adds a child. `T` can be `Element`, `string` (added as text), or `FragmentString` (added as HTML).
+- `void prependChild(T)(T el)`: Adds a child at the beginning.
+- `void appendSibling(T)(T el)`: Adds a sibling after the current element.
+- `void prependSibling(T)(T el)`: Adds a sibling before the current element.
+- `bool remove()`: Detaches the element from its parent.
+- `void replaceWith(T)(T el)`: Replaces the element with another.
+- `void copyFrom(Element e, bool deep = true)`: Copies attributes and optionally children from another element.
+- `Element parent`, `Element next`, `Element prev`: Navigation.
+- `Element firstChild(bool includeAllElements = false)`: Returns the first child (optionally including text/comments).
+- `Element lastChild(bool includeAllElements = false)`: Returns the last child.
+- `auto children(VisitOrder order = VisitOrder.Normal)(bool returnAllElements = false)`: Immediate children range.
+- `auto descendants(VisitOrder order = VisitOrder.Normal)(bool returnAllElements = false)`: Recursive descendants range.
+- `bool contains(Element e, bool deep = true)`: Checks if the element contains another.
+
+### `VisitOrder` (Enum)
+Used with `children` and `descendants` ranges.
+- `VisitOrder.Normal`: Forward traversal.
+- `VisitOrder.Reverse`: Backward traversal.
+
+### `Attribute` (Struct)
+- `string name`: Attribute name.
+- `string value`: Attribute value.
+
+## Range Helpers
+Since most search methods return lazy ranges, these helpers facilitate common operations:
+
+- `frontOrThrow(range)`: Returns the first element or throws `Exception` if empty.
+- `frontOr(range, fallback)`: Returns the first element or the `fallback` element.
+- `frontOrInit(range)`: Returns the first element or an uninitialized `Element` (`null`).
+
+## Fragment Handling
+Use `.asFragment` on a string to indicate it should be parsed as HTML when using `appendChild`, `prependChild`, `appendSibling`, `prependSibling`, or `outerHTML`.
+
+```d
+import parserino;
+auto doc = Document("<div></div>");
+doc.body.firstChild.appendChild("<b>Bold</b>".asFragment);
+// Result: <body><div><b>Bold</b></div></body>
+```
+
+## Practical Examples
+
+### Wikipedia Scraper (Lazy Processing)
+```d
+import std, parserino;
+void main() {
+    auto data = "https://en.wikipedia.org/wiki/Special:Random".get.to!string;
+    Document doc = Document(data);
+
+    // Get the canonical URL from <head>
+    auto canonicalUrl = doc.head.bySelector("link[rel=canonical]").frontOrThrow.getAttribute("href");
+
+    // Take the first 5 internal links lazily
+    auto internalLinks = doc.byId("mw-content-text")
+        .byTagName("a")
+        .filter!(x => x.getAttribute("href").startsWith("/wiki/"))
+        .filter!(x => !x.getAttribute("href").startsWith("/wiki/File:"))
+        .take(5);
+
+    foreach(l; internalLinks)
+        writeln(l.getAttribute("title"), " => ", l.getAttribute("href"));
+}
+```
+
+### DOM Manipulation
+```d
+import std.stdio, parserino;
+void main() {
+    Document doc = Document("<html><body><h1>Old Title</h1></body></html>");
+    auto h1 = doc.byTagName("h1").frontOrThrow;
+    h1.innerText = "New Title";
+
+    auto p = doc.createElement("p");
+    p.innerText = "A new paragraph.";
+    p.setAttribute("class", "description");
+    doc.body.appendChild(p);
+
+    writeln(doc.toString());
+}
+```
+
+## Notes on Performance
+Parserino uses lazy ranges for traversal. This means searching through a large document often doesn't require visiting every node unless the entire range is consumed (e.g., using `.array` or `.take(N)`).
