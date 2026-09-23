@@ -8,7 +8,7 @@ public import parserino.lexbor.core.mraw;
 public import parserino.lexbor.core.hash;
 public import parserino.lexbor.dom.interface_;
 public import parserino.lexbor.dom.interfaces.node;
-import parserino.lexbor.dom.interfaces.element;
+public import parserino.lexbor.dom.interfaces.element;
 import parserino.lexbor.dom.interfaces.text;
 import parserino.lexbor.dom.interfaces.document_fragment;
 import parserino.lexbor.dom.interfaces.comment;
@@ -20,7 +20,7 @@ __gshared:
 
 // ---- document.h ----
 /*
- * Copyright (C) 2018-2025 Alexander Borisov
+ * Copyright (C) 2018-2026 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
@@ -44,14 +44,34 @@ alias LXB_DOM_DOCUMENT_DTYPE_HTML = lxb_dom_document_dtype_t.LXB_DOM_DOCUMENT_DT
 alias LXB_DOM_DOCUMENT_DTYPE_XML = lxb_dom_document_dtype_t.LXB_DOM_DOCUMENT_DTYPE_XML;
 
 
+alias lxb_dom_document_opt_t = uint;
+
+enum lxb_dom_document_opt_ {
+    LXB_DOM_DOCUMENT_OPT_UNDEF = 0x00,
+    LXB_DOM_DOCUMENT_OPT_WO_EVENTS = 1 << 0
+}
+alias LXB_DOM_DOCUMENT_OPT_UNDEF = lxb_dom_document_opt_.LXB_DOM_DOCUMENT_OPT_UNDEF;
+alias LXB_DOM_DOCUMENT_OPT_WO_EVENTS = lxb_dom_document_opt_.LXB_DOM_DOCUMENT_OPT_WO_EVENTS;
+
+
 struct lxb_dom_document_css; // D port: opaque
 alias lxb_dom_document_css_t = lxb_dom_document_css;
 
-struct lxb_dom_document_node_cb_t {
-    lxb_dom_node_cb_insert_f insert;
-    lxb_dom_node_cb_remove_f remove;
+/* 4.2.3. Mutation algorithms. */
+struct lxb_dom_document_mutation_cb_t {
+    lxb_dom_node_cb_insertion_f inserted;
+    lxb_dom_node_cb_removing_f removed;
+    lxb_dom_node_cb_moving_f moved;
     lxb_dom_node_cb_destroy_f destroy;
-    lxb_dom_node_cb_set_value_f set_value;
+    lxb_dom_node_cb_children_changed_f children_changed;
+    lxb_dom_node_cb_post_connection_f connected;
+}
+
+struct lxb_dom_document_attr_mutation_cb_t {
+    lxb_dom_element_attr_change_f change;
+    lxb_dom_element_attr_change_f append;
+    lxb_dom_element_attr_change_f remove;
+    lxb_dom_element_attr_change_f replace;
 }
 
 struct lxb_dom_document {
@@ -67,7 +87,8 @@ struct lxb_dom_document {
     lxb_dom_interface_clone_f clone_interface;
     lxb_dom_interface_destroy_f destroy_interface;
 
-    const(lxb_dom_document_node_cb_t)* node_cb;
+    const(lxb_dom_document_mutation_cb_t)* mutation;
+    const(lxb_dom_document_attr_mutation_cb_t)* attr_mutation;
 
     lexbor_mraw_t* mraw;
     lexbor_mraw_t* text;
@@ -79,6 +100,8 @@ struct lxb_dom_document {
     void* user;
 
     lxb_dom_document_css_t* css;
+
+    lxb_dom_document_opt_t options;
 
     bool tags_inherited;
     bool ns_inherited;
@@ -116,6 +139,8 @@ struct lxb_dom_document {
  *
  * @return LXB_STATUS_OK if successful, otherwise an error status value.
  */
+
+
 
 
 
@@ -190,6 +215,16 @@ struct lxb_dom_document {
     return (cast(lxb_dom_node_t*) (document)).owner_document == document;
 }
 
+ void lxb_dom_document_opt_set(lxb_dom_document_t* document, lxb_dom_document_opt_t opt)
+{
+    document.options = opt;
+}
+
+ lxb_dom_document_opt_t lxb_dom_document_opt(lxb_dom_document_t* document)
+{
+    return document.options;
+}
+
 /*
  * No inline functions for ABI.
  */
@@ -202,14 +237,24 @@ struct lxb_dom_document {
 
 
 
+
+
 // ---- document.c ----
 /*
- * Copyright (C) 2018-2021 Alexander Borisov
+ * Copyright (C) 2018-2026 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
-private const(lxb_dom_document_node_cb_t) lxb_dom_document_node_cbs = {
-    insert: null, remove: null, destroy: null, set_value: null
+private const(lxb_dom_document_mutation_cb_t) lxb_dom_document_mutation_cbs = {
+    inserted: null, removed: null, moved: null,destroy: null,
+    children_changed: null, connected: null
+};
+
+private const(lxb_dom_document_attr_mutation_cb_t) lxb_dom_document_attr_mutation_cbs = {
+    change: null,
+    append: null,
+    remove: null,
+    replace: null
 };
 
 lxb_dom_document_t* lxb_dom_document_interface_create(lxb_dom_document_t* document)
@@ -275,8 +320,6 @@ lxb_status_t lxb_dom_document_init(lxb_dom_document_t* document, lxb_dom_documen
     document.clone_interface = clone_interface;
     document.destroy_interface = destroy_interface;
 
-    document.node_cb = &lxb_dom_document_node_cbs;
-
     node = (cast(lxb_dom_node_t*) (document));
 
     node.type = LXB_DOM_NODE_TYPE_DOCUMENT;
@@ -295,6 +338,9 @@ lxb_status_t lxb_dom_document_init(lxb_dom_document_t* document, lxb_dom_documen
         document.scripting = owner.scripting;
         document.compat_mode = owner.compat_mode;
         document.css = owner.css;
+        document.mutation = owner.mutation;
+        document.attr_mutation = owner.attr_mutation;
+        document.options = owner.options;
 
         document.tags_inherited = true;
         document.ns_inherited = true;
@@ -305,6 +351,9 @@ lxb_status_t lxb_dom_document_init(lxb_dom_document_t* document, lxb_dom_documen
     }
 
     document.css = null;
+    document.mutation = &lxb_dom_document_mutation_cbs;
+    document.attr_mutation = &lxb_dom_document_attr_mutation_cbs;
+    document.options = LXB_DOM_DOCUMENT_OPT_UNDEF;
 
     /* For nodes */
     document.mraw = lexbor_mraw_create();
@@ -405,6 +454,18 @@ lxb_dom_document_t* lxb_dom_document_destroy(lxb_dom_document_t* document)
     lexbor_hash_destroy(document.prefix, true);
 
     return cast(lxb_dom_document*) lexbor_free(document);
+}
+
+void lxb_dom_document_mutation_init(lxb_dom_document_t* document)
+{
+    document.mutation = &lxb_dom_document_mutation_cbs;
+    document.attr_mutation = &lxb_dom_document_attr_mutation_cbs;
+}
+
+void lxb_dom_document_mutation_erase(lxb_dom_document_t* document)
+{
+    document.mutation = &lxb_dom_document_mutation_cbs;
+    document.attr_mutation = &lxb_dom_document_attr_mutation_cbs;
 }
 
 void lxb_dom_document_attach_doctype(lxb_dom_document_t* document, lxb_dom_document_type_t* doctype)
@@ -643,7 +704,7 @@ lxb_dom_node_t* lxb_dom_document_import_node(lxb_dom_document_t* doc, lxb_dom_no
 
 void lxb_dom_document_set_default_node_cb(lxb_dom_document_t* document)
 {
-    document.node_cb = &lxb_dom_document_node_cbs;
+    document.mutation = &lxb_dom_document_mutation_cbs;
 }
 
 /*
@@ -692,4 +753,14 @@ bool lxb_dom_document_scripting_noi(lxb_dom_document_t* document)
 void lxb_dom_document_scripting_set_noi(lxb_dom_document_t* document, bool scripting)
 {
     lxb_dom_document_scripting_set(document, scripting);
+}
+
+void lxb_dom_document_opt_set_noi(lxb_dom_document_t* document, lxb_dom_document_opt_t opt)
+{
+    lxb_dom_document_opt_set(document, opt);
+}
+
+lxb_dom_document_opt_t lxb_dom_document_opt_noi(lxb_dom_document_t* document)
+{
+    return lxb_dom_document_opt(document);
 }

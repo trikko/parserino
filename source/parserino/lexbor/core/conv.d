@@ -106,7 +106,9 @@ size_t lexbor_conv_int64_to_data(long num, lxb_char_t* buf, size_t len)
     }
 
     i = length;
-    buf[length] = '\0';
+    if (length < len) {
+        buf[length] = '\0';
+    }
 
     while (i != have_minus) {
         i -= 1;
@@ -139,12 +141,12 @@ double lexbor_conv_data_to_double(const(lxb_char_t)** start, size_t len)
     switch (**start) {
         case '-':
             minus = true;
+            goto case;
             /* fall through */
-            goto case; /* C fallthrough */
         case '+':
             (*start)++;
+            goto default;
             /* fall through */
-            goto default; /* C fallthrough */
         default:
             break;
     }
@@ -347,7 +349,7 @@ size_t lexbor_conv_dec_to_hex(uint number, lxb_char_t* out_, size_t length, bool
 
     map_str = (upper) ? map_str_u.ptr : map_str_l.ptr;
 
-    if(number != 0) {
+    if (number != 0) {
         tmp = number;
         len = 0;
 
@@ -355,8 +357,6 @@ size_t lexbor_conv_dec_to_hex(uint number, lxb_char_t* out_, size_t length, bool
             len += 1;
             tmp /= 16;
         }
-
-        /* len = (size_t) floor(log10(labs((long) number))) + 1; */
     }
     else {
         if (length > 0) {
@@ -367,13 +367,18 @@ size_t lexbor_conv_dec_to_hex(uint number, lxb_char_t* out_, size_t length, bool
         return 0;
     }
 
-    length = len - 1;
+    while (len > length) {
+        number /= 16;
+        len -= 1;
+    }
 
-    while (number != 0) {
+    tmp = cast(uint) len;
+
+    while (tmp != 0) {
+        tmp -= 1;
         c = number % 16;
         number = number / 16;
-
-        out_[ length-- ] = map_str[c];
+        out_[tmp] = map_str[c];
     }
 
     return len;

@@ -15,7 +15,6 @@ import parserino.lexbor.html.tokenizer.state_rcdata;
 import parserino.lexbor.html.tokenizer.state_rawtext;
 import parserino.lexbor.html.tokenizer.state_script;
 import parserino.lexbor.html.tree;
-import parserino.lexbor.html.tag_res;
 
 extern(C) @nogc nothrow:
 __gshared:
@@ -26,6 +25,12 @@ __gshared:
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
+enum {
+    LXB_HTML_TOKENIZER_OPT_UNDEF = 0x00,
+    LXB_HTML_TOKENIZER_OPT_VALIDATE_INPUT = 1 << 3,
+    LXB_HTML_TOKENIZER_OPT_ATTR_KEEP_DUPLICATE = 1 << 4
+}
+
 /* State */
 alias lxb_html_tokenizer_state_f = const(lxb_char_t)* function(lxb_html_tokenizer_t* tkz, const(lxb_char_t)* data, const(lxb_char_t)* end);
 
@@ -88,11 +93,15 @@ struct lxb_html_tokenizer {
     lxb_status_t status;
     bool is_eof;
 
+    /* Input stream validation (for cross-chunk UTF-8). */
+    lxb_char_t[4] utf8_buf;
+    uint utf8_buf_len;
+
     lxb_html_tokenizer_t* base;
     size_t ref_count;
 }
 
-// extern const(lxb_char_t)* lxb_html_tokenizer_eof;
+//     extern const(lxb_char_t)* lxb_html_tokenizer_eof;
 
 
 
@@ -109,6 +118,8 @@ struct lxb_html_tokenizer {
 
 
  const(lxb_char_t)* lxb_html_tokenizer_change_incoming(lxb_html_tokenizer_t* tkz, const(lxb_char_t)* pos);
+
+
 
 
 
@@ -186,6 +197,26 @@ struct lxb_html_tokenizer {
     return tkz.mraw;
 }
 
+ void lxb_html_tokenizer_input_validation_set(lxb_html_tokenizer_t* tkz, bool enabled)
+{
+    if (enabled) {
+        tkz.opt |= LXB_HTML_TOKENIZER_OPT_VALIDATE_INPUT;
+    }
+    else {
+        tkz.opt &= ~LXB_HTML_TOKENIZER_OPT_VALIDATE_INPUT;
+    }
+}
+
+ void lxb_html_tokenizer_keep_duplicate_set(lxb_html_tokenizer_t* tkz, bool keep)
+{
+    if (keep) {
+        tkz.opt |= LXB_HTML_TOKENIZER_OPT_ATTR_KEEP_DUPLICATE;
+    }
+    else {
+        tkz.opt &= ~LXB_HTML_TOKENIZER_OPT_ATTR_KEEP_DUPLICATE;
+    }
+}
+
  lxb_status_t lxb_html_tokenizer_temp_realloc(lxb_html_tokenizer_t* tkz, size_t size)
 {
     size_t length = tkz.pos - tkz.start;
@@ -207,7 +238,7 @@ struct lxb_html_tokenizer {
 {
     size_t size = data - tkz.begin;
 
-    if ((tkz.pos + size) > tkz.end) {
+    if (size > cast(size_t)(tkz.end - tkz.pos)) {
         if(lxb_html_tokenizer_temp_realloc(tkz, size)) {
             return tkz.status;
         }
@@ -220,7 +251,7 @@ struct lxb_html_tokenizer {
 
  lxb_status_t lxb_html_tokenizer_temp_append(lxb_html_tokenizer_t* tkz, const(lxb_char_t)* data, size_t size)
 {
-    if ((tkz.pos + size) > tkz.end) {
+    if (size > cast(size_t)(tkz.end - tkz.pos)) {
         if(lxb_html_tokenizer_temp_realloc(tkz, size)) {
             return tkz.status;
         }
@@ -243,19 +274,24 @@ struct lxb_html_tokenizer {
 
 
 
+
+
 // ---- tokenizer.c ----
 /*
  * Copyright (C) 2018-2020 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
+
+    // D port (C extern, imported instead): extern lxb_html_tag_category_t[LXB_NS__LAST_ENTRY][LXB_TAG__LAST_ENTRY] lxb_html_tag_res_cats;
+    // D port (C extern, imported instead): extern lxb_html_tag_fixname_t[LXB_TAG__LAST_ENTRY] lxb_html_tag_res_fixname_svg;
+
 enum LXB_HTML_TKZ_TEMP_SIZE = (4096 * 4);
 
 enum {
-    LXB_HTML_TOKENIZER_OPT_UNDEF = 0x00,
-    LXB_HTML_TOKENIZER_OPT_TAGS_SELF = 0x01,
-    LXB_HTML_TOKENIZER_OPT_ATTRS_SELF = 0x02,
-    LXB_HTML_TOKENIZER_OPT_ATTRS_MRAW_SELF = 0x04
+    LXB_HTML_TOKENIZER_OPT_TAGS_SELF = 1 << 0,
+    LXB_HTML_TOKENIZER_OPT_ATTRS_SELF = 1 << 1,
+    LXB_HTML_TOKENIZER_OPT_ATTRS_MRAW_SELF = 1 << 2
 }
 
 const(lxb_char_t)* lxb_html_tokenizer_eof = cast(const(lxb_char_t)*) "\x00";
@@ -422,6 +458,8 @@ void lxb_html_tokenizer_clean(lxb_html_tokenizer_t* tkz)
     tkz.is_eof = false;
     tkz.status = LXB_STATUS_OK;
 
+    tkz.utf8_buf_len = 0;
+
     tkz.pos = tkz.start;
 
     lexbor_mraw_clean(tkz.mraw);
@@ -514,9 +552,257 @@ lxb_status_t lxb_html_tokenizer_begin(lxb_html_tokenizer_t* tkz)
     return LXB_STATUS_OK;
 }
 
+/*
+ * Input stream validation.
+ *
+ * Per the HTML spec §13.2.3.5: surrogates, noncharacters, and controls
+ * (other than ASCII whitespace and NULL) in the input stream are parse errors.
+ *
+ * This is a fast linear scan that only fires when
+ * LXB_HTML_TOKENIZER_OPT_VALIDATE_INPUT is set.
+ */
+
+/*
+ * Lookup: 1 if the byte is a single-byte control that needs reporting.
+ * Covers 0x01–0x08, 0x0B, 0x0E–0x1F, 0x7F.
+ * Excludes 0x00 (handled by tokenizer as UNNUCH), 0x09 (TAB), 0x0A (LF),
+ * 0x0C (FF), 0x0D (CR), 0x20 (SPACE).
+ */
+private const(lxb_char_t)[256] lxb_html_tkz_validate_ctl = [
+/*       0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F */
+/* 0 */ 0, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 1, 0, 0, 1, 1,
+/* 1 */ 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1,
+/* 2 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+/* 3 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+/* 4 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+/* 5 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+/* 6 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+/* 7 */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1,
+/* 8+ */ 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+         0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
+];
+
+private void lxb_html_tokenizer_validate_codepoint(lxb_html_tokenizer_t* tkz, uint cp, const(lxb_char_t)* pos)
+{
+    /* C1 controls: U+0080–U+009F */
+    if (cp >= 0x0080 && cp <= 0x009F) {
+        lxb_html_tokenizer_error_add(tkz.parse_errors, pos,
+                                     LXB_HTML_TOKENIZER_ERROR_COCHININST);
+        return;
+    }
+
+    /* Surrogates: U+D800–U+DFFF */
+    if (cp >= 0xD800 && cp <= 0xDFFF) {
+        lxb_html_tokenizer_error_add(tkz.parse_errors, pos,
+                                     LXB_HTML_TOKENIZER_ERROR_SUININST);
+        return;
+    }
+
+    /* Noncharacters: U+FDD0–U+FDEF */
+    if (cp >= 0xFDD0 && cp <= 0xFDEF) {
+        lxb_html_tokenizer_error_add(tkz.parse_errors, pos,
+                                     LXB_HTML_TOKENIZER_ERROR_NOININST);
+        return;
+    }
+
+    /* Noncharacters: U+xFFFE and U+xFFFF on every plane */
+    if ((cp & 0xFFFE) == 0xFFFE && cp <= 0x10FFFF) {
+        lxb_html_tokenizer_error_add(tkz.parse_errors, pos,
+                                     LXB_HTML_TOKENIZER_ERROR_NOININST);
+    }
+}
+
+private void lxb_html_tokenizer_validate_flush_utf8(lxb_html_tokenizer_t* tkz, const(lxb_char_t)* pos)
+{
+    uint cp = void;
+    uint len = tkz.utf8_buf_len;
+    const(lxb_char_t)* b = tkz.utf8_buf.ptr;
+
+    if (len < 2) {
+        goto done;
+    }
+
+    if ((b[0] & 0xE0) == 0xC0) {
+        cp = (cast(uint)(b[0] & 0x1F) << 6) | (b[1] & 0x3F);
+        lxb_html_tokenizer_validate_codepoint(tkz, cp, pos);
+        goto done;
+    }
+
+    if (len < 3) {
+        goto done;
+    }
+
+    if ((b[0] & 0xF0) == 0xE0) {
+        cp = (cast(uint)(b[0] & 0x0F) << 12)
+           | (cast(uint)(b[1] & 0x3F) << 6)
+           | (b[2] & 0x3F);
+        lxb_html_tokenizer_validate_codepoint(tkz, cp, pos);
+        goto done;
+    }
+
+    if (len < 4) {
+        goto done;
+    }
+
+    if ((b[0] & 0xF8) == 0xF0) {
+        cp = (cast(uint)(b[0] & 0x07) << 18)
+           | (cast(uint)(b[1] & 0x3F) << 12)
+           | (cast(uint)(b[2] & 0x3F) << 6)
+           | (b[3] & 0x3F);
+        lxb_html_tokenizer_validate_codepoint(tkz, cp, pos);
+    }
+
+done:
+
+    tkz.utf8_buf_len = 0;
+}
+
+private void lxb_html_tokenizer_validate_input(lxb_html_tokenizer_t* tkz, const(lxb_char_t)* data, size_t size)
+{
+    uint cp = void;
+    uint need = void, len = void;
+    const(lxb_char_t)* p = void, end = void;
+
+    p = data;
+    end = data + size;
+
+    /* Continue incomplete UTF-8 sequence from previous chunk. */
+    if (tkz.utf8_buf_len > 0) {
+        lxb_char_t lead = tkz.utf8_buf[0];
+
+        if ((lead & 0xE0) == 0xC0) {
+            need = 2;
+        }
+        else if ((lead & 0xF0) == 0xE0) {
+            need = 3;
+        }
+        else {
+            need = 4;
+        }
+
+        while (tkz.utf8_buf_len < need && p < end) {
+            if ((*p & 0xC0) != 0x80) {
+                /* Broken sequence, skip. */
+                tkz.utf8_buf_len = 0;
+                break;
+            }
+
+            tkz.utf8_buf[tkz.utf8_buf_len++] = *p++;
+        }
+
+        if (tkz.utf8_buf_len == need) {
+            lxb_html_tokenizer_validate_flush_utf8(tkz, data);
+        }
+        else if (p >= end) {
+            /* Still incomplete, wait for more data. */
+            return;
+        }
+        else {
+            /* Broken sequence was reset above. */
+        }
+    }
+
+    while (p < end) {
+        lxb_char_t b = *p;
+
+        /* Fast path: printable ASCII (0x20–0x7E), TAB, LF, FF, CR, NULL. */
+        if (b < 0x80) {
+            if (lxb_html_tkz_validate_ctl[b]) {
+                lxb_html_tokenizer_error_add(tkz.parse_errors, p,
+                                             LXB_HTML_TOKENIZER_ERROR_COCHININST);
+            }
+
+            p++;
+            continue;
+        }
+
+        /* Multi-byte UTF-8. Determine expected length. */
+        if ((b & 0xE0) == 0xC0) {
+            need = 2;
+        }
+        else if ((b & 0xF0) == 0xE0) {
+            need = 3;
+        }
+        else if ((b & 0xF8) == 0xF0) {
+            need = 4;
+        }
+        else {
+            /* Invalid lead byte or continuation byte, skip. */
+            p++;
+            continue;
+        }
+
+        /* Check if the full sequence is available in this chunk. */
+        if (cast(uint)(end - p) < need) {
+            /* Save partial sequence for next chunk. */
+            len = cast(uint)(end - p);
+            memcpy(tkz.utf8_buf.ptr, p, len);
+            tkz.utf8_buf_len = len;
+            return;
+        }
+
+        /* Quick filter: only decode if lead byte can start a bad codepoint.
+         *
+         * 0xC2       -> C1 controls (U+0080–U+009F): second byte 0x80–0x9F
+         * 0xED       -> surrogates (U+D800–U+DFFF): second byte 0xA0–0xBF
+         * 0xEF       -> nonchars U+FDD0–U+FDEF (0xEF 0xB7 0x90–0xAF)
+         *               and U+FFFE/U+FFFF (0xEF 0xBF 0xBE/0xBF)
+         * 0xF0–0xF4  -> nonchars U+xFFFE/U+xFFFF on planes 1–16
+         */
+        if (b == 0xC2) {
+            if (p[1] <= 0x9F) {
+                cp = (cast(uint)(b & 0x1F) << 6) | (p[1] & 0x3F);
+                lxb_html_tokenizer_validate_codepoint(tkz, cp, p);
+            }
+        }
+        else if (b == 0xED) {
+            if (p[1] >= 0xA0) {
+                cp = (cast(uint)(b & 0x0F) << 12)
+                   | (cast(uint)(p[1] & 0x3F) << 6)
+                   | (p[2] & 0x3F);
+                lxb_html_tokenizer_validate_codepoint(tkz, cp, p);
+            }
+        }
+        else if (b == 0xEF) {
+            if (p[1] == 0xB7 && p[2] >= 0x90 && p[2] <= 0xAF) {
+                /* U+FDD0–U+FDEF */
+                lxb_html_tokenizer_error_add(tkz.parse_errors, p,
+                                             LXB_HTML_TOKENIZER_ERROR_NOININST);
+            }
+            else if (p[1] == 0xBF && (p[2] == 0xBE || p[2] == 0xBF)) {
+                /* U+FFFE, U+FFFF */
+                lxb_html_tokenizer_error_add(tkz.parse_errors, p,
+                                             LXB_HTML_TOKENIZER_ERROR_NOININST);
+            }
+        }
+        else if (b >= 0xF0 && b <= 0xF4) {
+            /* 4-byte: check for xFFFE/xFFFF. */
+            if (p[2] == 0xBF && (p[3] == 0xBE || p[3] == 0xBF)) {
+                cp = (cast(uint)(b & 0x07) << 18)
+                   | (cast(uint)(p[1] & 0x3F) << 12)
+                   | (cast(uint)(p[2] & 0x3F) << 6)
+                   | (p[3] & 0x3F);
+                lxb_html_tokenizer_validate_codepoint(tkz, cp, p);
+            }
+        }
+
+        p += need;
+    }
+}
+
 lxb_status_t lxb_html_tokenizer_chunk(lxb_html_tokenizer_t* tkz, const(lxb_char_t)* data, size_t size)
 {
     const(lxb_char_t)* end = data + size;
+
+    if (tkz.opt & LXB_HTML_TOKENIZER_OPT_VALIDATE_INPUT) {
+        lxb_html_tokenizer_validate_input(tkz, data, size);
+    }
 
     tkz.is_eof = false;
     tkz.status = LXB_STATUS_OK;
@@ -640,6 +926,43 @@ void lxb_html_tokenizer_set_state_by_tag(lxb_html_tokenizer_t* tkz, bool scripti
     }
 }
 
+void lxb_html_tokenizer_attr_last_duplicate(lxb_html_tokenizer_t* tkz)
+{
+    lxb_html_token_t* token = void;
+    lxb_html_token_attr_t* attr = void, last = void;
+
+    token = tkz.token;
+    attr = token.attr_first;
+    last = token.attr_last;
+
+    while (attr != last) {
+        if (attr.name == last.name) {
+            lxb_html_tokenizer_error_add(tkz.parse_errors, last.name_begin,
+                                         LXB_HTML_TOKENIZER_ERROR_DUAT);
+
+            lxb_html_token_attr_remove(token, last);
+            lxb_html_token_attr_destroy(last, tkz.dobj_token_attr);
+            return;
+        }
+
+        attr = attr.next;
+    }
+}
+
+void lxb_html_tokenizer_validate_close_tag(lxb_html_tokenizer_t* tkz)
+{
+    if (tkz.token.attr_last != null) {
+        lxb_html_tokenizer_error_add(tkz.parse_errors,
+                                     tkz.token.attr_last.name_begin,
+                                     LXB_HTML_TOKENIZER_ERROR_ENTAWIAT);
+    }
+
+    if (tkz.token.type & LXB_HTML_TOKEN_TYPE_CLOSE_SELF) {
+        lxb_html_tokenizer_error_add(tkz.parse_errors, tkz.token.end,
+                                     LXB_HTML_TOKENIZER_ERROR_ENTAWITRSO);
+    }
+}
+
 /*
  * No inline functions for ABI.
  */
@@ -678,6 +1001,11 @@ void lxb_html_tokenizer_tree_set_noi(lxb_html_tokenizer_t* tkz, lxb_html_tree_t*
     lxb_html_tokenizer_tree_set(tkz, tree);
 }
 
+void lxb_html_tokenizer_input_validation_set_noi(lxb_html_tokenizer_t* tkz, bool enabled)
+{
+    lxb_html_tokenizer_input_validation_set(tkz, enabled);
+}
+
 lexbor_mraw_t* lxb_html_tokenizer_mraw_noi(lxb_html_tokenizer_t* tkz)
 {
     return lxb_html_tokenizer_mraw(tkz);
@@ -686,4 +1014,9 @@ lexbor_mraw_t* lxb_html_tokenizer_mraw_noi(lxb_html_tokenizer_t* tkz)
 lexbor_hash_t* lxb_html_tokenizer_tags_noi(lxb_html_tokenizer_t* tkz)
 {
     return lxb_html_tokenizer_tags(tkz);
+}
+
+void lxb_html_tokenizer_keep_duplicate_set_noi(lxb_html_tokenizer_t* tkz, bool keep)
+{
+    lxb_html_tokenizer_keep_duplicate_set(tkz, keep);
 }

@@ -43,6 +43,7 @@ private bool lxb_html_tree_insertion_mode_in_head_noscript_open(lxb_html_tree_t*
             return lxb_html_tree_insertion_mode_in_body(tree, token);
 
         case LXB_TAG__EM_COMMENT:
+        case LXB_TAG__PROCESSINGINSTRUCTION:
         case LXB_TAG_BASEFONT:
         case LXB_TAG_BGSOUND:
         case LXB_TAG_LINK:
@@ -94,6 +95,13 @@ private bool lxb_html_tree_insertion_mode_in_head_noscript_closed(lxb_html_tree_
     if(token.tag_id == LXB_TAG_BR) {
         return lxb_html_tree_insertion_mode_in_head_noscript_anything_else(tree,
                                                                             token);
+    }
+
+    if (token.tag_id == LXB_TAG_NOSCRIPT) {
+        lxb_html_tree_open_elements_pop(tree);
+        tree.mode = &lxb_html_tree_insertion_mode_in_head;
+
+        return true;
     }
 
     lxb_html_tree_parse_error(tree, token, LXB_HTML_RULES_ERROR_UNTO);

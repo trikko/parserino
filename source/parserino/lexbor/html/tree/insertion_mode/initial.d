@@ -113,6 +113,8 @@ private lxb_html_tree_insertion_mode_initial_str_t[2] lxb_html_tree_insertion_mo
 
 bool lxb_html_tree_insertion_mode_initial(lxb_html_tree_t* tree, lxb_html_token_t* token)
 {
+    lxb_dom_processing_instruction_t* pi = void;
+
     switch (token.tag_id) {
         case LXB_TAG__EM_COMMENT: {
             lxb_dom_comment_t* comment = void;
@@ -125,6 +127,15 @@ bool lxb_html_tree_insertion_mode_initial(lxb_html_tree_t* tree, lxb_html_token_
 
             break;
         }
+
+        case LXB_TAG__PROCESSINGINSTRUCTION:
+            pi = lxb_html_tree_insert_processing_instruction(tree, token,
+                                        (cast(lxb_dom_node_t*) (tree.document)));
+            if (pi == null) {
+                return lxb_html_tree_process_abort(tree);
+            }
+
+            break;
 
         case LXB_TAG__EM_DOCTYPE:
             tree.mode = &lxb_html_tree_insertion_mode_before_html;

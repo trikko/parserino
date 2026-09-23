@@ -107,7 +107,7 @@ def main():
             if me:
                 f, ln, ex, aty, bty = me.groups()
                 ex = re.sub(r'\(\*(\w+)\)\.', r'\1.', ex)
-                if not (aty in ('int', 'uint', 'long', 'ulong') and bty.endswith('*')) and not aty.startswith('string'):
+                if not (aty in ('int', 'uint', 'long', 'ulong') and bty.endswith('*')) and not aty.startswith('string') and 'void' not in aty:
                     if re.search(r'\[\d+\]\)?$', aty) and bty.endswith('*'):
                         rep = ex + '.ptr'
                     else:
@@ -195,6 +195,16 @@ def main():
                     if new != src:
                         src = new
                         changed = True
+                    # aliases of the tag declared in other modules (C forward typedefs)
+                    for g in glob.glob('parserino/lexbor/**/*.d', recursive=True):
+                        if g == f:
+                            continue
+                        t = open(g).read()
+                        t2 = re.sub(r'^(alias \w+ = )' + val + ';', r'\g<1>' + val + '_;', t, flags=re.M)
+                        t2 = re.sub(r'= &' + val + r'\.', '= ' + val + '_.', t2)
+                        if t2 != t:
+                            open(g, 'w').write(t2)
+                    src = re.sub(r'= &' + val + r'\.', '= ' + val + '_.', src)
             open(f, 'w').write(src)
         if not changed:
             break

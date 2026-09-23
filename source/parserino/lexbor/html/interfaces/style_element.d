@@ -23,10 +23,6 @@ struct lxb_html_style_element {
 
 
 
- lxb_status_t lxb_html_style_element_parse(lxb_html_style_element_t* element);
-
- lxb_status_t lxb_html_element_style_remove(lxb_html_style_element_t* style);
-
 // ---- style_element.c ----
 /*
  * Copyright (C) 2018-2025 Alexander Borisov

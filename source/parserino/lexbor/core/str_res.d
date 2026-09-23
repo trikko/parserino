@@ -1,30 +1,23 @@
 module parserino.lexbor.core.str_res;
 
+import parserino.lexbor.core.types;
 // D port of lexbor (https://github.com/lexbor/lexbor), Apache-2.0.
 // Original author: Alexander Borisov <borisov@lexbor.com>
 
-
-import parserino.lexbor.core.types;
 
 extern(C) @nogc nothrow:
 __gshared:
 
 // ---- str_res.h ----
 /*
- * Copyright (C) 2018 Alexander Borisov
+ * Copyright (C) 2018-2026 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
 
-enum LEXBOR_STR_RES_MAP_CHAR_OTHER = '\00';
-enum LEXBOR_STR_RES_MAP_CHAR_A_Z_a_z = '\01';
-enum LEXBOR_STR_RES_MAP_CHAR_WHITESPACE = '\02';
+ const(lxb_char_t)[4] lexbor_str_res_ansi_replacement_character = lexbor_carray!"\xEF\xBF\xBD";
 
-enum LEXBOR_STR_RES_SLIP = 0xFF;
-
-const(lxb_char_t)[4] lexbor_str_res_ansi_replacement_character = lexbor_carray!"\xEF\xBF\xBD";
-
-const(lxb_char_t)[256] lexbor_str_res_map_num = [
+ const(lxb_char_t)[256] lexbor_str_res_map_num = [
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -56,7 +49,7 @@ const(lxb_char_t)[256] lexbor_str_res_map_num = [
     0xff, 0xff, 0xff, 0xff
 ];
 
-const(lxb_char_t)[256] lexbor_str_res_map_hex = [
+ const(lxb_char_t)[256] lexbor_str_res_map_hex = [
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -88,7 +81,7 @@ const(lxb_char_t)[256] lexbor_str_res_map_hex = [
     0xff, 0xff, 0xff, 0xff
 ];
 
-const(lxb_char_t)[256] lexbor_str_res_map_lowercase = [
+ const(lxb_char_t)[256] lexbor_str_res_map_lowercase = [
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
     0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11,
     0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a,
@@ -120,7 +113,7 @@ const(lxb_char_t)[256] lexbor_str_res_map_lowercase = [
     0xfc, 0xfd, 0xfe, 0xff
 ];
 
-const(lxb_char_t)[256] lexbor_str_res_map_uppercase = [
+ const(lxb_char_t)[256] lexbor_str_res_map_uppercase = [
     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
     0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f, 0x10, 0x11,
     0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a,
@@ -152,7 +145,7 @@ const(lxb_char_t)[256] lexbor_str_res_map_uppercase = [
     0xfc, 0xfd, 0xfe, 0xff
 ];
 
-const(size_t)[160] lexbor_str_res_replacement_character = [
+ const(size_t)[160] lexbor_str_res_replacement_character = [
     65533, 1, 2, 3, 4, 5, 6, 7, 8,
     9, 10, 11, 12, 13, 14, 15, 16, 17,
     18, 19, 20, 21, 22, 23, 24, 25, 26,
@@ -173,7 +166,7 @@ const(size_t)[160] lexbor_str_res_replacement_character = [
     8482, 353, 8250, 339, 157, 382, 376
 ];
 
-const(size_t)[256] lexbor_str_res_alphanumeric_character = [
+ const(size_t)[256] lexbor_str_res_alphanumeric_character = [
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -205,7 +198,7 @@ const(size_t)[256] lexbor_str_res_alphanumeric_character = [
     0xff, 0xff, 0xff, 0xff
 ];
 
-const(size_t)[256] lexbor_str_res_alpha_character = [
+ const(size_t)[256] lexbor_str_res_alpha_character = [
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -237,7 +230,7 @@ const(size_t)[256] lexbor_str_res_alpha_character = [
     0xff, 0xff, 0xff, 0xff
 ];
 
-const(ubyte)[256] lexbor_tokenizer_chars_map = [
+ const(ubyte)[256] lexbor_tokenizer_chars_map = [
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0x02, 0x02, 0xff, 0x02, 0x02, 0xff, 0xff, 0xff, 0xff,
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -269,17 +262,17 @@ const(ubyte)[256] lexbor_tokenizer_chars_map = [
     0xff, 0xff, 0xff, 0xff
 ];
 
-const(lxb_char_t)[17] lexbor_str_res_map_hex_to_char = [
+ const(lxb_char_t)[17] lexbor_str_res_map_hex_to_char = [
     0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38,
     0x39, 0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x00
 ];
 
-const(lxb_char_t)[17] lexbor_str_res_map_hex_to_char_lowercase = [
+ const(lxb_char_t)[17] lexbor_str_res_map_hex_to_char_lowercase = [
     0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38,
     0x39, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x00
 ];
 
-const(char)*[257] lexbor_str_res_char_to_two_hex_value = [
+ const(char)*[257] lexbor_str_res_char_to_two_hex_value = [
     "00", "01", "02", "03", "04", "05", "06", "07",
     "08", "09", "0A", "0B", "0C", "0D", "0E", "0F",
     "10", "11", "12", "13", "14", "15", "16", "17",
@@ -315,7 +308,7 @@ const(char)*[257] lexbor_str_res_char_to_two_hex_value = [
     null
 ];
 
-const(char)*[257] lexbor_str_res_char_to_two_hex_value_lowercase = [
+ const(char)*[257] lexbor_str_res_char_to_two_hex_value_lowercase = [
     "00", "01", "02", "03", "04", "05", "06", "07",
     "08", "09", "0a", "0b", "0c", "0d", "0e", "0f",
     "10", "11", "12", "13", "14", "15", "16", "17",

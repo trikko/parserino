@@ -17,18 +17,29 @@ __gshared:
 
 bool lxb_html_tree_insertion_mode_after_after_body(lxb_html_tree_t* tree, lxb_html_token_t* token)
 {
+    lxb_dom_processing_instruction_t* pi = void;
+
     switch (token.tag_id) {
         case LXB_TAG__EM_COMMENT: {
             lxb_dom_comment_t* comment = void;
 
             comment = lxb_html_tree_insert_comment(tree, token,
-                                                   (cast(lxb_dom_node_t*) (tree.document)));
+                                        (cast(lxb_dom_node_t*) (tree.document)));
             if (comment == null) {
                 return lxb_html_tree_process_abort(tree);
             }
 
             break;
         }
+
+        case LXB_TAG__PROCESSINGINSTRUCTION:
+            pi = lxb_html_tree_insert_processing_instruction(tree, token,
+                                        (cast(lxb_dom_node_t*) (tree.document)));
+            if (pi == null) {
+                return lxb_html_tree_process_abort(tree);
+            }
+
+            break;
 
         case LXB_TAG__EM_DOCTYPE:
         case LXB_TAG_HTML:

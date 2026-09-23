@@ -24,11 +24,16 @@ __gshared:
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
-enum LEXBOR_VERSION_MAJOR = 1;
-enum LEXBOR_VERSION_MINOR = 9;
+enum LEXBOR_VERSION_MAJOR = 3;
+enum LEXBOR_VERSION_MINOR = 1;
 enum LEXBOR_VERSION_PATCH = 0;
 
-enum LEXBOR_VERSION_STRING = "1.9.0";
+enum LEXBOR_VERSION_STRING = "0.0.0";
+
+enum LEXBOR_STR_RES_MAP_CHAR_OTHER = 0x00;
+enum LEXBOR_STR_RES_MAP_CHAR_A_Z_a_z = 0x01;
+enum LEXBOR_STR_RES_MAP_CHAR_WHITESPACE = 0x02;
+enum LEXBOR_STR_RES_SLIP = 0xFF;
 
 /*
  * Very important!!!
@@ -56,7 +61,8 @@ enum lexbor_status_t {
     LXB_STATUS_STOPPED,
     LXB_STATUS_NEXT,
     LXB_STATUS_STOP,
-    LXB_STATUS_WARNING
+    LXB_STATUS_WARNING,
+    LXB_STATUS_SKIPPED
 }
 alias LXB_STATUS_OK = lexbor_status_t.LXB_STATUS_OK;
 alias LXB_STATUS_ERROR = lexbor_status_t.LXB_STATUS_ERROR;
@@ -79,6 +85,7 @@ alias LXB_STATUS_STOPPED = lexbor_status_t.LXB_STATUS_STOPPED;
 alias LXB_STATUS_NEXT = lexbor_status_t.LXB_STATUS_NEXT;
 alias LXB_STATUS_STOP = lexbor_status_t.LXB_STATUS_STOP;
 alias LXB_STATUS_WARNING = lexbor_status_t.LXB_STATUS_WARNING;
+alias LXB_STATUS_SKIPPED = lexbor_status_t.LXB_STATUS_SKIPPED;
 
 
 enum lexbor_action_t {

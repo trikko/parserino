@@ -33,6 +33,8 @@ bool lxb_html_tree_insertion_mode_after_head(lxb_html_tree_t* tree, lxb_html_tok
 
 private bool lxb_html_tree_insertion_mode_after_head_open(lxb_html_tree_t* tree, lxb_html_token_t* token)
 {
+    lxb_dom_processing_instruction_t* pi = void;
+
     switch (token.tag_id) {
         case LXB_TAG__EM_COMMENT: {
             lxb_dom_comment_t* comment = void;
@@ -46,6 +48,14 @@ private bool lxb_html_tree_insertion_mode_after_head_open(lxb_html_tree_t* tree,
 
             break;
         }
+
+        case LXB_TAG__PROCESSINGINSTRUCTION:
+            pi = lxb_html_tree_insert_processing_instruction(tree, token, null);
+            if (pi == null) {
+                return lxb_html_tree_process_abort(tree);
+            }
+
+            break;
 
         case LXB_TAG__EM_DOCTYPE:
             lxb_html_tree_parse_error(tree, token,

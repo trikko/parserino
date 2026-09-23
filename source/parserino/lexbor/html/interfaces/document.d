@@ -12,26 +12,28 @@ public import parserino.lexbor.dom.interfaces.document;
 import parserino.lexbor.core.str;
 import parserino.lexbor.html.interfaces.title_element;
 import parserino.lexbor.html.interfaces.style_element;
+import parserino.lexbor.html.interfaces.option_element;
+import parserino.lexbor.html.element_steps;
+import parserino.lexbor.html.attribute_steps;
 import parserino.lexbor.html.node;
 import parserino.lexbor.html.parser;
+import parserino.lexbor.html.tokenizer;
+import parserino.lexbor.html.tree.open_elements_res;
 import parserino.lexbor.dom.interfaces.text;
 import parserino.lexbor.dom.interfaces.element;
-import parserino.lexbor.html.tag_res;
 
 extern(C) @nogc nothrow:
 __gshared:
 
 // ---- document.h ----
 /*
- * Copyright (C) 2018-2021 Alexander Borisov
+ * Copyright (C) 2018-2026 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
 alias lxb_html_document_done_cb_f = lxb_status_t function(lxb_html_document_t* document);
 
-alias lxb_html_document_parse_cb_f = lxb_status_t function(lxb_html_tree_t* tree, lxb_dom_node_t* node);
-
-alias lxb_html_document_opt_t = uint;
+alias lxb_html_document_open_elements_pop_f = lxb_status_t function(lxb_dom_node_t* node);
 
 enum lxb_html_document_ready_state_t {
     LXB_HTML_DOCUMENT_READY_STATE_UNDEF = 0x00,
@@ -45,18 +47,13 @@ alias LXB_HTML_DOCUMENT_READY_STATE_INTERACTIVE = lxb_html_document_ready_state_
 alias LXB_HTML_DOCUMENT_READY_STATE_COMPLETE = lxb_html_document_ready_state_t.LXB_HTML_DOCUMENT_READY_STATE_COMPLETE;
 
 
+alias lxb_html_document_opt_t = uint;
+
 enum lxb_html_document_opt_ {
-    LXB_HTML_DOCUMENT_OPT_UNDEF = 0x00,
-    LXB_HTML_DOCUMENT_PARSE_WO_COPY = 0x01
+    LXB_HTML_DOCUMENT_OPT_UNDEF = 0x00
 }
 alias LXB_HTML_DOCUMENT_OPT_UNDEF = lxb_html_document_opt_.LXB_HTML_DOCUMENT_OPT_UNDEF;
-alias LXB_HTML_DOCUMENT_PARSE_WO_COPY = lxb_html_document_opt_.LXB_HTML_DOCUMENT_PARSE_WO_COPY;
 
-
-struct lxb_html_document_parse_cb_t {
-    lxb_html_document_parse_cb_f script;
-    lxb_html_document_parse_cb_f style;
-}
 
 struct lxb_html_document {
     lxb_dom_document_t dom_document;
@@ -66,13 +63,15 @@ struct lxb_html_document {
     lxb_html_head_element_t* head;
     lxb_html_body_element_t* body;
 
-    const(lxb_html_document_parse_cb_t)* parse_cb;
-
     lxb_html_document_done_cb_f done;
     lxb_html_document_ready_state_t ready_state;
 
+    const(lxb_html_document_open_elements_pop_f)* open_pop;
+
     lxb_html_document_opt_t opt;
 }
+
+
 
 
 
@@ -141,6 +140,26 @@ struct lxb_html_document {
     return document.opt;
 }
 
+ void lxb_html_document_dom_opt_set(lxb_html_document_t* document, lxb_dom_document_opt_t opt)
+{
+    document.dom_document.options = opt;
+}
+
+ lxb_dom_document_opt_t lxb_html_document_dom_opt(const(lxb_html_document_t)* document)
+{
+    return document.dom_document.options;
+}
+
+ void lxb_html_document_scripting_set(lxb_html_document_t* document, bool scripting)
+{
+    document.dom_document.scripting = scripting;
+}
+
+ bool lxb_html_document_scripting(lxb_html_document_t* document)
+{
+    return document.dom_document.scripting;
+}
+
  lexbor_hash_t* lxb_html_document_tags(lxb_html_document_t* document)
 {
     return document.dom_document.tags;
@@ -169,16 +188,6 @@ struct lxb_html_document {
     return lxb_dom_document_destroy_element(element);
 }
 
- const(lxb_html_document_parse_cb_t)* lxb_html_document_parse_cb(lxb_html_document_t* document)
-{
-    return document.parse_cb;
-}
-
- void lxb_html_document_parse_cb_set(lxb_html_document_t* document, const(lxb_html_document_parse_cb_t)* parse_cb)
-{
-    document.parse_cb = parse_cb;
-}
-
  lxb_html_document_done_cb_f lxb_html_document_done(lxb_html_document_t* document)
 {
     return document.done;
@@ -204,20 +213,40 @@ struct lxb_html_document {
 
 
 
+
+
 // ---- document.c ----
 /*
- * Copyright (C) 2018-2024 Alexander Borisov
+ * Copyright (C) 2018-2026 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
+    // D port (C extern, imported instead): extern lxb_html_tag_category_t[LXB_NS__LAST_ENTRY][LXB_TAG__LAST_ENTRY] lxb_html_tag_res_cats;
+    // D port (C extern, imported instead): extern lxb_html_tag_fixname_t[LXB_TAG__LAST_ENTRY] lxb_html_tag_res_fixname_svg;
+
+private const(lxb_dom_document_mutation_cb_t) lxb_html_document_mutation = {
+    inserted: &lxb_html_element_steps_insertion,
+    removed: &lxb_html_element_steps_removing,
+    moved: &lxb_html_element_steps_moving,
+    destroy: &lxb_html_element_steps_destroy,
+    children_changed: &lxb_html_element_steps_children_changed,
+    connected: &lxb_html_element_steps_post_connection
+};
+
+private const(lxb_dom_document_attr_mutation_cb_t) lxb_html_document_attr_mutation = {
+    change: &lxb_html_attribute_steps_change,
+    append: &lxb_html_attribute_steps_append,
+    remove: &lxb_html_attribute_steps_remove,
+    replace: &lxb_html_attribute_steps_replace
+};
+
 lxb_status_t lxb_html_parse_chunk_prepare(lxb_html_parser_t* parser, lxb_html_document_t* document);
 
  
 
 
 
-// D port: renamed, C "static" clashed with the inline wrapper in interface_res
-private lxb_dom_interface_t* lxb_html_document_interface_create_wrapper_doc(lxb_dom_document_t* document, lxb_tag_id_t tag_id, lxb_ns_id_t ns)
+ lxb_dom_interface_t* lxb_html_document_interface_create_handler(lxb_dom_document_t* document, lxb_tag_id_t tag_id, lxb_ns_id_t ns)
 {
     return lxb_html_interface_create((cast(lxb_html_document_t*) (document)),
                                      tag_id, ns);
@@ -241,7 +270,7 @@ lxb_html_document_t* lxb_html_document_interface_create(lxb_html_document_t* doc
     }
 
     status = lxb_dom_document_init(doc, (cast(lxb_dom_document_t*) (document)),
-                                   &lxb_html_document_interface_create_wrapper_doc,
+                                   &lxb_html_document_interface_create_handler,
                                    &lxb_html_interface_clone,
                                    &lxb_html_interface_destroy,
                                    LXB_DOM_DOCUMENT_DTYPE_HTML, LXB_NS_HTML);
@@ -249,6 +278,8 @@ lxb_html_document_t* lxb_html_document_interface_create(lxb_html_document_t* doc
         cast(void) lxb_dom_document_destroy(doc);
         return null;
     }
+
+    lxb_html_document_mutation_init((cast(lxb_html_document_t*) (doc)));
 
     return (cast(lxb_html_document_t*) (doc));
 }
@@ -290,6 +321,19 @@ void lxb_html_document_clean(lxb_html_document_t* document)
 lxb_html_document_t* lxb_html_document_destroy(lxb_html_document_t* document)
 {
     return lxb_html_document_interface_destroy(document);
+}
+
+void lxb_html_document_mutation_init(lxb_html_document_t* document)
+{
+    document.dom_document.mutation = &lxb_html_document_mutation;
+    document.dom_document.attr_mutation = &lxb_html_document_attr_mutation;
+    document.open_pop = lxb_html_tree_open_elements_pop_res.ptr;
+}
+
+void lxb_html_document_mutation_erase(lxb_html_document_t* document)
+{
+    lxb_dom_document_mutation_init(&document.dom_document);
+    document.open_pop = null;
 }
 
 lxb_status_t lxb_html_document_parse(lxb_html_document_t* document, const(lxb_char_t)* html, size_t size)
@@ -429,6 +473,7 @@ lxb_dom_node_t* lxb_html_document_parse_fragment_chunk_end(lxb_html_document_t* 
 {
     lxb_status_t status = void;
     lxb_dom_document_t* doc = void;
+    lxb_html_parser_t* parser = void;
 
     doc = (cast(lxb_dom_document_t*) (document));
 
@@ -440,6 +485,10 @@ lxb_dom_node_t* lxb_html_document_parse_fragment_chunk_end(lxb_html_document_t* 
             lxb_html_parser_destroy(cast(lxb_html_parser_t*) doc.parser);
             return status;
         }
+
+        parser = cast(lxb_html_parser_t*) doc.parser;
+
+        lxb_html_tokenizer_keep_duplicate_set(parser.tkz, true);
     }
     else if (lxb_html_parser_state(cast(lxb_html_parser_t*) doc.parser) != LXB_HTML_PARSER_STATE_BEGIN) {
         lxb_html_parser_clean(cast(lxb_html_parser_t*) doc.parser);
@@ -589,4 +638,14 @@ lxb_html_element_t* lxb_html_document_create_element_noi(lxb_html_document_t* do
 lxb_dom_element_t* lxb_html_document_destroy_element_noi(lxb_dom_element_t* element)
 {
     return lxb_html_document_destroy_element(element);
+}
+
+void lxb_html_document_dom_opt_set_noi(lxb_html_document_t* document, lxb_dom_document_opt_t opt)
+{
+    lxb_html_document_dom_opt_set(document, opt);
+}
+
+lxb_dom_document_opt_t lxb_html_document_dom_opt_noi(lxb_html_document_t* document)
+{
+    return lxb_html_document_dom_opt(document);
 }

@@ -29,7 +29,7 @@ struct lxb_css_syntax_anb_t {
 
 // ---- anb.c ----
 /*
- * Copyright (C) 2021-2022 Alexander Borisov
+ * Copyright (C) 2021-2026 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
@@ -44,10 +44,8 @@ struct lxb_css_syntax_anb_t {
 
 
 private const(lxb_css_syntax_cb_pipe_t) lxb_css_syntax_anb_pipe = {
-    state: &lxb_css_syntax_anb_state,
-    block: null,
-    failed: &lxb_css_state_failed,
-    end: &lxb_css_syntax_anb_end
+    prelude: &lxb_css_syntax_anb_state,
+    cb: {failed: &lxb_css_state_failed, end: &lxb_css_syntax_anb_end}
 };
 
 lxb_css_syntax_anb_t lxb_css_syntax_anb_parse(lxb_css_parser_t* parser, const(lxb_char_t)* data, size_t length)
@@ -69,8 +67,8 @@ lxb_css_syntax_anb_t lxb_css_syntax_anb_parse(lxb_css_parser_t* parser, const(lx
 
     lxb_css_parser_buffer_set(parser, data, length);
 
-    rule = lxb_css_syntax_parser_pipe_push(parser, null,
-                                           &lxb_css_syntax_anb_pipe, &anb,
+    rule = lxb_css_syntax_parser_pipe_push(parser, &lxb_css_syntax_anb_pipe,
+                                           null, &anb,
                                            LXB_CSS_SYNTAX_TOKEN_UNDEF);
     if (rule == null) {
         return anb;

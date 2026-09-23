@@ -12,9 +12,9 @@ Pipeline for every unit (X.h and/or X.c):
 import os, re, subprocess, sys, shutil
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
-SRC = os.path.join(ROOT, 'pruned')
-WORK = os.path.join(ROOT, 'work')
-OUT = os.path.join(ROOT, 'dout')
+SRC = os.path.join(ROOT, os.environ.get('LXB_SRC', 'pruned'))
+WORK = os.path.join(ROOT, os.environ.get('LXB_WORK', 'work'))
+OUT = os.path.join(ROOT, os.environ.get('LXB_OUT', 'dout'))
 CTOD = os.path.expanduser('~/.dub/packages/ctod/1.0.5/ctod/build/ctod')
 
 KEYWORDS = {'const', 'interface', 'in', 'module', 'import', 'version', 'debug',

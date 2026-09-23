@@ -18,7 +18,7 @@ __gshared:
 /*
  * Inline functions
  */
- bool lxb_html_node_is_void(lxb_dom_node_t* node)
+ bool lxb_html_node_is_void(const(lxb_dom_node_t)* node)
 {
     if (node.ns != LXB_NS_HTML) {
         return false;
@@ -60,5 +60,6 @@ __gshared:
 /*
  * No inline functions for ABI.
  */
+ bool lxb_html_node_is_void_noi(lxb_dom_node_t* node);
 
 // D port: implementation not needed by parserino, not ported.

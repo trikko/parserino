@@ -53,10 +53,6 @@ __gshared:
 
  bool lxb_html_tree_insertion_mode_in_cell(lxb_html_tree_t* tree, lxb_html_token_t* token);
 
- bool lxb_html_tree_insertion_mode_in_select(lxb_html_tree_t* tree, lxb_html_token_t* token);
-
- bool lxb_html_tree_insertion_mode_in_select_in_table(lxb_html_tree_t* tree, lxb_html_token_t* token);
-
  bool lxb_html_tree_insertion_mode_in_template(lxb_html_tree_t* tree, lxb_html_token_t* token);
 
  bool lxb_html_tree_insertion_mode_after_body(lxb_html_tree_t* tree, lxb_html_token_t* token);

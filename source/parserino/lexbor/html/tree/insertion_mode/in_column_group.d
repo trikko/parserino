@@ -72,6 +72,18 @@ __gshared:
     return true;
 }
 
+ bool lxb_html_tree_insertion_mode_in_column_group_processing_instruction(lxb_html_tree_t* tree, lxb_html_token_t* token)
+{
+    lxb_dom_processing_instruction_t* pi = void;
+
+    pi = lxb_html_tree_insert_processing_instruction(tree, token, null);
+    if (pi == null) {
+        return lxb_html_tree_process_abort(tree);
+    }
+
+    return true;
+}
+
  bool lxb_html_tree_insertion_mode_in_column_group_html(lxb_html_tree_t* tree, lxb_html_token_t* token)
 {
     return lxb_html_tree_insertion_mode_in_body(tree, token);
@@ -160,6 +172,9 @@ bool lxb_html_tree_insertion_mode_in_column_group(lxb_html_tree_t* tree, lxb_htm
         case LXB_TAG__EM_COMMENT:
             return lxb_html_tree_insertion_mode_in_column_group_comment(tree,
                                                                         token);
+        case LXB_TAG__PROCESSINGINSTRUCTION:
+            return lxb_html_tree_insertion_mode_in_column_group_processing_instruction(tree,
+                                                                                       token);
         case LXB_TAG_HTML:
             return lxb_html_tree_insertion_mode_in_column_group_html(tree,
                                                                      token);

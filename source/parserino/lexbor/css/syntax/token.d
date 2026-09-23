@@ -12,9 +12,7 @@ import parserino.lexbor.core.serialize;
 import parserino.lexbor.core.print;
 import parserino.lexbor.css.parser;
 import parserino.lexbor.css.syntax.state;
-import parserino.lexbor.css.syntax.state_res;
 import parserino.lexbor.css.syntax.token_res;
-import parserino.lexbor.core.str_res;
 
 extern(C) @nogc nothrow:
 __gshared:
@@ -271,10 +269,13 @@ struct lxb_css_syntax_token_ {
 
 // ---- token.c ----
 /*
- * Copyright (C) 2018-2025 Alexander Borisov
+ * Copyright (C) 2018-2026 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
+    // D port (C extern, imported instead): extern const(lxb_char_t)[4] lexbor_str_res_ansi_replacement_character;
+    // D port (C extern, imported instead): extern const(lxb_char_t)[256] lexbor_str_res_map_hex;
+
 lxb_css_syntax_token_t* lxb_css_syntax_tokenizer_token(lxb_css_syntax_tokenizer_t* tkz);
 
 struct lxb_css_syntax_token_ctx_t {

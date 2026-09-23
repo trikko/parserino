@@ -13,7 +13,7 @@ __gshared:
 
 // ---- document_type.h ----
 /*
- * Copyright (C) 2018-2021 Alexander Borisov
+ * Copyright (C) 2018-2025 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
@@ -29,15 +29,36 @@ struct lxb_dom_document_type {
 
 
 /*
+ * Create DocumentType by specification.
+ *
+ * https://dom.spec.whatwg.org/#dom-domimplementation-createdocumenttype
+ *
+ * @param[in] lxb_dom_document_t *. Not NULL.
+ * @param[in] const lxb_char_t *. Name. May be NULL, but then the return value
+ *            will be NULL and an exception code will be recorded.
+ * @param[in] size_t. Length of name. May be 0, but then the return value
+ *            will be NULL and an exception code will be recorded.
+ * @param[in] const lxb_char_t *. PublicID. Can be NULL.
+ * @param[in] size_t. Length of PublicID. Can be 0.
+ * @param[in] const lxb_char_t *. SystemID. Can be NULL.
+ * @param[in] size_t. Length of SystemID. Can be 0.
+ * @param[out] lxb_dom_exception_code_t. Can be NULL. If the variable is passed,
+ *             the code will definitely be assigned. LXB_DOM_EXCEPTION_OK
+ *             if successful.
+ *
+ * @return lxb_dom_document_type_t * if successful, otherwise NULL.
+ */
+
+/*
  * Inline functions
  */
- const(lxb_char_t)* lxb_dom_document_type_name(lxb_dom_document_type_t* doc_type, size_t* len)
+ const(lxb_char_t)* lxb_dom_document_type_name(const(lxb_dom_document_type_t)* doc_type, size_t* len)
 {
     const(lxb_dom_attr_data_t)* data = void;
 
     static const(lxb_char_t)[1] lxb_empty = lexbor_carray!"";
 
-    data = lxb_dom_attr_data_by_id(doc_type.node.owner_document.attrs,
+    data = lxb_dom_attr_data_by_id(cast(lexbor_hash_t*) doc_type.node.owner_document.attrs,
                                    doc_type.name);
     if (data == null || doc_type.name == LXB_DOM_ATTR__UNDEF) {
         if (len != null) {
@@ -80,12 +101,14 @@ struct lxb_dom_document_type {
 
 // ---- document_type.c ----
 /*
- * Copyright (C) 2018-2021 Alexander Borisov
+ * Copyright (C) 2018-2025 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
 
  lxb_dom_attr_data_t* lxb_dom_attr_qualified_name_append(lexbor_hash_t* hash, const(lxb_char_t)* name, size_t length);
+
+ lxb_dom_attr_data_t* lxb_dom_attr_local_name_append(lexbor_hash_t* hash, const(lxb_char_t)* name, size_t length);
 
 lxb_dom_document_type_t* lxb_dom_document_type_interface_create(lxb_dom_document_t* document)
 {
@@ -101,6 +124,8 @@ lxb_dom_document_type_t* lxb_dom_document_type_interface_create(lxb_dom_document
 
     node.owner_document = lxb_dom_document_owner(document);
     node.type = LXB_DOM_NODE_TYPE_DOCUMENT_TYPE;
+
+    element.name = LXB_DOM_ATTR_HTML;
 
     return element;
 }
@@ -172,6 +197,97 @@ lxb_dom_document_type_t* lxb_dom_document_type_interface_destroy(lxb_dom_documen
     cast(void) lexbor_str_destroy(&system_id, text, false);
 
     return null;
+}
+
+lxb_dom_document_type_t* lxb_dom_document_type_create(lxb_dom_document_t* document, const(lxb_char_t)* name, size_t name_len, const(lxb_char_t)* pub, size_t pub_len, const(lxb_char_t)* sys, size_t sys_len, lxb_dom_exception_code_t* code)
+{
+    lxb_dom_attr_data_t* data = void;
+    lxb_dom_document_type_t* doctype = void;
+
+    if (!lxb_dom_document_type_valid_name(name, name_len)) {
+        if (code != null) {
+            *code = LXB_DOM_EXCEPTION_INVALID_CHARACTER_ERR;
+        }
+
+        return null;
+    }
+
+    doctype = lxb_dom_document_type_interface_create(document);
+    if (doctype == null) {
+        goto failed;
+    }
+
+    data = lxb_dom_attr_local_name_append(document.attrs, name, name_len);
+    if (data == null) {
+        goto failed;
+    }
+
+    doctype.name = data.attr_id;
+
+    if (pub != null && pub_len != 0) {
+        doctype.public_id.data = lxb_dom_document_create_text(document,
+                                                               pub_len + 1);
+        if (doctype.public_id.data == null) {
+            goto failed;
+        }
+
+        cast(void) lexbor_str_copy_to_with_null(&doctype.public_id, pub, pub_len);
+    }
+
+    if (sys != null && sys_len != 0) {
+        doctype.system_id.data = lxb_dom_document_create_text(document,
+                                                               sys_len + 1);
+        if (doctype.system_id.data == null) {
+            goto failed;
+        }
+
+        cast(void) lexbor_str_copy_to_with_null(&doctype.system_id, sys, sys_len);
+    }
+
+    if (code != null) {
+        *code = LXB_DOM_EXCEPTION_OK;
+    }
+
+    return doctype;
+
+failed:
+
+    if (doctype != null && doctype.public_id.data != null) {
+        lxb_dom_document_destroy_text(document, doctype.public_id.data);
+    }
+
+    if (code != null) {
+        *code = LXB_DOM_EXCEPTION_ERR;
+    }
+
+    return null;
+}
+
+bool lxb_dom_document_type_valid_name(const(lxb_char_t)* name, size_t length)
+{
+    lxb_char_t c = void;
+    const(lxb_char_t)* end = void;
+
+    if (name == null || length == 0) {
+        return false;
+    }
+
+    end = name + length;
+
+    while (name < end) {
+        c = *name++;
+        /*
+         * U+0009 TAB, U+000A LF, U+000C FF, U+000D CR, or U+0020 SPACE,
+         * or U+0000 NULL, or U+003E (>)
+         */
+        if (c == 0x09 || c == 0x0A || c == 0x0C || c == 0x0D || c == 0x20
+            || c == 0x00 || c == 0x3E)
+        {
+            return false;
+        }
+    }
+
+    return true;
 }
 
 /*

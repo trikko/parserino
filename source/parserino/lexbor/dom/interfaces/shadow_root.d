@@ -31,6 +31,8 @@ struct lxb_dom_shadow_root {
     lxb_dom_element_t* host;
 }
 
+ lxb_dom_shadow_root_t* lxb_dom_shadow_root_interface_create(lxb_dom_document_t* document);
 
+ lxb_dom_shadow_root_t* lxb_dom_shadow_root_interface_destroy(lxb_dom_shadow_root_t* shadow_root);
 
 // D port: implementation not needed by parserino, not ported.

@@ -28,8 +28,6 @@ struct lexbor_dobject_t {
 
 
 
- ubyte* lexbor_dobject_init_list_entries(lexbor_dobject_t* dobject, size_t pos);
-
 
 
 

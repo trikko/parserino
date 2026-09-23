@@ -5,11 +5,11 @@ module parserino.lexbor.dom.interfaces.element;
 
 public import parserino.lexbor.core.str;
 public import parserino.lexbor.core.avl;
-public import parserino.lexbor.dom.interfaces.document;
 public import parserino.lexbor.dom.interfaces.node;
 public import parserino.lexbor.dom.collection;
 public import parserino.lexbor.dom.interfaces.attr;
 public import parserino.lexbor.tag.tag;
+import parserino.lexbor.dom.interfaces.document;
 import parserino.lexbor.ns.ns;
 import parserino.lexbor.core.utils;
 import parserino.lexbor.core.hash;
@@ -35,6 +35,26 @@ alias LXB_DOM_ELEMENT_CUSTOM_STATE_UNCUSTOMIZED = lxb_dom_element_custom_state_t
 alias LXB_DOM_ELEMENT_CUSTOM_STATE_CUSTOM = lxb_dom_element_custom_state_t.LXB_DOM_ELEMENT_CUSTOM_STATE_CUSTOM;
 
 
+/*
+ * Element condition flags for lazy style cleanup.
+ *
+ * DIRTY_STYLE: set on an element (and all its descendants) when it is removed
+ * from the DOM tree. Instead of immediately walking the style AVL tree and
+ * freeing every stylesheet-originated declaration, we just mark the element
+ * dirty and defer cleanup. When styles are later accessed or a new stylesheet
+ * is applied, the dirty flag tells the code to discard stale stylesheet entries
+ * lazily, keeping only inline style="..." declarations (sp_s == 1).
+ */
+enum lxb_dom_element_condition_t {
+    LXB_DOM_ELEMENT_CONDITION_OK = 0x00,
+    LXB_DOM_ELEMENT_CONDITION_DIRTY_STYLE = 1 << 0
+}
+alias LXB_DOM_ELEMENT_CONDITION_OK = lxb_dom_element_condition_t.LXB_DOM_ELEMENT_CONDITION_OK;
+alias LXB_DOM_ELEMENT_CONDITION_DIRTY_STYLE = lxb_dom_element_condition_t.LXB_DOM_ELEMENT_CONDITION_DIRTY_STYLE;
+
+
+alias lxb_dom_element_attr_change_f = lxb_status_t function(lxb_dom_element_t* element, lxb_dom_attr_id_t local_name, const(lxb_char_t)* old_value, size_t old_len, const(lxb_char_t)* value, size_t value_len, lxb_ns_id_t ns);
+
 struct lxb_dom_element {
     lxb_dom_node_t node;
 
@@ -57,6 +77,7 @@ struct lxb_dom_element {
     lexbor_avl_node_t* style;
     void* list; /* lxb_css_rule_declaration_list_t */
 
+    lxb_dom_element_condition_t condition;
     lxb_dom_element_custom_state_t custom_state;
 }
 
@@ -76,7 +97,9 @@ struct lxb_dom_element {
 
 
 
+
  lxb_dom_attr_t* lxb_dom_element_attr_by_data(lxb_dom_element_t* element, const(lxb_dom_attr_data_t)* data);
+
 
 
 
@@ -444,7 +467,10 @@ lxb_dom_attr_t* lxb_dom_element_set_attribute(lxb_dom_element_t* element, const(
         return lxb_dom_attr_interface_destroy(attr);
     }
 
-    lxb_dom_element_attr_append(element, attr);
+    status = lxb_dom_element_attr_append(element, attr);
+    if (status != LXB_STATUS_OK) {
+        return lxb_dom_attr_interface_destroy(attr);
+    }
 
     return attr;
 }
@@ -492,6 +518,8 @@ bool lxb_dom_element_has_attribute(lxb_dom_element_t* element, const(lxb_char_t)
 
 lxb_status_t lxb_dom_element_attr_append(lxb_dom_element_t* element, lxb_dom_attr_t* attr)
 {
+    size_t value_len = void;
+    const(lxb_char_t)* value = void;
     lxb_dom_attr_t* exist = void;
     lxb_dom_document_t* doc = (cast(lxb_dom_node_t*) (element)).owner_document;
 
@@ -532,8 +560,20 @@ done:
 
     attr.owner = element;
 
-    if (doc.node_cb.insert != null) {
-        doc.node_cb.insert((cast(lxb_dom_node_t*) (attr)));
+    if (!(lxb_dom_document_opt(doc) & LXB_DOM_DOCUMENT_OPT_WO_EVENTS)
+        && doc.attr_mutation.append != null)
+    {
+        value = null;
+        value_len = 0;
+
+        if (attr.value != null && attr.value.data != null) {
+            value = attr.value.data;
+            value_len = attr.value.length;
+        }
+
+        return doc.attr_mutation.append(element, attr.node.local_name,
+                                          null, 0, value, value_len,
+                                          LXB_NS__UNDEF);
     }
 
     return LXB_STATUS_OK;
@@ -587,6 +627,24 @@ lxb_dom_attr_t* lxb_dom_element_attr_by_local_name_data(lxb_dom_element_t* eleme
 
     while (attr != null) {
         if (attr.node.local_name == data.attr_id
+            || attr.qualified_name == data.attr_id)
+        {
+            return attr;
+        }
+
+        attr = attr.next;
+    }
+
+    return null;
+}
+
+lxb_dom_attr_t* lxb_dom_element_attr_by_local_name_ns_data(lxb_dom_element_t* element, const(lxb_dom_attr_data_t)* data, lxb_ns_id_t ns)
+{
+    lxb_dom_attr_t* attr = element.first_attr;
+
+    while (attr != null) {
+        if ((attr.node.local_name == data.attr_id
+             && attr.node.ns == ns)
             || attr.qualified_name == data.attr_id)
         {
             return attr;
@@ -659,12 +717,12 @@ bool lxb_dom_element_compare(lxb_dom_element_t* first, lxb_dom_element_t* second
     return true;
 }
 
-lxb_dom_attr_t* lxb_dom_element_attr_is_exist(lxb_dom_element_t* element, const(lxb_char_t)* qualified_name, size_t length)
+lxb_dom_attr_t* lxb_dom_element_attr_is_exist(const(lxb_dom_element_t)* element, const(lxb_char_t)* qualified_name, size_t length)
 {
     const(lxb_dom_attr_data_t)* data = void;
-    lxb_dom_attr_t* attr = element.first_attr;
+    lxb_dom_attr_t* attr = cast(lxb_dom_attr*) element.first_attr;
 
-    data = lxb_dom_attr_data_by_local_name(element.node.owner_document.attrs,
+    data = lxb_dom_attr_data_by_local_name(cast(lexbor_hash_t*) element.node.owner_document.attrs,
                                            qualified_name, length);
     if (data == null) {
         return null;
@@ -716,6 +774,16 @@ lxb_status_t lxb_dom_element_is_set(lxb_dom_element_t* element, const(lxb_char_t
     return LXB_STATUS_OK;
 }
 
+lxb_dom_element_t* lxb_dom_element_by_id(lxb_dom_element_t* root, const(lxb_char_t)* qualified_name, size_t len)
+{
+    lxb_dom_node_t* node = void;
+
+    node = lxb_dom_node_by_id((cast(lxb_dom_node_t*) (root)),
+                              qualified_name, len);
+
+    return (cast(lxb_dom_element_t*) (node));
+}
+
 lxb_status_t lxb_dom_elements_by_tag_name(lxb_dom_element_t* root, lxb_dom_collection_t* collection, const(lxb_char_t)* qname, size_t len)
 {
     return lxb_dom_node_by_tag_name((cast(lxb_dom_node_t*) (root)),
@@ -756,7 +824,7 @@ lxb_status_t lxb_dom_elements_by_attr_contain(lxb_dom_element_t* root, lxb_dom_c
                                         value, value_len, case_insensitive);
 }
 
-const(lxb_char_t)* lxb_dom_element_qualified_name(lxb_dom_element_t* element, size_t* len)
+const(lxb_char_t)* lxb_dom_element_qualified_name(const(lxb_dom_element_t)* element, size_t* len)
 {
     const(lxb_tag_data_t)* data = void;
 

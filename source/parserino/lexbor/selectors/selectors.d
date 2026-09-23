@@ -308,6 +308,8 @@ struct lxb_selectors {
 
 
 
+
+
 lxb_selectors_t* lxb_selectors_create()
 {
     return cast(lxb_selectors*) lexbor_calloc(1, lxb_selectors_t.sizeof);
@@ -1309,8 +1311,8 @@ private lxb_selectors_entry_t* lxb_selectors_state_after_nth_child(lxb_selectors
     current = selectors.current;
 
     if (current.index == 0) {
-        selectors.state = &lxb_selectors_state_not_found;
         selectors.current = selectors.current.parent;
+        lxb_selectors_switch_to_not_found(selectors, selectors.current);
 
         return selectors.current.entry;
     }
@@ -1381,7 +1383,9 @@ private bool lxb_selectors_match(lxb_selectors_t* selectors, lxb_selectors_entry
             }
 
             return lxb_selectors_match_class(element.attr_class.value,
-                                             &entry.selector.name, true);
+                                             &entry.selector.name,
+                                             node.owner_document.compat_mode
+                                             == LXB_DOM_DOCUMENT_CMODE_QUIRKS);
 
         case LXB_CSS_SELECTOR_TYPE_ATTRIBUTE:
             return lxb_selectors_match_attribute(entry.selector, node, entry);
@@ -1436,15 +1440,22 @@ private bool lxb_selectors_match_id(const(lxb_css_selector_t)* selector, lxb_dom
     trg = element.attr_id.value;
     src = &selector.name;
 
-    return trg.length == src.length
-           && lexbor_str_data_ncasecmp(trg.data, src.data, src.length);
+    if (trg.length != src.length) {
+        return false;
+    }
+
+    if (node.owner_document.compat_mode == LXB_DOM_DOCUMENT_CMODE_QUIRKS) {
+        return lexbor_str_data_ncasecmp(trg.data, src.data, src.length);
+    }
+
+    return lexbor_str_data_ncmp(trg.data, src.data, src.length);
 }
 
 private bool lxb_selectors_match_class(const(lexbor_str_t)* target, const(lexbor_str_t)* src, bool quirks)
 {
     lxb_char_t chr = void;
 
-    if (target.length < src.length) {
+    if (src.length == 0 || target.length < src.length) {
         return false;
     }
 
@@ -1535,7 +1546,20 @@ private bool lxb_selectors_match_attribute(const(lxb_css_selector_t)* selector, 
         trg = &lxb_blank_str;
     }
 
-    ins = attr.modifier == LXB_CSS_SELECTOR_MODIFIER_I;
+    switch (attr.modifier) {
+        case LXB_CSS_SELECTOR_MODIFIER_I:
+            ins = true;
+            break;
+
+        case LXB_CSS_SELECTOR_MODIFIER_S:
+            ins = false;
+            break;
+
+        default:
+            ins = lxb_selectors_match_attribute_html_case_insensitive(node,
+                                                                       entry.id);
+            break;
+    }
 
     switch (attr.match) {
         case LXB_CSS_SELECTOR_MATCH_EQUAL: /*  = */
@@ -1627,6 +1651,68 @@ private bool lxb_selectors_match_attribute(const(lxb_css_selector_t)* selector, 
     }
 
     return false;
+}
+
+private bool lxb_selectors_match_attribute_html_case_insensitive(lxb_dom_node_t* node, lxb_dom_attr_id_t attr_id)
+{
+    if (node.ns != LXB_NS_HTML
+        || node.owner_document.type != LXB_DOM_DOCUMENT_DTYPE_HTML)
+    {
+        return false;
+    }
+
+    switch (attr_id) {
+        case LXB_DOM_ATTR_ACCEPT:
+        case LXB_DOM_ATTR_ACCEPT_CHARSET:
+        case LXB_DOM_ATTR_ALIGN:
+        case LXB_DOM_ATTR_ALINK:
+        case LXB_DOM_ATTR_AXIS:
+        case LXB_DOM_ATTR_BGCOLOR:
+        case LXB_DOM_ATTR_CHARSET:
+        case LXB_DOM_ATTR_CHECKED:
+        case LXB_DOM_ATTR_CLEAR:
+        case LXB_DOM_ATTR_CODETYPE:
+        case LXB_DOM_ATTR_COLOR:
+        case LXB_DOM_ATTR_COMPACT:
+        case LXB_DOM_ATTR_DECLARE:
+        case LXB_DOM_ATTR_DEFER:
+        case LXB_DOM_ATTR_DIR:
+        case LXB_DOM_ATTR_DIRECTION:
+        case LXB_DOM_ATTR_DISABLED:
+        case LXB_DOM_ATTR_ENCTYPE:
+        case LXB_DOM_ATTR_FACE:
+        case LXB_DOM_ATTR_FRAME:
+        case LXB_DOM_ATTR_HREFLANG:
+        case LXB_DOM_ATTR_HTTP_EQUIV:
+        case LXB_DOM_ATTR_LANG:
+        case LXB_DOM_ATTR_LANGUAGE:
+        case LXB_DOM_ATTR_LINK:
+        case LXB_DOM_ATTR_MEDIA:
+        case LXB_DOM_ATTR_METHOD:
+        case LXB_DOM_ATTR_MULTIPLE:
+        case LXB_DOM_ATTR_NOHREF:
+        case LXB_DOM_ATTR_NORESIZE:
+        case LXB_DOM_ATTR_NOSHADE:
+        case LXB_DOM_ATTR_NOWRAP:
+        case LXB_DOM_ATTR_READONLY:
+        case LXB_DOM_ATTR_REL:
+        case LXB_DOM_ATTR_REV:
+        case LXB_DOM_ATTR_RULES:
+        case LXB_DOM_ATTR_SCOPE:
+        case LXB_DOM_ATTR_SCROLLING:
+        case LXB_DOM_ATTR_SELECTED:
+        case LXB_DOM_ATTR_SHAPE:
+        case LXB_DOM_ATTR_TARGET:
+        case LXB_DOM_ATTR_TEXT:
+        case LXB_DOM_ATTR_TYPE:
+        case LXB_DOM_ATTR_VALIGN:
+        case LXB_DOM_ATTR_VALUETYPE:
+        case LXB_DOM_ATTR_VLINK:
+            return true;
+
+        default:
+            return false;
+    }
 }
 
 private bool lxb_selectors_pseudo_class(const(lxb_css_selector_t)* selector, const(lxb_dom_node_t)* node)
@@ -1939,12 +2025,16 @@ private lxb_selectors_nested_t* lxb_selectors_nested_make(lxb_selectors_t* selec
 
 private bool lxb_selectors_pseudo_class_function(lxb_selectors_t* selectors, const(lxb_css_selector_t)* selector, lxb_dom_node_t* node)
 {
+    bool is_ = void;
     size_t index = void;
     lxb_dom_node_t* base = void;
     lxb_selectors_nested_t* current = void;
+    const(lexbor_str_t)* str = void;
+    const(lxb_dom_text_t)* text = void;
     const(lxb_css_selector_list_t)* list = void;
     const(lxb_css_selector_anb_of_t)* anb = void;
     const(lxb_css_selector_pseudo_t)* pseudo = void;
+    const(lxb_css_selector_contains_t)* contains = void;
 
     pseudo = &selector.u.pseudo;
 
@@ -2071,6 +2161,36 @@ private bool lxb_selectors_pseudo_class_function(lxb_selectors_t* selectors, con
             }
 
             return lxb_selectors_anb_calc(cast(lxb_css_selector_anb_of_t*) pseudo.data, index);
+
+        case LXB_CSS_SELECTOR_PSEUDO_CLASS_FUNCTION_LEXBOR_CONTAINS:
+            contains = cast(const(lxb_css_selector_contains_t)*) pseudo.data;
+
+            node = node.first_child;
+            while (node != null) {
+                if (node.type == LXB_DOM_NODE_TYPE_TEXT) {
+                    text = cast(const(lxb_dom_text_t)*) (cast(lxb_dom_text_t*) (node));
+                    str = &text.char_data.data;
+
+                    if (contains.insensitive) {
+                        is_ = lexbor_str_data_ncasecmp_contain(str.data, str.length,
+                                                              contains.str.data,
+                                                              contains.str.length);
+                    }
+                    else {
+                        is_ = lexbor_str_data_ncmp_contain(str.data, str.length,
+                                                          contains.str.data,
+                                                          contains.str.length);
+                    }
+
+                    if (is_) {
+                        return true;
+                    }
+                }
+
+                node = node.next;
+            }
+
+            return false;
 
         case LXB_CSS_SELECTOR_PSEUDO_CLASS_FUNCTION_DIR:
         case LXB_CSS_SELECTOR_PSEUDO_CLASS_FUNCTION_LANG:

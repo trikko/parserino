@@ -43,6 +43,8 @@ struct lexbor_str_t {
 
 
 
+
+
 /* Data utils */
 /*
  * [in] first: must be null-terminated
@@ -113,7 +115,7 @@ struct lexbor_str_t {
 
 // ---- str.c ----
 /*
- * Copyright (C) 2018 Alexander Borisov
+ * Copyright (C) 2018-2026 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
@@ -179,6 +181,7 @@ lexbor_str_t* lexbor_str_destroy(lexbor_str_t* str, lexbor_mraw_t* mraw, bool de
     }
 
     if (str.data != null) {
+        lexbor_str_clean(str);
         str.data = cast(ubyte*) lexbor_mraw_free(mraw, str.data);
     }
 
@@ -458,6 +461,27 @@ size_t lexbor_str_whitespace_from_end(lexbor_str_t* target)
     }
 
     return 0;
+}
+
+lxb_char_t* lexbor_str_copy_to(lexbor_str_t* str, const(lxb_char_t)* buff, size_t length)
+{
+    lxb_char_t* data_begin = void;
+
+    data_begin = &str.data[str.length];
+    memcpy(data_begin, buff, lxb_char_t.sizeof * length);
+
+    str.length += length;
+
+    return data_begin;
+}
+
+lxb_char_t* lexbor_str_copy_to_with_null(lexbor_str_t* str, const(lxb_char_t)* buff, size_t length)
+{
+    lxb_char_t* data_begin = lexbor_str_copy_to(str, buff, length);
+
+    str.data[str.length] = '\0';
+
+    return data_begin;
 }
 
 /*

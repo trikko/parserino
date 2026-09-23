@@ -47,7 +47,7 @@ lxb_dom_character_data_t* lxb_dom_character_data_interface_create(lxb_dom_docume
     lxb_dom_node_t* node = (cast(lxb_dom_node_t*) (element));
 
     node.owner_document = lxb_dom_document_owner(document);
-    node.type = LXB_DOM_NODE_TYPE_UNDEF;
+    node.type = LXB_DOM_NODE_TYPE_CHARACTER_DATA;
 
     return element;
 }
@@ -114,7 +114,7 @@ lxb_status_t lxb_dom_character_data_replace(lxb_dom_character_data_t* ch_data, c
             return LXB_STATUS_ERROR_MEMORY_ALLOCATION;
         }
     }
-    else if (lexbor_str_size(&ch_data.data) < len) {
+    else if (lexbor_str_size(&ch_data.data) <= len) {
         const(lxb_char_t)* data_r = void;
 
         data_r = lexbor_str_realloc(&ch_data.data,

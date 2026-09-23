@@ -6,7 +6,6 @@ module parserino.lexbor.ns.ns;
 public import parserino.lexbor.core.hash;
 public import parserino.lexbor.core.shs;
 public import parserino.lexbor.ns.const_;
-import parserino.lexbor.core.str_res;
 import parserino.lexbor.ns.res;
 
 extern(C) @nogc nothrow:
@@ -44,10 +43,12 @@ struct lxb_ns_prefix_data_t {
 
 // ---- ns.c ----
 /*
- * Copyright (C) 2018-2019 Alexander Borisov
+ * Copyright (C) 2018-2026 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
+
+    // D port (C extern, imported instead): extern const(lxb_char_t)[256] lexbor_str_res_map_lowercase;
 
  const(lxb_ns_data_t)* lxb_ns_append(lexbor_hash_t* hash, const(lxb_char_t)* link, size_t length)
 {

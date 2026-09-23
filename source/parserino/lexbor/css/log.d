@@ -201,7 +201,7 @@ lxb_css_log_message_t* lxb_css_log_format(lxb_css_log_t* log, lxb_css_log_type_t
         return null;
     }
 
-    msg = lxb_css_log_push(log, LXB_CSS_LOG_SYNTAX_ERROR, psize);
+    msg = lxb_css_log_push(log, type, psize);
     if (msg == null) {
         return null;
     }
@@ -262,7 +262,7 @@ lxb_status_t lxb_css_log_serialize(lxb_css_log_t* log, lexbor_serialize_cb_f cb,
             break;
         }
 
-        do { (status) = cb(cast(lxb_char_t*) ("\n"), (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+        do { (status) = cb(cast(lxb_char_t*) "\n".ptr, (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
     }
     while (true);
 
@@ -322,7 +322,7 @@ lxb_status_t lxb_css_log_message_serialize(lxb_css_log_message_t* msg, lexbor_se
     type_name = lxb_css_log_type_by_id(msg.type, &length);
 
     do { (status) = cb(cast(lxb_char_t*) (type_name), (length), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
-    do { (status) = cb(cast(lxb_char_t*) (". "), (2), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+    do { (status) = cb(cast(lxb_char_t*) ". ".ptr, (2), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
     do { (status) = cb(cast(lxb_char_t*) (msg.text.data), (msg.text.length), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
 
     return LXB_STATUS_OK;

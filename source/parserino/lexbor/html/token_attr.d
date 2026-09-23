@@ -60,7 +60,7 @@ struct lxb_html_token_attr {
 
 lxb_html_token_attr_t* lxb_html_token_attr_create(lexbor_dobject_t* dobj)
 {
-    return cast(lxb_html_token_attr*) lexbor_dobject_calloc(dobj);
+    return cast(lxb_html_token_attr*) (lexbor_dobject_calloc(dobj));
 }
 
 void lxb_html_token_attr_clean(lxb_html_token_attr_t* attr)

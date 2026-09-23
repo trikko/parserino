@@ -79,7 +79,7 @@ struct lxb_css_selectors {
 
 // ---- selectors.c ----
 /*
- * Copyright (C) 2020-2022 Alexander Borisov
+ * Copyright (C) 2020-2026 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
@@ -88,59 +88,43 @@ struct lxb_css_selectors {
 
 
 private const(lxb_css_syntax_cb_components_t) lxb_css_selectors_complex_list_cb = {
-    state: &lxb_css_selectors_state_complex_list,
-    block: null,
-    failed: &lxb_css_state_failed,
-    end: &lxb_css_selectors_components_end
+    prelude: &lxb_css_selectors_state_complex_list,
+    cb: {failed: &lxb_css_state_failed, end: &lxb_css_selectors_components_end}
 };
 
 private const(lxb_css_syntax_cb_components_t) lxb_css_selectors_compound_list_cb = {
-    state: &lxb_css_selectors_state_compound_list,
-    block: null,
-    failed: &lxb_css_state_failed,
-    end: &lxb_css_selectors_components_end
+    prelude: &lxb_css_selectors_state_compound_list,
+    cb: {failed: &lxb_css_state_failed, end: &lxb_css_selectors_components_end}
 };
 
 private const(lxb_css_syntax_cb_components_t) lxb_css_selectors_simple_list_cb = {
-    state: &lxb_css_selectors_state_simple_list,
-    block: null,
-    failed: &lxb_css_state_failed,
-    end: &lxb_css_selectors_components_end
+    prelude: &lxb_css_selectors_state_simple_list,
+    cb: {failed: &lxb_css_state_failed, end: &lxb_css_selectors_components_end}
 };
 
 private const(lxb_css_syntax_cb_components_t) lxb_css_selectors_relative_list_cb = {
-    state: &lxb_css_selectors_state_relative_list,
-    block: null,
-    failed: &lxb_css_state_failed,
-    end: &lxb_css_selectors_components_end
+    prelude: &lxb_css_selectors_state_relative_list,
+    cb: {failed: &lxb_css_state_failed, end: &lxb_css_selectors_components_end}
 };
 
 private const(lxb_css_syntax_cb_components_t) lxb_css_selectors_complex_cb = {
-    state: &lxb_css_selectors_state_complex,
-    block: null,
-    failed: &lxb_css_state_failed,
-    end: &lxb_css_selectors_components_end
+    prelude: &lxb_css_selectors_state_complex,
+    cb: {failed: &lxb_css_state_failed, end: &lxb_css_selectors_components_end}
 };
 
 private const(lxb_css_syntax_cb_components_t) lxb_css_selectors_compound_cb = {
-    state: &lxb_css_selectors_state_compound,
-    block: null,
-    failed: &lxb_css_state_failed,
-    end: &lxb_css_selectors_components_end
+    prelude: &lxb_css_selectors_state_compound,
+    cb: {failed: &lxb_css_state_failed, end: &lxb_css_selectors_components_end}
 };
 
 private const(lxb_css_syntax_cb_components_t) lxb_css_selectors_simple_cb = {
-    state: &lxb_css_selectors_state_simple,
-    block: null,
-    failed: &lxb_css_state_failed,
-    end: &lxb_css_selectors_components_end
+    prelude: &lxb_css_selectors_state_simple,
+    cb: {failed: &lxb_css_state_failed, end: &lxb_css_selectors_components_end}
 };
 
 private const(lxb_css_syntax_cb_components_t) lxb_css_selectors_relative_cb = {
-    state: &lxb_css_selectors_state_relative,
-    block: null,
-    failed: &lxb_css_state_failed,
-    end: &lxb_css_selectors_components_end
+    prelude: &lxb_css_selectors_state_relative,
+    cb: {failed: &lxb_css_state_failed, end: &lxb_css_selectors_components_end}
 };
 
 lxb_css_selectors_t* lxb_css_selectors_create()
@@ -222,7 +206,7 @@ lxb_css_selector_list_t* lxb_css_selectors_parse_relative_list(lxb_css_parser_t*
                                         data, length);
 }
 
-private lxb_status_t lxb_css_selectors_parse_prepare(lxb_css_parser_t* parser, lxb_css_memory_t* memory, lxb_css_selectors_t* selectors)
+private lxb_status_t lxb_css_selectors_parse_prepare(lxb_css_parser_t* parser)
 {
     if (parser.stage != LXB_CSS_PARSER_CLEAN) {
         if (parser.stage == LXB_CSS_PARSER_RUN) {
@@ -235,12 +219,6 @@ private lxb_status_t lxb_css_selectors_parse_prepare(lxb_css_parser_t* parser, l
     parser.tkz.with_comment = false;
     parser.stage = LXB_CSS_PARSER_RUN;
 
-    parser.old_memory = parser.memory;
-    parser.old_selectors = parser.selectors;
-
-    parser.memory = memory;
-    parser.selectors = selectors;
-
     return LXB_STATUS_OK;
 }
 
@@ -250,8 +228,7 @@ private lxb_css_selector_list_t* lxb_css_selectors_parse_process(lxb_css_parser_
 
     lxb_css_parser_buffer_set(parser, data, length);
 
-    rule = lxb_css_syntax_parser_components_push(parser, null, null,
-                                                 components, null,
+    rule = lxb_css_syntax_parser_components_push(parser, components, null, null,
                                                  LXB_CSS_SYNTAX_TOKEN_UNDEF);
     if (rule == null) {
         return null;
@@ -268,48 +245,49 @@ private lxb_css_selector_list_t* lxb_css_selectors_parse_process(lxb_css_parser_
 private void lxb_css_selectors_parse_finish(lxb_css_parser_t* parser)
 {
     parser.stage = LXB_CSS_PARSER_END;
-
-    parser.memory = parser.old_memory;
-    parser.selectors = parser.old_selectors;
 }
 
 private lxb_css_selector_list_t* lxb_css_selectors_parse_list(lxb_css_parser_t* parser, const(lxb_css_syntax_cb_components_t)* components, const(lxb_char_t)* data, size_t length)
 {
-    lxb_css_memory_t* memory = void;
-    lxb_css_selectors_t* selectors = void;
+    bool my_mem = void, my_selectors = void;
     lxb_css_selector_list_t* list = void;
 
-    memory = parser.memory;
-    selectors = parser.selectors;
+    my_mem = false;
+    my_selectors = false;
 
-    if (selectors == null) {
-        selectors = lxb_css_selectors_create();
-        parser.status = lxb_css_selectors_init(selectors);
+    if (parser.selectors == null) {
+        parser.selectors = lxb_css_selectors_create();
+        parser.status = lxb_css_selectors_init(parser.selectors);
 
         if (parser.status != LXB_STATUS_OK) {
-            cast(void) lxb_css_selectors_destroy(selectors, true);
+            cast(void) lxb_css_selectors_destroy(parser.selectors, true);
             return null;
         }
+
+        my_selectors = true;
     }
     else {
-        lxb_css_selectors_clean(selectors);
+        lxb_css_selectors_clean(parser.selectors);
     }
 
-    if (memory == null) {
-        memory = lxb_css_memory_create();
-        parser.status = lxb_css_memory_init(memory, 256);
+    if (parser.memory == null) {
+        parser.memory = lxb_css_memory_create();
+        parser.status = lxb_css_memory_init(parser.memory, 256);
 
         if (parser.status != LXB_STATUS_OK) {
-            if (selectors != parser.selectors) {
-                cast(void) lxb_css_selectors_destroy(selectors, true);
+            if (my_selectors) {
+                parser.selectors = lxb_css_selectors_destroy(parser.selectors,
+                                                              true);
             }
 
-            cast(void) lxb_css_memory_destroy(memory, true);
+            cast(void) lxb_css_memory_destroy(parser.memory, true);
             return null;
         }
+
+        my_mem = true;
     }
 
-    parser.status = lxb_css_selectors_parse_prepare(parser, memory, selectors);
+    parser.status = lxb_css_selectors_parse_prepare(parser);
     if (parser.status != LXB_STATUS_OK) {
         list = null;
         goto end;
@@ -321,12 +299,12 @@ private lxb_css_selector_list_t* lxb_css_selectors_parse_list(lxb_css_parser_t* 
 
 end:
 
-    if (list == null && memory != parser.memory) {
-        cast(void) lxb_css_memory_destroy(memory, true);
+    if (list == null && my_mem) {
+        parser.memory = lxb_css_memory_destroy(parser.memory, true);
     }
 
-    if (selectors != parser.selectors) {
-        cast(void) lxb_css_selectors_destroy(selectors, true);
+    if (my_selectors) {
+        parser.selectors = lxb_css_selectors_destroy(parser.selectors, true);
     }
 
     return list;

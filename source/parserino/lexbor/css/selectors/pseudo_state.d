@@ -34,9 +34,10 @@ __gshared:
 
 
 
+
 // ---- pseudo_state.c ----
 /*
- * Copyright (C) 2020-2022 Alexander Borisov
+ * Copyright (C) 2020-2026 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
@@ -49,10 +50,8 @@ __gshared:
 
 
 private const(lxb_css_syntax_cb_components_t) lxb_css_selectors_comp = {
-    state: &lxb_css_selectors_state_complex_list,
-    block: null,
-    failed: &lxb_css_state_failed,
-    end: &lxb_css_selectors_state_pseudo_of_end
+    prelude: &lxb_css_selectors_state_complex_list,
+    cb: {failed: &lxb_css_state_failed, end: &lxb_css_selectors_state_pseudo_of_end}
 };
 
  bool lxb_css_selectors_state_pseudo_anb_begin(lxb_css_parser_t* parser, const(lxb_css_syntax_token_t)* token, void* ctx)
@@ -170,6 +169,118 @@ bool lxb_css_selectors_state_pseudo_element_function__undef(lxb_css_parser_t* pa
     return true;
 }
 
+bool lxb_css_selectors_state_pseudo_class_function_lexbor_contains(lxb_css_parser_t* parser, const(lxb_css_syntax_token_t)* token, void* ctx)
+{
+    lxb_css_selectors_t* selectors = void;
+    lxb_css_selector_t* selector = void;
+    lxb_css_selector_contains_t* contains = void;
+    lexbor_str_t* str = void;
+    const(lxb_char_t)* data = void;
+    size_t length = void;
+
+    selectors = parser.selectors;
+    selector = selectors.list_last.last;
+
+again:
+
+    switch (token.type) {
+        case LXB_CSS_SYNTAX_TOKEN_STRING:
+            data = token.types.string.data;
+            length = token.types.string.length;
+            break;
+
+        case LXB_CSS_SYNTAX_TOKEN_IDENT:
+            data = token.types.ident.data;
+            length = token.types.ident.length;
+            break;
+
+        case LXB_CSS_SYNTAX_TOKEN_WHITESPACE:
+            lxb_css_syntax_parser_consume(parser);
+            do { if ((token = lxb_css_syntax_parser_token(parser)) == null) { return cast(bool) parser.tkz.status; } } while (false);
+            goto again;
+
+        default:
+            lxb_css_parser_unexpected_data(parser, token);
+            return lxb_css_parser_failed(parser);
+    }
+
+    contains = cast(lxb_css_selector_contains_t*) lexbor_mraw_alloc(parser.memory.mraw,
+                            lxb_css_selector_contains_t.sizeof);
+    if (contains == null) {
+        return lxb_css_parser_memory_fail(parser);
+    }
+
+    contains.insensitive = false;
+    str = &contains.str;
+
+    str.data = cast(ubyte*) lexbor_mraw_alloc(parser.memory.mraw, length + 1);
+    if (str.data == null) {
+        lexbor_mraw_free(parser.memory.mraw, contains);
+        return lxb_css_parser_memory_fail(parser);
+    }
+
+    memcpy(str.data, data, length);
+
+    str.length = length;
+    str.data[length] = '\0';
+
+    selector.u.pseudo.data = contains;
+
+again_end:
+
+    lxb_css_syntax_parser_consume(parser);
+    do { if ((token = lxb_css_syntax_parser_token(parser)) == null) { return cast(bool) parser.tkz.status; } } while (false);
+
+    switch (token.type) {
+        case LXB_CSS_SYNTAX_TOKEN__END:
+            break;
+
+        case LXB_CSS_SYNTAX_TOKEN_WHITESPACE:
+            goto again_end;
+
+        case LXB_CSS_SYNTAX_TOKEN_IDENT:
+            data = token.types.ident.data;
+            length = token.types.ident.length;
+
+            if (length == 1 && (*data == 'i' || *data == 'I')) {
+                contains.insensitive = true;
+
+                lxb_css_syntax_parser_consume(parser);
+                do { if ((token = lxb_css_syntax_parser_token(parser)) == null) { return cast(bool) parser.tkz.status; } } while (false);
+
+                if (token.type == LXB_CSS_SYNTAX_TOKEN_WHITESPACE) {
+                    lxb_css_syntax_parser_consume(parser);
+                    do { if ((token = lxb_css_syntax_parser_token(parser)) == null) { return cast(bool) parser.tkz.status; } } while (false);
+                }
+
+                if (token.type != LXB_CSS_SYNTAX_TOKEN__END) {
+                    goto failed;
+                }
+
+                break;
+            }
+            /* Fall through. */
+
+            goto default; /* C fallthrough */
+        default:
+            goto failed;
+    }
+
+    parser.selectors.list = null;
+
+    return lxb_css_parser_success(parser);
+
+failed:
+
+    lexbor_mraw_free(parser.memory.mraw, contains.str.data);
+    lexbor_mraw_free(parser.memory.mraw, contains);
+
+    selector.u.pseudo.data = null;
+
+    lxb_css_parser_unexpected_data(parser, token);
+    return lxb_css_parser_failed(parser);
+}
+
 private bool lxb_css_selectors_state_pseudo_anb(lxb_css_parser_t* parser, const(lxb_css_syntax_token_t)* token, void* ctx)
 {
     lxb_css_selectors_t* selectors = void;
@@ -250,10 +361,14 @@ private bool lxb_css_selectors_state_pseudo_of_begin(lxb_css_parser_t* parser, c
                 return lxb_css_parser_memory_fail(parser);
             }
 
-            rule = lxb_css_syntax_parser_components_push(parser, token,
+            rule = lxb_css_syntax_parser_components_push(parser,
+                                                         &lxb_css_selectors_comp,
                                                          &lxb_css_selectors_state_pseudo_of_back,
-                                                         &lxb_css_selectors_comp, list,
-                                                         LXB_CSS_SYNTAX_TOKEN_R_PARENTHESIS);
+                                                         list, LXB_CSS_SYNTAX_TOKEN_R_PARENTHESIS);
+//            rule = lxb_css_syntax_parser_components_push(parser, token,
+//                                                         lxb_css_selectors_state_pseudo_of_back,
+//                                                         &lxb_css_selectors_comp, list,
+//                                                         LXB_CSS_SYNTAX_TOKEN_R_PARENTHESIS);
             if (rule == null) {
                 lexbor_mraw_free(parser.memory.mraw,
                                  list.last.u.pseudo.data);

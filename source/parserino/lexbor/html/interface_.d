@@ -74,6 +74,8 @@ alias lxb_html_progress_element_t = lxb_html_progress_element;
 alias lxb_html_quote_element_t = lxb_html_quote_element;
 alias lxb_html_script_element_t = lxb_html_script_element;
 alias lxb_html_select_element_t = lxb_html_select_element;
+alias lxb_html_selectedcontent_element_t = lxb_html_selectedcontent_element;
+alias lxb_html_search_element_t = lxb_html_search_element;
 alias lxb_html_slot_element_t = lxb_html_slot_element;
 alias lxb_html_source_element_t = lxb_html_source_element;
 alias lxb_html_span_element_t = lxb_html_span_element;
@@ -108,30 +110,33 @@ alias lxb_html_window_t = lxb_html_window;
 lxb_dom_interface_t* lxb_html_interface_create(lxb_html_document_t* document, lxb_tag_id_t tag_id, lxb_ns_id_t ns)
 {
     lxb_dom_node_t* node = void;
+    lxb_dom_element_t* domel = void;
+    lxb_html_unknown_element_t* unel = void;
 
     if (tag_id >= LXB_TAG__LAST_ENTRY) {
         if (ns == LXB_NS_HTML) {
-            lxb_html_unknown_element_t* unel = void;
-
             unel = lxb_html_unknown_element_interface_create(document);
             node = (cast(lxb_dom_node_t*) (unel));
         }
         else if (ns == LXB_NS_SVG) {
             /* TODO: For this need implement SVGElement */
-            lxb_dom_element_t* domel = void;
 
             domel = lxb_dom_element_interface_create(&document.dom_document);
             node = (cast(lxb_dom_node_t*) (domel));
         }
         else {
-            lxb_dom_element_t* domel = void;
-
             domel = lxb_dom_element_interface_create(&document.dom_document);
             node = (cast(lxb_dom_node_t*) (domel));
         }
     }
     else {
-        node = cast(lxb_dom_node*) lxb_html_interface_res_constructors[tag_id][ns](document);
+        if (ns < LXB_NS__LAST_ENTRY) {
+            node = cast(lxb_dom_node*) lxb_html_interface_res_constructors[tag_id][ns](document);
+        }
+        else {
+            domel = lxb_dom_element_interface_create(&document.dom_document);
+            node = (cast(lxb_dom_node_t*) (domel));
+        }
     }
 
     if (node == null) {

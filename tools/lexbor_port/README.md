@@ -1,10 +1,16 @@
 # lexbor → D port tooling
 
-These scripts produced the first version of `source/parserino/lexbor/` from
-lexbor commit `7fb22cf5664a331d7c24b113489e566767c9c25a` (the subset parserino
-needs: core, tag, ns, dom, html, css syntax/selectors, selectors). From now on
-the D code is maintained by hand; the scripts are kept for reference.
+These scripts produced `source/parserino/lexbor/` from lexbor master
+`e6c068fc95fd2952aaf253e5a8e5beeb8b36d072` (2026-09-22), limited to the subset
+parserino needs (`used_c.txt`: core, tag, ns, dom, html, css syntax/selectors,
+selectors). CSS stylesheet/property code is not ported: `css/state.c` was
+trimmed to the generic parser states and `lxb_css_syntax_parse_list_rules()` /
+`lxb_css_syntax_parse_declarations()` were removed before translating.
 
+The D code is now maintained by hand (phase 3 will diverge from lexbor); the
+scripts are kept only as a record of how it was produced.
+
+0. `postprocess.py`: generic textual fixes on the raw ctod output.
 1. `convert.py`: C preprocessor expands only function-like macros
    (`funcmacros.h`), then [ctod](https://github.com/dkorpel/ctod) translates
    each `.h`/`.c` pair into one D module.

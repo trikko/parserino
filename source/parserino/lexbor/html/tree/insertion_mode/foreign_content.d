@@ -1,27 +1,32 @@
 module parserino.lexbor.html.tree.insertion_mode.foreign_content;
 
+import parserino.lexbor.core.str_res;
 // D port of lexbor (https://github.com/lexbor/lexbor), Apache-2.0.
 // Original author: Alexander Borisov <borisov@lexbor.com>
 
 import parserino.lexbor.html.tree.insertion_mode;
 import parserino.lexbor.html.tree.open_elements;
 import parserino.lexbor.html.interfaces.element;
-import parserino.lexbor.core.str_res;
 
 extern(C) @nogc nothrow:
 __gshared:
 
 // ---- foreign_content.c ----
 /*
- * Copyright (C) 2018-2020 Alexander Borisov
+ * Copyright (C) 2018-2026 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
+
+    // D port (C extern, imported instead): extern const(lxb_char_t)[4] lexbor_str_res_ansi_replacement_character;
+    // D port (C extern, imported instead): extern const(ubyte)[256] lexbor_tokenizer_chars_map;
 
 lxb_status_t lxb_dom_element_qualified_name_set(lxb_dom_element_t* element, const(lxb_char_t)* prefix, size_t prefix_len, const(lxb_char_t)* lname, size_t lname_len);
 
  bool lxb_html_tree_insertion_mode_foreign_content_anything_else_closed(lxb_html_tree_t* tree, lxb_html_token_t* token)
 {
+    uint status = void;
+
     if (tree.open_elements.length == 0) {
         return tree.mode(tree, token);
     }
@@ -35,10 +40,12 @@ lxb_status_t lxb_dom_element_qualified_name_set(lxb_dom_element_t* element, cons
                                   LXB_HTML_RULES_ERROR_UNELINOPELST);
     }
 
+    status = LXB_STATUS_OK;
+
     while (idx != 0) {
         if (list[idx].local_name == token.tag_id) {
-            lxb_html_tree_open_elements_pop_until_node(tree, list[idx], true);
-
+            status |= cast(uint) lxb_html_tree_open_elements_pop_until_node(tree,
+                                                                list[idx], true);
             return true;
         }
 
@@ -47,6 +54,11 @@ lxb_status_t lxb_dom_element_qualified_name_set(lxb_dom_element_t* element, cons
         if (list[idx].ns == LXB_NS_HTML) {
             break;
         }
+    }
+
+    if (status != LXB_STATUS_OK) {
+        tree.status = LXB_STATUS_ERROR;
+        return lxb_html_tree_process_abort(tree);
     }
 
     return tree.mode(tree, token);
@@ -82,7 +94,8 @@ lxb_status_t lxb_dom_element_qualified_name_set(lxb_dom_element_t* element, cons
         tree.before_append_attr = &lxb_html_tree_adjust_attributes_svg;
     }
 
-    element = lxb_html_tree_insert_foreign_element(tree, token, node.ns);
+    element = lxb_html_tree_insert_foreign_element(tree, token, node.ns,
+                                                   false);
     if (element == null) {
         tree.before_append_attr = null;
         tree.status = LXB_STATUS_ERROR_MEMORY_ALLOCATION;
@@ -147,8 +160,8 @@ lxb_status_t lxb_dom_element_qualified_name_set(lxb_dom_element_t* element, cons
         const(lxb_char_t)* pos = str.data;
         const(lxb_char_t)* end = str.data + str.length;
 
-        static const(lxb_char_t)* rep = lexbor_str_res_ansi_replacement_character.ptr;
-        static const(uint) rep_len = lexbor_str_res_ansi_replacement_character.sizeof - 1;
+        const(lxb_char_t)* rep = lexbor_str_res_ansi_replacement_character.ptr;
+        const(uint) rep_len = lexbor_str_res_ansi_replacement_character.sizeof - 1;
 
         while (pos != end) {
             /* Need skip U+FFFD REPLACEMENT CHARACTER */
@@ -204,6 +217,18 @@ lxb_status_t lxb_dom_element_qualified_name_set(lxb_dom_element_t* element, cons
     return true;
 }
 
+ bool lxb_html_tree_insertion_mode_foreign_content_processing_instruction(lxb_html_tree_t* tree, lxb_html_token_t* token)
+{
+    lxb_dom_processing_instruction_t* pi = void;
+
+    pi = lxb_html_tree_insert_processing_instruction(tree, token, null);
+    if (pi == null) {
+        return lxb_html_tree_process_abort(tree);
+    }
+
+    return true;
+}
+
  bool lxb_html_tree_insertion_mode_foreign_content_doctype(lxb_html_tree_t* tree, lxb_html_token_t* token)
 {
     lxb_html_tree_parse_error(tree, token, LXB_HTML_RULES_ERROR_DOTOFOCOMO);
@@ -246,22 +271,19 @@ go_next:
 
     lxb_html_tree_parse_error(tree, token, LXB_HTML_RULES_ERROR_UNTO);
 
-    if (tree.fragment != null) {
-        return lxb_html_tree_insertion_mode_foreign_content_anything_else(tree,
-                                                                          token);
-    }
+    node = lxb_html_tree_current_node(tree);
 
-    do {
+    while (node != null &&
+           !(lxb_html_tree_mathml_text_integration_point(node)
+             || lxb_html_tree_html_integration_point(node)
+             || node.ns == LXB_NS_HTML))
+    {
         lxb_html_tree_open_elements_pop(tree);
 
         node = lxb_html_tree_current_node(tree);
     }
-    while (node &&
-           !(lxb_html_tree_mathml_text_integration_point(node)
-            || lxb_html_tree_html_integration_point(node)
-            || node.ns == LXB_NS_HTML));
 
-    return false;
+    return tree.mode(tree, token);
 }
 
 bool lxb_html_tree_insertion_mode_foreign_content(lxb_html_tree_t* tree, lxb_html_token_t* token)
@@ -271,6 +293,10 @@ bool lxb_html_tree_insertion_mode_foreign_content(lxb_html_tree_t* tree, lxb_htm
             case LXB_TAG_SCRIPT:
                 return lxb_html_tree_insertion_mode_foreign_content_script_closed(tree,
                                                                                   token);
+            case LXB_TAG_P:
+            case LXB_TAG_BR:
+                return lxb_html_tree_insertion_mode_foreign_content_all(tree,
+                                                                        token);
             default:
                 return lxb_html_tree_insertion_mode_foreign_content_anything_else_closed(tree,
                                                                                          token);
@@ -284,6 +310,9 @@ bool lxb_html_tree_insertion_mode_foreign_content(lxb_html_tree_t* tree, lxb_htm
         case LXB_TAG__EM_COMMENT:
             return lxb_html_tree_insertion_mode_foreign_content_comment(tree,
                                                                         token);
+        case LXB_TAG__PROCESSINGINSTRUCTION:
+            return lxb_html_tree_insertion_mode_foreign_content_processing_instruction(tree,
+                                                                                       token);
         case LXB_TAG__EM_DOCTYPE:
             return lxb_html_tree_insertion_mode_foreign_content_doctype(tree,
                                                                         token);

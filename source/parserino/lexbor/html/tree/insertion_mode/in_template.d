@@ -101,8 +101,11 @@ __gshared:
 
     lxb_html_tree_parse_error(tree, token, LXB_HTML_RULES_ERROR_UNENOFFI);
 
-    lxb_html_tree_open_elements_pop_until_tag_id(tree, LXB_TAG_TEMPLATE,
-                                                 LXB_NS_HTML, true);
+    tree.status = lxb_html_tree_open_elements_pop_until_tag_id(tree,
+                                        LXB_TAG_TEMPLATE, LXB_NS_HTML, true);
+    if (tree.status != LXB_STATUS_OK) {
+        return lxb_html_tree_process_abort(tree);
+    }
 
     lxb_html_tree_active_formatting_up_to_last_marker(tree);
     lxb_html_tree_template_insertion_pop(tree);
@@ -141,6 +144,7 @@ bool lxb_html_tree_insertion_mode_in_template(lxb_html_tree_t* tree, lxb_html_to
     switch (token.tag_id) {
         case LXB_TAG__TEXT:
         case LXB_TAG__EM_COMMENT:
+        case LXB_TAG__PROCESSINGINSTRUCTION:
         case LXB_TAG__EM_DOCTYPE:
             return lxb_html_tree_insertion_mode_in_body(tree, token);
 

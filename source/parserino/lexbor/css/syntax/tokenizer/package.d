@@ -10,7 +10,6 @@ import parserino.lexbor.css.syntax.tokenizer.error;
 import parserino.lexbor.css.syntax.state;
 import parserino.lexbor.css.syntax.state_res;
 import parserino.lexbor.core.array;
-import parserino.lexbor.core.str_res;
 
 extern(C) @nogc nothrow:
 __gshared:
@@ -91,10 +90,12 @@ struct lxb_css_syntax_tokenizer {
 
 // ---- tokenizer.c ----
 /*
- * Copyright (C) 2018-2025 Alexander Borisov
+ * Copyright (C) 2018-2026 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
+
+    // D port (C extern, imported instead): extern const(lxb_char_t)[256] lexbor_str_res_map_lowercase;
 
 private const(lxb_char_t)[10] lxb_css_syntax_tokenizer_important = lexbor_carray!"important";
 
@@ -355,7 +356,7 @@ private bool lxb_css_syntax_tokenizer_lookup_important_ch(lxb_css_syntax_tokeniz
 {
     static const(size_t) length = lxb_css_syntax_tokenizer_important.sizeof - 1;
 
-    if (!(end - p >= length
+    if (!((cast(size_t) (end - p)) >= length
            && lexbor_str_data_ncasecmp(p, lxb_css_syntax_tokenizer_important.ptr,
                                        length)))
     {

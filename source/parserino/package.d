@@ -1892,6 +1892,7 @@ class SelectorElementRange
         {
             lxb_selectors_destroy(selectors,true);
             lxb_css_selector_list_destroy_memory(list);
+            lxb_css_parser_destroy(parser, true);
             Element.RefCounter.remove(element);
             Document.RefCounter.remove(docPayload);
         }
@@ -1926,7 +1927,12 @@ class SelectorElementRange
 
         selectors = lxb_selectors_create();
         lxb_selectors_init(selectors);
-        list = CallWithLexborString!lxb_css_selectors_parse(docPayload.parser, selector);
+
+        // A parser for each query: newer lexbor keeps the selector memory
+        // inside the parser, so the list must not outlive a shared parser.
+        parser = lxb_css_parser_create();
+        lxb_css_parser_init(parser, null, null);
+        list = CallWithLexborString!lxb_css_selectors_parse(parser, selector);
 
         Document.RefCounter.add(docPayload);
         Element.RefCounter.add(element);
@@ -1960,6 +1966,7 @@ class SelectorElementRange
     Document.DocumentPayload*   docPayload;
     lxb_selectors_t*            selectors;
     lxb_css_selector_list_t*    list;
+    lxb_css_parser_t*           parser;
 
 }
 

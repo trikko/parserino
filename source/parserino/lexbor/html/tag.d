@@ -6,7 +6,7 @@ module parserino.lexbor.html.tag;
 public import parserino.lexbor.html.base;
 public import parserino.lexbor.tag.tag;
 public import parserino.lexbor.ns.ns;
-public import parserino.lexbor.html.tag_res;
+import parserino.lexbor.html.tag_res;
 
 extern(C) @nogc nothrow:
 __gshared:
@@ -27,8 +27,7 @@ enum lxb_html_tag_category {
     LXB_HTML_TAG_CATEGORY_SCOPE = 0x0008,
     LXB_HTML_TAG_CATEGORY_SCOPE_LIST_ITEM = 0x0010,
     LXB_HTML_TAG_CATEGORY_SCOPE_BUTTON = 0x0020,
-    LXB_HTML_TAG_CATEGORY_SCOPE_TABLE = 0x0040,
-    LXB_HTML_TAG_CATEGORY_SCOPE_SELECT = 0x0080,
+    LXB_HTML_TAG_CATEGORY_SCOPE_TABLE = 0x0040
 }
 alias LXB_HTML_TAG_CATEGORY__UNDEF = lxb_html_tag_category.LXB_HTML_TAG_CATEGORY__UNDEF;
 alias LXB_HTML_TAG_CATEGORY_ORDINARY = lxb_html_tag_category.LXB_HTML_TAG_CATEGORY_ORDINARY;
@@ -38,7 +37,6 @@ alias LXB_HTML_TAG_CATEGORY_SCOPE = lxb_html_tag_category.LXB_HTML_TAG_CATEGORY_
 alias LXB_HTML_TAG_CATEGORY_SCOPE_LIST_ITEM = lxb_html_tag_category.LXB_HTML_TAG_CATEGORY_SCOPE_LIST_ITEM;
 alias LXB_HTML_TAG_CATEGORY_SCOPE_BUTTON = lxb_html_tag_category.LXB_HTML_TAG_CATEGORY_SCOPE_BUTTON;
 alias LXB_HTML_TAG_CATEGORY_SCOPE_TABLE = lxb_html_tag_category.LXB_HTML_TAG_CATEGORY_SCOPE_TABLE;
-alias LXB_HTML_TAG_CATEGORY_SCOPE_SELECT = lxb_html_tag_category.LXB_HTML_TAG_CATEGORY_SCOPE_SELECT;
 
 
 struct lxb_html_tag_fixname_t {
@@ -46,27 +44,11 @@ struct lxb_html_tag_fixname_t {
     uint len;
 }
 
+
+
 /*
  * Inline functions
  */
- bool lxb_html_tag_is_category(lxb_tag_id_t tag_id, lxb_ns_id_t ns, lxb_html_tag_category_t cat)
-{
-    if (tag_id < LXB_TAG__LAST_ENTRY && ns < LXB_NS__LAST_ENTRY) {
-        return cast(bool) (lxb_html_tag_res_cats[tag_id][ns] & cat);
-    }
-
-    return cast(bool) ((LXB_HTML_TAG_CATEGORY_ORDINARY|LXB_HTML_TAG_CATEGORY_SCOPE_SELECT) & cat);
-}
-
- const(lxb_html_tag_fixname_t)* lxb_html_tag_fixname_svg(lxb_tag_id_t tag_id)
-{
-    if (tag_id >= LXB_TAG__LAST_ENTRY) {
-        return null;
-    }
-
-    return &lxb_html_tag_res_fixname_svg[tag_id];
-}
-
  bool lxb_html_tag_is_void(lxb_tag_id_t tag_id)
 {
     switch (tag_id) {
@@ -90,4 +72,29 @@ struct lxb_html_tag_fixname_t {
     }
 
     return false;
+}
+
+// ---- tag.c ----
+/*
+ * Copyright (C) 2026 Alexander Borisov
+ *
+ * Author: Alexander Borisov <borisov@lexbor.com>
+ */
+
+bool lxb_html_tag_is_category(lxb_tag_id_t tag_id, lxb_ns_id_t ns, lxb_html_tag_category_t cat)
+{
+    if (tag_id < LXB_TAG__LAST_ENTRY && ns < LXB_NS__LAST_ENTRY) {
+        return cast(bool) (lxb_html_tag_res_cats[tag_id][ns] & cat);
+    }
+
+    return (LXB_HTML_TAG_CATEGORY_ORDINARY) & cat;
+}
+
+const(lxb_html_tag_fixname_t)* lxb_html_tag_fixname_svg(lxb_tag_id_t tag_id)
+{
+    if (tag_id >= LXB_TAG__LAST_ENTRY) {
+        return null;
+    }
+
+    return &lxb_html_tag_res_fixname_svg[tag_id];
 }

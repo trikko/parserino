@@ -19,9 +19,6 @@ __gshared:
 
 bool lxb_html_tree_insertion_mode_text(lxb_html_tree_t* tree, lxb_html_token_t* token)
 {
-    lxb_dom_node_t* node = void;
-    const(lxb_html_document_parse_cb_t)* pcb = void;
-
     switch (token.tag_id) {
         case LXB_TAG__TEXT: {
             tree.status = lxb_html_tree_insert_character(tree, token, null);
@@ -33,14 +30,14 @@ bool lxb_html_tree_insertion_mode_text(lxb_html_tree_t* tree, lxb_html_token_t* 
         }
 
         case LXB_TAG__END_OF_FILE: {
-            lxb_dom_node_t* node_c = void;
+            lxb_dom_node_t* node = void;
 
             lxb_html_tree_parse_error(tree, token,
                                       LXB_HTML_RULES_ERROR_UNENOFFI);
 
-            node_c = lxb_html_tree_current_node(tree);
+            node = lxb_html_tree_current_node(tree);
 
-            if (lxb_html_tree_node_is(node_c, LXB_TAG_SCRIPT)) {
+            if (lxb_html_tree_node_is(node, LXB_TAG_SCRIPT)) {
                 /* TODO: mark the script element as "already started" */
             }
 
@@ -53,36 +50,16 @@ bool lxb_html_tree_insertion_mode_text(lxb_html_tree_t* tree, lxb_html_token_t* 
 
         /* TODO: need to implement */
         case LXB_TAG_SCRIPT:
-            node = lxb_html_tree_open_elements_pop(tree);
+            lxb_html_tree_open_elements_pop(tree);
 
             tree.mode = tree.original_mode;
-            pcb = tree.document.parse_cb;
-
-            if (pcb == null || pcb.script == null) {
-                break;
-            }
-
-            tree.status = pcb.script(tree, node);
-            if (tree.status != LXB_STATUS_OK) {
-                return lxb_html_tree_process_abort(tree);
-            }
 
             break;
 
         case LXB_TAG_STYLE:
-            node = lxb_html_tree_open_elements_pop(tree);
+            lxb_html_tree_open_elements_pop(tree);
 
             tree.mode = tree.original_mode;
-            pcb = tree.document.parse_cb;
-
-            if (pcb == null || pcb.style == null) {
-                break;
-            }
-
-            tree.status = pcb.style(tree, node);
-            if (tree.status != LXB_STATUS_OK) {
-                return lxb_html_tree_process_abort(tree);
-            }
 
             break;
 

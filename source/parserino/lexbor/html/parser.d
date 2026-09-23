@@ -14,7 +14,6 @@ import parserino.lexbor.html.interfaces.html_element;
 import parserino.lexbor.html.interfaces.form_element;
 import parserino.lexbor.html.tree.template_insertion;
 import parserino.lexbor.html.tree.insertion_mode;
-import parserino.lexbor.html.tag_res;
 
 extern(C) @nogc nothrow:
 __gshared:
@@ -49,6 +48,8 @@ struct lxb_html_parser_t {
 
     lxb_html_parser_state_t state;
     lxb_status_t status;
+
+    lxb_dom_document_opt_t dom_opt;
 
     size_t ref_count;
 }
@@ -101,6 +102,16 @@ struct lxb_html_parser_t {
     lxb_html_tree_scripting_set(parser.tree, scripting);
 }
 
+ lxb_dom_document_opt_t lxb_html_parser_dom_opt(lxb_html_parser_t* parser)
+{
+    return parser.dom_opt;
+}
+
+ void lxb_html_parser_dom_opt_set(lxb_html_parser_t* parser, lxb_dom_document_opt_t opt)
+{
+    parser.dom_opt = opt;
+}
+
 /*
  * No inline functions for ABI.
  */
@@ -110,12 +121,17 @@ struct lxb_html_parser_t {
 
 
 
+
+
 // ---- parser.c ----
 /*
- * Copyright (C) 2018-2021 Alexander Borisov
+ * Copyright (C) 2018-2026 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
+    // D port (C extern, imported instead): extern lxb_html_tag_category_t[LXB_NS__LAST_ENTRY][LXB_TAG__LAST_ENTRY] lxb_html_tag_res_cats;
+    // D port (C extern, imported instead): extern lxb_html_tag_fixname_t[LXB_TAG__LAST_ENTRY] lxb_html_tag_res_fixname_svg;
+
 
 
 lxb_html_parser_t* lxb_html_parser_create()
@@ -136,6 +152,8 @@ lxb_status_t lxb_html_parser_init(lxb_html_parser_t* parser)
     if (status != LXB_STATUS_OK) {
         return status;
     }
+
+    lxb_html_tokenizer_keep_duplicate_set(parser.tkz, true);
 
     /* Tree */
     parser.tree = lxb_html_tree_create();
@@ -278,6 +296,7 @@ lxb_status_t lxb_html_parse_fragment_chunk_begin(lxb_html_parser_t* parser, lxb_
     if (document == null) {
         doc.scripting = parser.tree.scripting;
         doc.compat_mode = LXB_DOM_DOCUMENT_CMODE_NO_QUIRKS;
+        doc.options = parser.dom_opt;
     }
 
     lxb_html_tokenizer_set_state_by_tag(parser.tkz, doc.scripting, tag_id, ns);
@@ -414,7 +433,9 @@ private void lxb_html_parse_fragment_chunk_destroy(lxb_html_parser_t* parser)
         parser.tree.fragment = null;
     }
 
-    if (lxb_html_document_is_original(parser.tree.document) == false) {
+    if (parser.tree.document != null
+        && lxb_html_document_is_original(parser.tree.document) == false)
+    {
         if (parser.root != null) {
             doc = (cast(lxb_dom_node_t*) (parser.tree.document)).owner_document;
             parser.root.parent = &doc.node;
@@ -462,6 +483,7 @@ lxb_html_document_t* lxb_html_parse_chunk_begin(lxb_html_parser_t* parser)
     }
 
     document.dom_document.scripting = parser.tree.scripting;
+    document.dom_document.options = parser.dom_opt;
 
     parser.status = lxb_html_parse_chunk_prepare(parser, document);
     if (parser.status != LXB_STATUS_OK) {
@@ -492,6 +514,13 @@ lxb_status_t lxb_html_parse_chunk_end(lxb_html_parser_t* parser)
     }
 
     parser.status = lxb_html_tree_end(parser.tree);
+
+    if (parser.status == LXB_STATUS_OK) {
+        parser.status = lxb_html_tree_open_elements_pop_all(parser.tree);
+    }
+    else {
+        cast(void) lxb_html_tree_open_elements_pop_all(parser.tree);
+    }
 
     lxb_html_tokenizer_tree_set(parser.tkz, parser.original_tree);
 
@@ -531,4 +560,14 @@ bool lxb_html_parser_scripting_noi(lxb_html_parser_t* parser)
 void lxb_html_parser_scripting_set_noi(lxb_html_parser_t* parser, bool scripting)
 {
     lxb_html_parser_scripting_set(parser, scripting);
+}
+
+lxb_dom_document_opt_t lxb_html_parser_dom_opt_noi(lxb_html_parser_t* parser)
+{
+    return lxb_html_parser_dom_opt(parser);
+}
+
+void lxb_html_parser_dom_opt_set_noi(lxb_html_parser_t* parser, lxb_dom_document_opt_t opt)
+{
+    lxb_html_parser_dom_opt_set(parser, opt);
 }

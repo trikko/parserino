@@ -1,5 +1,6 @@
 module parserino.lexbor.html.token;
 
+import parserino.lexbor.core.str_res;
 // D port of lexbor (https://github.com/lexbor/lexbor), Apache-2.0.
 // Original author: Alexander Borisov <borisov@lexbor.com>
 
@@ -9,7 +10,6 @@ public import parserino.lexbor.html.base;
 public import parserino.lexbor.html.token_attr;
 public import parserino.lexbor.tag.tag;
 import parserino.lexbor.html.tokenizer;
-import parserino.lexbor.core.str_res;
 import parserino.lexbor.dom.interfaces.document_type;
 
 extern(C) @nogc nothrow:
@@ -49,6 +49,23 @@ struct lxb_html_token_t {
 
     void* base_element;
 
+    /*
+     * Token-dependent auxiliary value.
+     *
+     * For LXB_TAG__TEXT tokens, this is the number of U+0000 bytes in the
+     * [text_start, text_end) range.  Text insertion code uses the count when
+     * dropping U+0000 or replacing it with U+FFFD.
+     *
+     * For LXB_TAG__PROCESSINGINSTRUCTION tokens, this is the target length
+     * and, equivalently, the byte offset from text_start to the beginning of
+     * the processing instruction data.  The tokenizer stores an offset rather
+     * than a pointer because its temporary text buffer can be reallocated
+     * while the processing instruction data is being collected.
+     *
+     * These uses are mutually exclusive and must be interpreted according to
+     * tag_id.  Reusing this field preserves the lxb_html_token_t layout and
+     * ABI.
+     */
     size_t null_count;
     lxb_tag_id_t tag_id;
     lxb_html_token_type_t type;
@@ -87,16 +104,21 @@ struct lxb_html_token_t {
 
 // ---- token.c ----
 /*
- * Copyright (C) 2018-2020 Alexander Borisov
+ * Copyright (C) 2018-2026 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
+
+    // D port (C extern, imported instead): extern const(lxb_char_t)[256] lexbor_str_res_map_lowercase;
+    // D port (C extern, imported instead): extern const(lxb_char_t)[4] lexbor_str_res_ansi_replacement_character;
+    // D port (C extern, imported instead): extern const(lxb_char_t)[256] lexbor_str_res_map_num;
+    // D port (C extern, imported instead): extern const(lxb_char_t)[256] lexbor_str_res_map_hex;
 
 const(lxb_tag_data_t)* lxb_tag_append_lower(lexbor_hash_t* hash, const(lxb_char_t)* name, size_t length);
 
 lxb_html_token_t* lxb_html_token_create(lexbor_dobject_t* dobj)
 {
-    return cast(lxb_html_token_t*) lexbor_dobject_calloc(dobj);
+    return cast(lxb_html_token_t*) (lexbor_dobject_calloc(dobj));
 }
 
 lxb_html_token_t* lxb_html_token_destroy(lxb_html_token_t* token, lexbor_dobject_t* dobj)
@@ -251,6 +273,7 @@ lxb_status_t lxb_html_token_data_skip_ws_begin(lxb_html_token_t* token)
              */
             case 0x09:
             case 0x0A:
+            case 0x0C:
             case 0x0D:
             case 0x20:
                 break;

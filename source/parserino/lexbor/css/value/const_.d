@@ -9,7 +9,7 @@ __gshared:
 
 // ---- const.h ----
 /*
- * Copyright (C) 2023 Alexander Borisov
+ * Copyright (C) 2026 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */

@@ -1,10 +1,10 @@
 module parserino.lexbor.core.lexbor;
 
+import parserino.lexbor.core.types;
 // D port of lexbor (https://github.com/lexbor/lexbor), Apache-2.0.
 // Original author: Alexander Borisov <borisov@lexbor.com>
 
 public import parserino.lexbor.core.def;
-public import parserino.lexbor.core.types;
 
 extern(C) @nogc nothrow:
 __gshared:

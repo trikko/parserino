@@ -11,6 +11,7 @@ core/dtoa
 core/hash
 core/lexbor
 core/mem
+core/memory
 core/mraw
 core/print
 core/sbst
@@ -70,7 +71,12 @@ dom/interfaces/node
 dom/interfaces/processing_instruction
 dom/interfaces/shadow_root
 dom/interfaces/text
+html/attribute_steps
+html/attribute_steps_res
 html/base
+html/common
+html/element_steps
+html/element_steps_res
 html/interface
 html/interface_res
 html/interfaces/anchor_element
@@ -126,6 +132,8 @@ html/interfaces/pre_element
 html/interfaces/progress_element
 html/interfaces/quote_element
 html/interfaces/script_element
+html/interfaces/search_element
+html/interfaces/selectedcontent_element
 html/interfaces/select_element
 html/interfaces/slot_element
 html/interfaces/source_element
@@ -183,14 +191,13 @@ html/tree/insertion_mode/in_head
 html/tree/insertion_mode/in_head_noscript
 html/tree/insertion_mode/initial
 html/tree/insertion_mode/in_row
-html/tree/insertion_mode/in_select
-html/tree/insertion_mode/in_select_in_table
 html/tree/insertion_mode/in_table
 html/tree/insertion_mode/in_table_body
 html/tree/insertion_mode/in_table_text
 html/tree/insertion_mode/in_template
 html/tree/insertion_mode/text
 html/tree/open_elements
+html/tree/open_elements_res
 html/tree_res
 html/tree/template_insertion
 ns/const
@@ -201,4 +208,3 @@ selectors/selectors
 tag/const
 tag/res
 tag/tag
-core/memory

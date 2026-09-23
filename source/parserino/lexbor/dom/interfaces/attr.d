@@ -9,8 +9,8 @@ public import parserino.lexbor.ns.ns;
 public import parserino.lexbor.dom.interface_;
 public import parserino.lexbor.dom.interfaces.node;
 public import parserino.lexbor.dom.interfaces.attr_const;
-public import parserino.lexbor.dom.interfaces.document;
 import parserino.lexbor.dom.interfaces.attr_res;
+import parserino.lexbor.dom.interfaces.document;
 import parserino.lexbor.dom.interfaces.element;
 
 extern(C) @nogc nothrow:
@@ -18,7 +18,7 @@ __gshared:
 
 // ---- attr.h ----
 /*
- * Copyright (C) 2018-2021 Alexander Borisov
+ * Copyright (C) 2018-2026 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
@@ -61,23 +61,10 @@ struct lxb_dom_attr {
 
 
 
+
 /*
  * Inline functions
  */
- const(lxb_char_t)* lxb_dom_attr_local_name(lxb_dom_attr_t* attr, size_t* len)
-{
-    const(lxb_dom_attr_data_t)* data = void;
-
-    data = lxb_dom_attr_data_by_id(cast(lexbor_hash_t*) attr.node.owner_document.attrs,
-                                   attr.node.local_name);
-
-    if (len != null) {
-        *len = data.entry.length;
-    }
-
-    return lexbor_hash_entry_str(&data.entry);
-}
-
  const(lxb_char_t)* lxb_dom_attr_value(lxb_dom_attr_t* attr, size_t* len)
 {
     if (attr.value == null) {
@@ -288,16 +275,8 @@ lxb_status_t lxb_dom_attr_set_name_ns(lxb_dom_attr_t* attr, const(lxb_char_t)* l
 
 lxb_status_t lxb_dom_attr_set_value(lxb_dom_attr_t* attr, const(lxb_char_t)* value, size_t value_len)
 {
-    lxb_status_t status = void;
+    lexbor_str_t old_value = void; lexbor_str_t* new_value = void;
     lxb_dom_document_t* doc = (cast(lxb_dom_node_t*) (attr)).owner_document;
-
-    if (doc.node_cb.set_value != null) {
-        status = doc.node_cb.set_value((cast(lxb_dom_node_t*) (attr)),
-                                         value, value_len);
-        if (status != LXB_STATUS_OK) {
-            return status;
-        }
-    }
 
     if (attr.value == null) {
         attr.value = cast(lexbor_str_t*) lexbor_mraw_calloc(doc.mraw, lexbor_str_t.sizeof);
@@ -306,29 +285,31 @@ lxb_status_t lxb_dom_attr_set_value(lxb_dom_attr_t* attr, const(lxb_char_t)* val
         }
     }
 
-    if (attr.value.data == null) {
-        lexbor_str_init(attr.value, doc.text, value_len);
-        if (attr.value.data == null) {
-            return LXB_STATUS_ERROR_MEMORY_ALLOCATION;
-        }
-    }
-    else {
-        attr.value.length = 0;
+    old_value = *attr.value;
+    new_value = attr.value;
 
-        if (lexbor_str_size(attr.value) <= value_len) {
-            const(lxb_char_t)* tmp = void;
-
-            tmp = lexbor_str_realloc(attr.value, doc.text, (value_len + 1));
-            if (tmp == null) {
-                return LXB_STATUS_ERROR_MEMORY_ALLOCATION;
-            }
-        }
+    lexbor_str_init(new_value, doc.text, value_len);
+    if (new_value.data == null) {
+        return LXB_STATUS_ERROR_MEMORY_ALLOCATION;
     }
 
-    memcpy(attr.value.data, value, lxb_char_t.sizeof * value_len);
+    memcpy(new_value.data, value, lxb_char_t.sizeof * value_len);
 
-    attr.value.data[value_len] = 0x00;
-    attr.value.length = value_len;
+    new_value.data[value_len] = 0x00;
+    new_value.length = value_len;
+
+    if (!(lxb_dom_document_opt(doc) & LXB_DOM_DOCUMENT_OPT_WO_EVENTS)
+        && doc.attr_mutation.change != null && attr.owner != null)
+    {
+        return doc.attr_mutation.change(attr.owner, attr.node.local_name,
+                                          old_value.data, old_value.length,
+                                          new_value.data, new_value.length,
+                                          LXB_NS__UNDEF);
+    }
+
+    if (old_value.data != null) {
+        lexbor_mraw_free(doc.text, old_value.data);
+    }
 
     return LXB_STATUS_OK;
 }
@@ -399,12 +380,20 @@ bool lxb_dom_attr_compare(lxb_dom_attr_t* first, lxb_dom_attr_t* second)
 
 void lxb_dom_attr_remove(lxb_dom_attr_t* attr)
 {
-    lxb_dom_element_t* element = attr.owner;
-    lxb_dom_document_t* doc = (cast(lxb_dom_node_t*) (attr)).owner_document;
+    size_t old_value_len = void;
+    const(lxb_char_t)* old_value = void;
+    lxb_dom_element_t* element = void;
+    lxb_dom_document_t* doc = void;
 
-    if (doc.node_cb.remove != null) {
-        doc.node_cb.remove((cast(lxb_dom_node_t*) (attr)));
+    element = attr.owner;
+    if (element == null) {
+        return;
     }
+
+    doc = (cast(lxb_dom_node_t*) (attr)).owner_document;
+
+    old_value = null;
+    old_value_len = 0;
 
     if (element.attr_id == attr) {
         element.attr_id = null;
@@ -430,6 +419,19 @@ void lxb_dom_attr_remove(lxb_dom_attr_t* attr)
     attr.next = null;
     attr.prev = null;
     attr.owner = null;
+
+    if (!(lxb_dom_document_opt(doc) & LXB_DOM_DOCUMENT_OPT_WO_EVENTS)
+        && doc.attr_mutation.remove != null)
+    {
+        if (attr.value != null && attr.value.data != null) {
+            old_value = attr.value.data;
+            old_value_len = attr.value.length;
+        }
+
+        doc.attr_mutation.remove(element, attr.node.local_name,
+                                   old_value, old_value_len, null, 0,
+                                   LXB_NS__UNDEF);
+    }
 }
 
 lxb_dom_attr_data_t* lxb_dom_attr_local_name_append(lexbor_hash_t* hash, const(lxb_char_t)* name, size_t length)
@@ -527,7 +529,7 @@ const(lxb_dom_attr_data_t)* lxb_dom_attr_data_by_qualified_name(lexbor_hash_t* h
     return cast(const(lxb_dom_attr_data_t)*) lexbor_hash_search(hash, lexbor_hash_search_raw, name, length);
 }
 
-const(lxb_char_t)* lxb_dom_attr_qualified_name(lxb_dom_attr_t* attr, size_t* len)
+const(lxb_char_t)* lxb_dom_attr_qualified_name(const(lxb_dom_attr_t)* attr, size_t* len)
 {
     const(lxb_dom_attr_data_t)* data = void;
 
@@ -539,6 +541,20 @@ const(lxb_char_t)* lxb_dom_attr_qualified_name(lxb_dom_attr_t* attr, size_t* len
         data = lxb_dom_attr_data_by_id(cast(lexbor_hash_t*) attr.node.owner_document.attrs,
                                        attr.node.local_name);
     }
+
+    if (len != null) {
+        *len = data.entry.length;
+    }
+
+    return lexbor_hash_entry_str(&data.entry);
+}
+
+const(lxb_char_t)* lxb_dom_attr_local_name(const(lxb_dom_attr_t)* attr, size_t* len)
+{
+    const(lxb_dom_attr_data_t)* data = void;
+
+    data = lxb_dom_attr_data_by_id(cast(lexbor_hash_t*) attr.node.owner_document.attrs,
+                                   attr.node.local_name);
 
     if (len != null) {
         *len = data.entry.length;

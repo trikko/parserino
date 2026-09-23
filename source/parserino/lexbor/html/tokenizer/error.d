@@ -6,13 +6,14 @@ module parserino.lexbor.html.tokenizer.error;
 public import parserino.lexbor.core.base;
 public import parserino.lexbor.core.array_obj;
 public import parserino.lexbor.html.tokenizer;
+import parserino.lexbor.core.str;
 
 extern(C) @nogc nothrow:
 __gshared:
 
 // ---- error.h ----
 /*
- * Copyright (C) 2018 Alexander Borisov
+ * Copyright (C) 2018-2026 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
@@ -20,102 +21,111 @@ enum lxb_html_tokenizer_error_id_t {
     /* abrupt-closing-of-empty-comment */
     LXB_HTML_TOKENIZER_ERROR_ABCLOFEMCO = 0x0000,
     /* abrupt-doctype-public-identifier */
-    LXB_HTML_TOKENIZER_ERROR_ABDOPUID = 0x0001,
+    LXB_HTML_TOKENIZER_ERROR_ABDOPUID,
     /* abrupt-doctype-system-identifier */
-    LXB_HTML_TOKENIZER_ERROR_ABDOSYID = 0x0002,
+    LXB_HTML_TOKENIZER_ERROR_ABDOSYID,
     /* absence-of-digits-in-numeric-character-reference */
-    LXB_HTML_TOKENIZER_ERROR_ABOFDIINNUCHRE = 0x0003,
+    LXB_HTML_TOKENIZER_ERROR_ABOFDIINNUCHRE,
     /* cdata-in-html-content */
-    LXB_HTML_TOKENIZER_ERROR_CDINHTCO = 0x0004,
+    LXB_HTML_TOKENIZER_ERROR_CDINHTCO,
     /* character-reference-outside-unicode-range */
-    LXB_HTML_TOKENIZER_ERROR_CHREOUUNRA = 0x0005,
+    LXB_HTML_TOKENIZER_ERROR_CHREOUUNRA,
     /* control-character-in-input-stream */
-    LXB_HTML_TOKENIZER_ERROR_COCHININST = 0x0006,
+    LXB_HTML_TOKENIZER_ERROR_COCHININST,
     /* control-character-reference */
-    LXB_HTML_TOKENIZER_ERROR_COCHRE = 0x0007,
+    LXB_HTML_TOKENIZER_ERROR_COCHRE,
     /* end-tag-with-attributes */
-    LXB_HTML_TOKENIZER_ERROR_ENTAWIAT = 0x0008,
+    LXB_HTML_TOKENIZER_ERROR_ENTAWIAT,
     /* duplicate-attribute */
-    LXB_HTML_TOKENIZER_ERROR_DUAT = 0x0009,
+    LXB_HTML_TOKENIZER_ERROR_DUAT,
     /* end-tag-with-trailing-solidus */
-    LXB_HTML_TOKENIZER_ERROR_ENTAWITRSO = 0x000A,
+    LXB_HTML_TOKENIZER_ERROR_ENTAWITRSO,
     /* eof-before-tag-name */
-    LXB_HTML_TOKENIZER_ERROR_EOBETANA = 0x000B,
+    LXB_HTML_TOKENIZER_ERROR_EOBETANA,
     /* eof-in-cdata */
-    LXB_HTML_TOKENIZER_ERROR_EOINCD = 0x000C,
+    LXB_HTML_TOKENIZER_ERROR_EOINCD,
     /* eof-in-comment */
-    LXB_HTML_TOKENIZER_ERROR_EOINCO = 0x000D,
+    LXB_HTML_TOKENIZER_ERROR_EOINCO,
     /* eof-in-doctype */
-    LXB_HTML_TOKENIZER_ERROR_EOINDO = 0x000E,
+    LXB_HTML_TOKENIZER_ERROR_EOINDO,
     /* eof-in-script-html-comment-like-text */
-    LXB_HTML_TOKENIZER_ERROR_EOINSCHTCOLITE = 0x000F,
+    LXB_HTML_TOKENIZER_ERROR_EOINSCHTCOLITE,
     /* eof-in-tag */
-    LXB_HTML_TOKENIZER_ERROR_EOINTA = 0x0010,
+    LXB_HTML_TOKENIZER_ERROR_EOINTA,
     /* incorrectly-closed-comment */
-    LXB_HTML_TOKENIZER_ERROR_INCLCO = 0x0011,
+    LXB_HTML_TOKENIZER_ERROR_INCLCO,
     /* incorrectly-opened-comment */
-    LXB_HTML_TOKENIZER_ERROR_INOPCO = 0x0012,
+    LXB_HTML_TOKENIZER_ERROR_INOPCO,
     /* invalid-character-sequence-after-doctype-name */
-    LXB_HTML_TOKENIZER_ERROR_INCHSEAFDONA = 0x0013,
+    LXB_HTML_TOKENIZER_ERROR_INCHSEAFDONA,
     /* invalid-first-character-of-tag-name */
-    LXB_HTML_TOKENIZER_ERROR_INFICHOFTANA = 0x0014,
+    LXB_HTML_TOKENIZER_ERROR_INFICHOFTANA,
     /* missing-attribute-value */
-    LXB_HTML_TOKENIZER_ERROR_MIATVA = 0x0015,
+    LXB_HTML_TOKENIZER_ERROR_MIATVA,
     /* missing-doctype-name */
-    LXB_HTML_TOKENIZER_ERROR_MIDONA = 0x0016,
+    LXB_HTML_TOKENIZER_ERROR_MIDONA,
     /* missing-doctype-public-identifier */
-    LXB_HTML_TOKENIZER_ERROR_MIDOPUID = 0x0017,
+    LXB_HTML_TOKENIZER_ERROR_MIDOPUID,
     /* missing-doctype-system-identifier */
-    LXB_HTML_TOKENIZER_ERROR_MIDOSYID = 0x0018,
+    LXB_HTML_TOKENIZER_ERROR_MIDOSYID,
     /* missing-end-tag-name */
-    LXB_HTML_TOKENIZER_ERROR_MIENTANA = 0x0019,
+    LXB_HTML_TOKENIZER_ERROR_MIENTANA,
     /* missing-quote-before-doctype-public-identifier */
-    LXB_HTML_TOKENIZER_ERROR_MIQUBEDOPUID = 0x001A,
+    LXB_HTML_TOKENIZER_ERROR_MIQUBEDOPUID,
     /* missing-quote-before-doctype-system-identifier */
-    LXB_HTML_TOKENIZER_ERROR_MIQUBEDOSYID = 0x001B,
+    LXB_HTML_TOKENIZER_ERROR_MIQUBEDOSYID,
     /* missing-semicolon-after-character-reference */
-    LXB_HTML_TOKENIZER_ERROR_MISEAFCHRE = 0x001C,
+    LXB_HTML_TOKENIZER_ERROR_MISEAFCHRE,
     /* missing-whitespace-after-doctype-public-keyword */
-    LXB_HTML_TOKENIZER_ERROR_MIWHAFDOPUKE = 0x001D,
+    LXB_HTML_TOKENIZER_ERROR_MIWHAFDOPUKE,
     /* missing-whitespace-after-doctype-system-keyword */
-    LXB_HTML_TOKENIZER_ERROR_MIWHAFDOSYKE = 0x001E,
+    LXB_HTML_TOKENIZER_ERROR_MIWHAFDOSYKE,
     /* missing-whitespace-before-doctype-name */
-    LXB_HTML_TOKENIZER_ERROR_MIWHBEDONA = 0x001F,
+    LXB_HTML_TOKENIZER_ERROR_MIWHBEDONA,
     /* missing-whitespace-between-attributes */
-    LXB_HTML_TOKENIZER_ERROR_MIWHBEAT = 0x0020,
+    LXB_HTML_TOKENIZER_ERROR_MIWHBEAT,
     /* missing-whitespace-between-doctype-public-and-system-identifiers */
-    LXB_HTML_TOKENIZER_ERROR_MIWHBEDOPUANSYID = 0x0021,
+    LXB_HTML_TOKENIZER_ERROR_MIWHBEDOPUANSYID,
     /* nested-comment */
-    LXB_HTML_TOKENIZER_ERROR_NECO = 0x0022,
+    LXB_HTML_TOKENIZER_ERROR_NECO,
     /* noncharacter-character-reference */
-    LXB_HTML_TOKENIZER_ERROR_NOCHRE = 0x0023,
+    LXB_HTML_TOKENIZER_ERROR_NOCHRE,
     /* noncharacter-in-input-stream */
-    LXB_HTML_TOKENIZER_ERROR_NOININST = 0x0024,
+    LXB_HTML_TOKENIZER_ERROR_NOININST,
     /* non-void-html-element-start-tag-with-trailing-solidus */
-    LXB_HTML_TOKENIZER_ERROR_NOVOHTELSTTAWITRSO = 0x0025,
+    LXB_HTML_TOKENIZER_ERROR_NOVOHTELSTTAWITRSO,
     /* null-character-reference */
-    LXB_HTML_TOKENIZER_ERROR_NUCHRE = 0x0026,
+    LXB_HTML_TOKENIZER_ERROR_NUCHRE,
     /* surrogate-character-reference */
-    LXB_HTML_TOKENIZER_ERROR_SUCHRE = 0x0027,
+    LXB_HTML_TOKENIZER_ERROR_SUCHRE,
     /* surrogate-in-input-stream */
-    LXB_HTML_TOKENIZER_ERROR_SUININST = 0x0028,
+    LXB_HTML_TOKENIZER_ERROR_SUININST,
     /* unexpected-character-after-doctype-system-identifier */
-    LXB_HTML_TOKENIZER_ERROR_UNCHAFDOSYID = 0x0029,
+    LXB_HTML_TOKENIZER_ERROR_UNCHAFDOSYID,
     /* unexpected-character-in-attribute-name */
-    LXB_HTML_TOKENIZER_ERROR_UNCHINATNA = 0x002A,
+    LXB_HTML_TOKENIZER_ERROR_UNCHINATNA,
     /* unexpected-character-in-unquoted-attribute-value */
-    LXB_HTML_TOKENIZER_ERROR_UNCHINUNATVA = 0x002B,
+    LXB_HTML_TOKENIZER_ERROR_UNCHINUNATVA,
     /* unexpected-equals-sign-before-attribute-name */
-    LXB_HTML_TOKENIZER_ERROR_UNEQSIBEATNA = 0x002C,
+    LXB_HTML_TOKENIZER_ERROR_UNEQSIBEATNA,
     /* unexpected-null-character */
-    LXB_HTML_TOKENIZER_ERROR_UNNUCH = 0x002D,
+    LXB_HTML_TOKENIZER_ERROR_UNNUCH,
     /* unexpected-question-mark-instead-of-tag-name */
-    LXB_HTML_TOKENIZER_ERROR_UNQUMAINOFTANA = 0x002E,
+    LXB_HTML_TOKENIZER_ERROR_UNQUMAINOFTANA,
     /* unexpected-solidus-in-tag */
-    LXB_HTML_TOKENIZER_ERROR_UNSOINTA = 0x002F,
+    LXB_HTML_TOKENIZER_ERROR_UNSOINTA,
     /* unknown-named-character-reference */
-    LXB_HTML_TOKENIZER_ERROR_UNNACHRE = 0x0030,
-    LXB_HTML_TOKENIZER_ERROR_LAST_ENTRY = 0x0031,
+    LXB_HTML_TOKENIZER_ERROR_UNNACHRE,
+    /* eof-in-processing-instruction */
+    LXB_HTML_TOKENIZER_ERROR_EOINPRIN,
+    /* invalid-first-character-of-processing-instruction-target */
+    LXB_HTML_TOKENIZER_ERROR_INFICHOFPRINTA,
+    /* disallowed-processing-instruction-target */
+    LXB_HTML_TOKENIZER_ERROR_DIPRINTA,
+    /* invalid-processing-instruction-target */
+    LXB_HTML_TOKENIZER_ERROR_INPRINTA,
+
+    LXB_HTML_TOKENIZER_ERROR_LAST_ENTRY
 }
 alias LXB_HTML_TOKENIZER_ERROR_ABCLOFEMCO = lxb_html_tokenizer_error_id_t.LXB_HTML_TOKENIZER_ERROR_ABCLOFEMCO;
 alias LXB_HTML_TOKENIZER_ERROR_ABDOPUID = lxb_html_tokenizer_error_id_t.LXB_HTML_TOKENIZER_ERROR_ABDOPUID;
@@ -166,6 +176,10 @@ alias LXB_HTML_TOKENIZER_ERROR_UNNUCH = lxb_html_tokenizer_error_id_t.LXB_HTML_T
 alias LXB_HTML_TOKENIZER_ERROR_UNQUMAINOFTANA = lxb_html_tokenizer_error_id_t.LXB_HTML_TOKENIZER_ERROR_UNQUMAINOFTANA;
 alias LXB_HTML_TOKENIZER_ERROR_UNSOINTA = lxb_html_tokenizer_error_id_t.LXB_HTML_TOKENIZER_ERROR_UNSOINTA;
 alias LXB_HTML_TOKENIZER_ERROR_UNNACHRE = lxb_html_tokenizer_error_id_t.LXB_HTML_TOKENIZER_ERROR_UNNACHRE;
+alias LXB_HTML_TOKENIZER_ERROR_EOINPRIN = lxb_html_tokenizer_error_id_t.LXB_HTML_TOKENIZER_ERROR_EOINPRIN;
+alias LXB_HTML_TOKENIZER_ERROR_INFICHOFPRINTA = lxb_html_tokenizer_error_id_t.LXB_HTML_TOKENIZER_ERROR_INFICHOFPRINTA;
+alias LXB_HTML_TOKENIZER_ERROR_DIPRINTA = lxb_html_tokenizer_error_id_t.LXB_HTML_TOKENIZER_ERROR_DIPRINTA;
+alias LXB_HTML_TOKENIZER_ERROR_INPRINTA = lxb_html_tokenizer_error_id_t.LXB_HTML_TOKENIZER_ERROR_INPRINTA;
 alias LXB_HTML_TOKENIZER_ERROR_LAST_ENTRY = lxb_html_tokenizer_error_id_t.LXB_HTML_TOKENIZER_ERROR_LAST_ENTRY;
 
 
@@ -175,9 +189,10 @@ struct lxb_html_tokenizer_error_t {
 }
 
 
+
 // ---- error.c ----
 /*
- * Copyright (C) 2018 Alexander Borisov
+ * Copyright (C) 2018-2026 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
@@ -197,4 +212,79 @@ lxb_html_tokenizer_error_t* lxb_html_tokenizer_error_add(lexbor_array_obj_t* par
     entry.pos = pos;
 
     return entry;
+}
+
+const(lxb_char_t)* lxb_html_tokenizer_error_to_string(lxb_html_tokenizer_error_id_t id, size_t* len)
+{
+    static const(lexbor_str_t) unknown = {data: cast(lxb_char_t*) "unknown error".ptr, "unknown error".length};
+
+    static const(lexbor_str_t)[LXB_HTML_TOKENIZER_ERROR_LAST_ENTRY] errors = [
+        {data: cast(lxb_char_t*) "abrupt closing of empty comment".ptr, "abrupt closing of empty comment".length},
+        {data: cast(lxb_char_t*) "abrupt doctype public identifier".ptr, "abrupt doctype public identifier".length},
+        {data: cast(lxb_char_t*) "abrupt doctype system identifier".ptr, "abrupt doctype system identifier".length},
+        {data: cast(lxb_char_t*) "absence of digits in numeric character reference".ptr, "absence of digits in numeric character reference".length},
+        {data: cast(lxb_char_t*) "cdata in html content".ptr, "cdata in html content".length},
+        {data: cast(lxb_char_t*) "character reference outside unicode range".ptr, "character reference outside unicode range".length},
+        {data: cast(lxb_char_t*) "control character in input stream".ptr, "control character in input stream".length},
+        {data: cast(lxb_char_t*) "control character reference".ptr, "control character reference".length},
+        {data: cast(lxb_char_t*) "end tag with attributes".ptr, "end tag with attributes".length},
+        {data: cast(lxb_char_t*) "duplicate attribute".ptr, "duplicate attribute".length},
+        {data: cast(lxb_char_t*) "end tag with trailing solidus".ptr, "end tag with trailing solidus".length},
+        {data: cast(lxb_char_t*) "eof before tag name".ptr, "eof before tag name".length},
+        {data: cast(lxb_char_t*) "eof in cdata".ptr, "eof in cdata".length},
+        {data: cast(lxb_char_t*) "eof in comment".ptr, "eof in comment".length},
+        {data: cast(lxb_char_t*) "eof in doctype".ptr, "eof in doctype".length},
+        {data: cast(lxb_char_t*) "eof in script html comment like text".ptr, "eof in script html comment like text".length},
+        {data: cast(lxb_char_t*) "eof in tag".ptr, "eof in tag".length},
+        {data: cast(lxb_char_t*) "incorrectly closed comment".ptr, "incorrectly closed comment".length},
+        {data: cast(lxb_char_t*) "incorrectly opened comment".ptr, "incorrectly opened comment".length},
+        {data: cast(lxb_char_t*) "invalid character sequence after doctype name".ptr, "invalid character sequence after doctype name".length},
+        {data: cast(lxb_char_t*) "invalid first character of tag name".ptr, "invalid first character of tag name".length},
+        {data: cast(lxb_char_t*) "missing attribute value".ptr, "missing attribute value".length},
+        {data: cast(lxb_char_t*) "missing doctype name".ptr, "missing doctype name".length},
+        {data: cast(lxb_char_t*) "missing doctype public identifier".ptr, "missing doctype public identifier".length},
+        {data: cast(lxb_char_t*) "missing doctype system identifier".ptr, "missing doctype system identifier".length},
+        {data: cast(lxb_char_t*) "missing end tag name".ptr, "missing end tag name".length},
+        {data: cast(lxb_char_t*) "missing quote before doctype public identifier".ptr, "missing quote before doctype public identifier".length},
+        {data: cast(lxb_char_t*) "missing quote before doctype system identifier".ptr, "missing quote before doctype system identifier".length},
+        {data: cast(lxb_char_t*) "missing semicolon after character reference".ptr, "missing semicolon after character reference".length},
+        {data: cast(lxb_char_t*) "missing whitespace after doctype public keyword".ptr, "missing whitespace after doctype public keyword".length},
+        {data: cast(lxb_char_t*) "missing whitespace after doctype system keyword".ptr, "missing whitespace after doctype system keyword".length},
+        {data: cast(lxb_char_t*) "missing whitespace before doctype name".ptr, "missing whitespace before doctype name".length},
+        {data: cast(lxb_char_t*) "missing whitespace between attributes".ptr, "missing whitespace between attributes".length},
+        {data: cast(lxb_char_t*) "missing whitespace between doctype public and system identifiers".ptr, "missing whitespace between doctype public and system identifiers".length},
+        {data: cast(lxb_char_t*) "nested comment".ptr, "nested comment".length},
+        {data: cast(lxb_char_t*) "noncharacter character reference".ptr, "noncharacter character reference".length},
+        {data: cast(lxb_char_t*) "noncharacter in input stream".ptr, "noncharacter in input stream".length},
+        {data: cast(lxb_char_t*) "non void html element start tag with trailing solidus".ptr, "non void html element start tag with trailing solidus".length},
+        {data: cast(lxb_char_t*) "null character reference".ptr, "null character reference".length},
+        {data: cast(lxb_char_t*) "surrogate character reference".ptr, "surrogate character reference".length},
+        {data: cast(lxb_char_t*) "surrogate in input stream".ptr, "surrogate in input stream".length},
+        {data: cast(lxb_char_t*) "unexpected character after doctype system identifier".ptr, "unexpected character after doctype system identifier".length},
+        {data: cast(lxb_char_t*) "unexpected character in attribute name".ptr, "unexpected character in attribute name".length},
+        {data: cast(lxb_char_t*) "unexpected character in unquoted attribute value".ptr, "unexpected character in unquoted attribute value".length},
+        {data: cast(lxb_char_t*) "unexpected equals sign before attribute name".ptr, "unexpected equals sign before attribute name".length},
+        {data: cast(lxb_char_t*) "unexpected null character".ptr, "unexpected null character".length},
+        {data: cast(lxb_char_t*) "unexpected question mark instead of tag name".ptr, "unexpected question mark instead of tag name".length},
+        {data: cast(lxb_char_t*) "unexpected solidus in tag".ptr, "unexpected solidus in tag".length},
+        {data: cast(lxb_char_t*) "unknown named character reference".ptr, "unknown named character reference".length},
+        {data: cast(lxb_char_t*) "eof in processing instruction".ptr, "eof in processing instruction".length},
+        {data: cast(lxb_char_t*) "invalid first character of processing instruction target".ptr, "invalid first character of processing instruction target".length},
+        {data: cast(lxb_char_t*) "disallowed processing instruction target".ptr, "disallowed processing instruction target".length},
+        {data: cast(lxb_char_t*) "invalid processing instruction target".ptr, "invalid processing instruction target".length}
+    ];
+
+    if (id >= (errors.sizeof / lexbor_str_t.sizeof)) {
+        if (len != null) {
+            *len = unknown.length;
+        }
+
+        return unknown.data;
+    }
+
+    if (len != null) {
+        *len = errors[id].length;
+    }
+
+    return errors[id].data;
 }

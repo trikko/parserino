@@ -15,15 +15,15 @@ __gshared:
 
 // ---- base.h ----
 /*
- * Copyright (C) 2019-2025 Alexander Borisov
+ * Copyright (C) 2019-2026 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
 enum LXB_CSS_VERSION_MAJOR = 1;
-enum LXB_CSS_VERSION_MINOR = 3;
+enum LXB_CSS_VERSION_MINOR = 4;
 enum LXB_CSS_VERSION_PATCH = 0;
 
-enum LXB_CSS_VERSION_STRING = "1.3.0";
+enum LXB_CSS_VERSION_STRING = "0.0.0";
 
 struct lxb_css_memory_t {
     lexbor_dobject_t* objs;
@@ -41,6 +41,8 @@ alias lxb_css_parser_error_t = lxb_css_parser_error;
 
 alias lxb_css_syntax_tokenizer_t = lxb_css_syntax_tokenizer;
 alias lxb_css_syntax_token_t = lxb_css_syntax_token_;
+
+/* Callbacks. */
 
 alias lxb_css_parser_state_f = bool function(lxb_css_parser_t* parser, const(lxb_css_syntax_token_t)* token, void* ctx);
 
@@ -78,8 +80,22 @@ struct lxb_css_entry_data_t {
     void* initial;
 }
 
+struct lxb_css_entry_at_rule_data_t {
+    lxb_char_t* name;
+    size_t length;
+    uintptr_t unique;
+
+    /* const lxb_css_syntax_cb_at_rule_t */
+    const(void)* cbs;
+
+    lxb_css_style_create_f create;
+    lxb_css_style_destroy_f destroy;
+    lxb_css_style_serialize_f serialize;
+    void* initial;
+}
+
 // D port: implemented in css/css.d
-public import parserino.lexbor.css.css : lxb_css_memory_create, lxb_css_memory_destroy, lxb_css_memory_ref_inc, lxb_css_memory_ref_dec_destroy, lxb_css_memory_clean, lxb_css_memory_ref_dec;
+public import parserino.lexbor.css.css : lxb_css_memory_create, lxb_css_memory_init, lxb_css_memory_clean, lxb_css_memory_destroy, lxb_css_memory_ref_inc, lxb_css_memory_ref_dec, lxb_css_memory_ref_dec_destroy;
 
 struct lxb_css_data_t {
     lxb_char_t* name;

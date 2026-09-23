@@ -17,8 +17,9 @@ __gshared:
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
 
-private void lxb_html_tree_close_cell(lxb_html_tree_t* tree, lxb_html_token_t* token)
+private lxb_status_t lxb_html_tree_close_cell(lxb_html_tree_t* tree, lxb_html_token_t* token)
 {
+    lxb_status_t status = void;
     lxb_dom_node_t* node = void;
 
     lxb_html_tree_generate_implied_end_tags(tree, LXB_TAG__UNDEF,
@@ -33,10 +34,16 @@ private void lxb_html_tree_close_cell(lxb_html_tree_t* tree, lxb_html_token_t* t
                                   LXB_HTML_RULES_ERROR_MIELINOPELST);
     }
 
-    lxb_html_tree_open_elements_pop_until_td_th(tree);
+    status = lxb_html_tree_open_elements_pop_until_td_th(tree);
+    if (status != LXB_STATUS_OK) {
+        return status;
+    }
+
     lxb_html_tree_active_formatting_up_to_last_marker(tree);
 
     tree.mode = &lxb_html_tree_insertion_mode_in_row;
+
+    return LXB_STATUS_OK;
 }
 
 /*
@@ -64,8 +71,11 @@ private void lxb_html_tree_close_cell(lxb_html_tree_t* tree, lxb_html_token_t* t
                                   LXB_HTML_RULES_ERROR_MIELINOPELST);
     }
 
-    lxb_html_tree_open_elements_pop_until_tag_id(tree, token.tag_id,
-                                                 LXB_NS_HTML, true);
+    tree.status = lxb_html_tree_open_elements_pop_until_tag_id(tree,
+                                            token.tag_id, LXB_NS_HTML, true);
+    if (tree.status != LXB_STATUS_OK) {
+        return lxb_html_tree_process_abort(tree);
+    }
 
     lxb_html_tree_active_formatting_up_to_last_marker(tree);
 
@@ -88,7 +98,10 @@ private void lxb_html_tree_close_cell(lxb_html_tree_t* tree, lxb_html_token_t* t
         return true;
     }
 
-    lxb_html_tree_close_cell(tree, token);
+    tree.status = lxb_html_tree_close_cell(tree, token);
+    if (tree.status != LXB_STATUS_OK) {
+        return lxb_html_tree_process_abort(tree);
+    }
 
     return false;
 }
@@ -118,7 +131,10 @@ private void lxb_html_tree_close_cell(lxb_html_tree_t* tree, lxb_html_token_t* t
         return true;
     }
 
-    lxb_html_tree_close_cell(tree, token);
+    tree.status = lxb_html_tree_close_cell(tree, token);
+    if (tree.status != LXB_STATUS_OK) {
+        return lxb_html_tree_process_abort(tree);
+    }
 
     return false;
 }

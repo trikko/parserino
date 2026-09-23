@@ -6,13 +6,14 @@ module parserino.lexbor.html.tree.error;
 public import parserino.lexbor.core.base;
 public import parserino.lexbor.core.array_obj;
 public import parserino.lexbor.html.token;
+import parserino.lexbor.core.str;
 
 extern(C) @nogc nothrow:
 __gshared:
 
 // ---- error.h ----
 /*
- * Copyright (C) 2018 Alexander Borisov
+ * Copyright (C) 2018-2026 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
@@ -89,6 +90,18 @@ enum lxb_html_tree_error_id_t {
     LXB_HTML_RULES_ERROR_DOTOAFFRMO,
     /* doctype-token-foreign-content-mode */
     LXB_HTML_RULES_ERROR_DOTOFOCOMO,
+    /* select-in-scope */
+    LXB_HTML_RULES_ERROR_SEINSC,
+    /* fragment-parsing-select-in-context-parse-input */
+    LXB_HTML_RULES_ERROR_FRPASEINCOPAIN,
+    /* fragment-parsing-select-in-context-parse-select */
+    LXB_HTML_RULES_ERROR_FRPASEINCOPASE,
+    /* hr-parsing-select-option-optgroup-in-scope */
+    LXB_HTML_RULES_ERROR_HRPASEOPOPINSC,
+    /* option-parsing-option-in-scope */
+    LXB_HTML_RULES_ERROR_OPPAOPINSC,
+    /* optgroup-parsing-option-optgroup-in-scope */
+    LXB_HTML_RULES_ERROR_OPPAOPOPINSC,
 
     LXB_HTML_RULES_ERROR_LAST_ENTRY
 }
@@ -128,6 +141,12 @@ alias LXB_HTML_RULES_ERROR_DOTOAFBOMO = lxb_html_tree_error_id_t.LXB_HTML_RULES_
 alias LXB_HTML_RULES_ERROR_DOTOINFRMO = lxb_html_tree_error_id_t.LXB_HTML_RULES_ERROR_DOTOINFRMO;
 alias LXB_HTML_RULES_ERROR_DOTOAFFRMO = lxb_html_tree_error_id_t.LXB_HTML_RULES_ERROR_DOTOAFFRMO;
 alias LXB_HTML_RULES_ERROR_DOTOFOCOMO = lxb_html_tree_error_id_t.LXB_HTML_RULES_ERROR_DOTOFOCOMO;
+alias LXB_HTML_RULES_ERROR_SEINSC = lxb_html_tree_error_id_t.LXB_HTML_RULES_ERROR_SEINSC;
+alias LXB_HTML_RULES_ERROR_FRPASEINCOPAIN = lxb_html_tree_error_id_t.LXB_HTML_RULES_ERROR_FRPASEINCOPAIN;
+alias LXB_HTML_RULES_ERROR_FRPASEINCOPASE = lxb_html_tree_error_id_t.LXB_HTML_RULES_ERROR_FRPASEINCOPASE;
+alias LXB_HTML_RULES_ERROR_HRPASEOPOPINSC = lxb_html_tree_error_id_t.LXB_HTML_RULES_ERROR_HRPASEOPOPINSC;
+alias LXB_HTML_RULES_ERROR_OPPAOPINSC = lxb_html_tree_error_id_t.LXB_HTML_RULES_ERROR_OPPAOPINSC;
+alias LXB_HTML_RULES_ERROR_OPPAOPOPINSC = lxb_html_tree_error_id_t.LXB_HTML_RULES_ERROR_OPPAOPOPINSC;
 alias LXB_HTML_RULES_ERROR_LAST_ENTRY = lxb_html_tree_error_id_t.LXB_HTML_RULES_ERROR_LAST_ENTRY;
 
 
@@ -138,9 +157,10 @@ struct lxb_html_tree_error_t {
 }
 
 
+
 // ---- error.c ----
 /*
- * Copyright (C) 2018 Alexander Borisov
+ * Copyright (C) 2018-2026 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
@@ -161,4 +181,68 @@ lxb_html_tree_error_t* lxb_html_tree_error_add(lexbor_array_obj_t* parse_errors,
     entry.end = token.end;
 
     return entry;
+}
+
+const(lxb_char_t)* lxb_html_tree_error_to_string(lxb_html_tree_error_id_t id, size_t* len)
+{
+    static const(lexbor_str_t) unknown = {data: cast(lxb_char_t*) "unknown error".ptr, "unknown error".length};
+
+    static const(lexbor_str_t)[LXB_HTML_RULES_ERROR_LAST_ENTRY] errors = [
+        {data: cast(lxb_char_t*) "unexpected token".ptr, "unexpected token".length},
+        {data: cast(lxb_char_t*) "unexpected closed token".ptr, "unexpected closed token".length},
+        {data: cast(lxb_char_t*) "null character".ptr, "null character".length},
+        {data: cast(lxb_char_t*) "unexpected character token".ptr, "unexpected character token".length},
+        {data: cast(lxb_char_t*) "unexpected token in initial mode".ptr, "unexpected token in initial mode".length},
+        {data: cast(lxb_char_t*) "bad doctype token in initial mode".ptr, "bad doctype token in initial mode".length},
+        {data: cast(lxb_char_t*) "doctype token in before html mode".ptr, "doctype token in before html mode".length},
+        {data: cast(lxb_char_t*) "unexpected closed token in before html mode".ptr, "unexpected closed token in before html mode".length},
+        {data: cast(lxb_char_t*) "doctype token in before head mode".ptr, "doctype token in before head mode".length},
+        {data: cast(lxb_char_t*) "unexpected closed token in before head mode".ptr, "unexpected closed token in before head mode".length},
+        {data: cast(lxb_char_t*) "doctype token in head mode".ptr, "doctype token in head mode".length},
+        {data: cast(lxb_char_t*) "non void html element start tag with trailing solidus".ptr, "non void html element start tag with trailing solidus".length},
+        {data: cast(lxb_char_t*) "head token in head mode".ptr, "head token in head mode".length},
+        {data: cast(lxb_char_t*) "unexpected closed token in head mode".ptr, "unexpected closed token in head mode".length},
+        {data: cast(lxb_char_t*) "template closed token without opening in head mode".ptr, "template closed token without opening in head mode".length},
+        {data: cast(lxb_char_t*) "template element is not current in head mode".ptr, "template element is not current in head mode".length},
+        {data: cast(lxb_char_t*) "doctype token in head noscript mode".ptr, "doctype token in head noscript mode".length},
+        {data: cast(lxb_char_t*) "doctype token after head mode".ptr, "doctype token after head mode".length},
+        {data: cast(lxb_char_t*) "head token after head mode".ptr, "head token after head mode".length},
+        {data: cast(lxb_char_t*) "doctype token in body mode".ptr, "doctype token in body mode".length},
+        {data: cast(lxb_char_t*) "bad ending open elements is wrong".ptr, "bad ending open elements is wrong".length},
+        {data: cast(lxb_char_t*) "open elements is wrong".ptr, "open elements is wrong".length},
+        {data: cast(lxb_char_t*) "unexpected element in open elements stack".ptr, "unexpected element in open elements stack".length},
+        {data: cast(lxb_char_t*) "missing element in open elements stack".ptr, "missing element in open elements stack".length},
+        {data: cast(lxb_char_t*) "no body element in scope".ptr, "no body element in scope".length},
+        {data: cast(lxb_char_t*) "missing element in scope".ptr, "missing element in scope".length},
+        {data: cast(lxb_char_t*) "unexpected element in scope".ptr, "unexpected element in scope".length},
+        {data: cast(lxb_char_t*) "unexpected element in active formatting stack".ptr, "unexpected element in active formatting stack".length},
+        {data: cast(lxb_char_t*) "unexpected end of file".ptr, "unexpected end of file".length},
+        {data: cast(lxb_char_t*) "characters in table text".ptr, "characters in table text".length},
+        {data: cast(lxb_char_t*) "doctype token in table mode".ptr, "doctype token in table mode".length},
+        {data: cast(lxb_char_t*) "doctype token in select mode".ptr, "doctype token in select mode".length},
+        {data: cast(lxb_char_t*) "doctype token after body mode".ptr, "doctype token after body mode".length},
+        {data: cast(lxb_char_t*) "doctype token in frameset mode".ptr, "doctype token in frameset mode".length},
+        {data: cast(lxb_char_t*) "doctype token after frameset mode".ptr, "doctype token after frameset mode".length},
+        {data: cast(lxb_char_t*) "doctype token foreign content mode".ptr, "doctype token foreign content mode".length},
+        {data: cast(lxb_char_t*) "select in scope".ptr, "select in scope".length},
+        {data: cast(lxb_char_t*) "fragment parsing select in context parse input".ptr, "fragment parsing select in context parse input".length},
+        {data: cast(lxb_char_t*) "fragment parsing select in context parse select".ptr, "fragment parsing select in context parse select".length},
+        {data: cast(lxb_char_t*) "hr parsing select option optgroup in scope".ptr, "hr parsing select option optgroup in scope".length},
+        {data: cast(lxb_char_t*) "option parsing option in scope".ptr, "option parsing option in scope".length},
+        {data: cast(lxb_char_t*) "optgroup parsing option optgroup in scope".ptr, "optgroup parsing option optgroup in scope".length}
+    ];
+
+    if (id >= (errors.sizeof / lexbor_str_t.sizeof)) {
+        if (len != null) {
+            *len = unknown.length;
+        }
+
+        return unknown.data;
+    }
+
+    if (len != null) {
+        *len = errors[id].length;
+    }
+
+    return errors[id].data;
 }

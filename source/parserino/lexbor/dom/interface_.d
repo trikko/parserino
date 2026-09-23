@@ -6,7 +6,6 @@ module parserino.lexbor.dom.interface_;
 public import parserino.lexbor.core.base;
 public import parserino.lexbor.tag.const_;
 public import parserino.lexbor.ns.const_;
-public import parserino.lexbor.dom.exception;
 import parserino.lexbor.dom.interfaces.cdata_section;
 import parserino.lexbor.dom.interfaces.character_data;
 import parserino.lexbor.dom.interfaces.comment;
@@ -25,7 +24,7 @@ __gshared:
 
 // ---- interface.h ----
 /*
- * Copyright (C) 2018-2021 Alexander Borisov
+ * Copyright (C) 2018-2025 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */

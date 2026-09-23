@@ -18,6 +18,8 @@ __gshared:
 
 bool lxb_html_tree_insertion_mode_after_body(lxb_html_tree_t* tree, lxb_html_token_t* token)
 {
+    lxb_dom_processing_instruction_t* pi = void;
+
     switch (token.tag_id) {
         case LXB_TAG__EM_COMMENT: {
             lxb_dom_comment_t* comment = void;
@@ -32,6 +34,15 @@ bool lxb_html_tree_insertion_mode_after_body(lxb_html_tree_t* tree, lxb_html_tok
 
             break;
         }
+
+        case LXB_TAG__PROCESSINGINSTRUCTION:
+            pi = lxb_html_tree_insert_processing_instruction(tree, token,
+                                                  cast(lxb_dom_node_t*) tree.open_elements.list[0]);
+            if (pi == null) {
+                return lxb_html_tree_process_abort(tree);
+            }
+
+            break;
 
         case LXB_TAG__EM_DOCTYPE:
             lxb_html_tree_parse_error(tree, token,
@@ -74,9 +85,8 @@ bool lxb_html_tree_insertion_mode_after_body(lxb_html_tree_t* tree, lxb_html_tok
                 return lxb_html_tree_insertion_mode_in_body(tree, token);
             }
         }
-        /* fall through */
+        goto default; /* C fallthrough */
 
-            goto default; /* C fallthrough */
         default:
             lxb_html_tree_parse_error(tree, token, LXB_HTML_RULES_ERROR_UNTO);
 

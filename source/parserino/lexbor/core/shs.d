@@ -1,12 +1,12 @@
 module parserino.lexbor.core.shs;
 
+import parserino.lexbor.core.str_res;
 // D port of lexbor (https://github.com/lexbor/lexbor), Apache-2.0.
 // Original author: Alexander Borisov <borisov@lexbor.com>
 
 public import core.stdc.string;
 public import parserino.lexbor.core.base;
 import parserino.lexbor.core.str;
-import parserino.lexbor.core.str_res;
 
 extern(C) @nogc nothrow:
 __gshared:
@@ -58,10 +58,13 @@ struct lexbor_shs_hash_t {
 
 // ---- shs.c ----
 /*
- * Copyright (C) 2018-2019 Alexander Borisov
+ * Copyright (C) 2018-2026 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
+
+    // D port (C extern, imported instead): extern const(lxb_char_t)[256] lexbor_str_res_map_lowercase;
+    // D port (C extern, imported instead): extern const(lxb_char_t)[256] lexbor_str_res_map_uppercase;
 const(lexbor_shs_entry_t)* lexbor_shs_entry_get_static(const(lexbor_shs_entry_t)* root, const(lxb_char_t)* key, size_t key_len)
 {
     const(lexbor_shs_entry_t)* entry = void;

@@ -1,11 +1,11 @@
 module parserino.lexbor.html.tokenizer.state_comment;
 
+import parserino.lexbor.core.str_res;
 // D port of lexbor (https://github.com/lexbor/lexbor), Apache-2.0.
 // Original author: Alexander Borisov <borisov@lexbor.com>
 
 public import parserino.lexbor.html.tokenizer;
 import parserino.lexbor.html.tokenizer.state;
-import parserino.lexbor.core.str_res;
 
 extern(C) @nogc nothrow:
 __gshared:
@@ -19,10 +19,12 @@ __gshared:
 
 // ---- state_comment.c ----
 /*
- * Copyright (C) 2018-2020 Alexander Borisov
+ * Copyright (C) 2018-2026 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
+
+// D port (C extern, imported instead): extern const(lxb_char_t)[4] lexbor_str_res_ansi_replacement_character;
 
 
 
@@ -67,7 +69,7 @@ private const(lxb_char_t)* lxb_html_tokenizer_state_comment_start(lxb_html_token
                                      LXB_HTML_TOKENIZER_ERROR_ABCLOFEMCO);
 
         do { tkz.token.text_start = tkz.start; tkz.token.text_end = tkz.pos; } while (0);
-        do { tkz.token = tkz.callback_token_done(tkz, tkz.token, tkz.callback_token_ctx); if (tkz.token == null) { if (tkz.status == LXB_STATUS_OK) { tkz.status = LXB_STATUS_ERROR; } return end; } lxb_html_token_clean(tkz.token); } while (0);
+        do { if (!(tkz.opt & LXB_HTML_TOKENIZER_OPT_ATTR_KEEP_DUPLICATE)) { lxb_html_tokenizer_attr_last_duplicate(tkz); } if (tkz.token.type & LXB_HTML_TOKEN_TYPE_CLOSE) { lxb_html_tokenizer_validate_close_tag(tkz); } tkz.token = tkz.callback_token_done(tkz, tkz.token, tkz.callback_token_ctx); if (tkz.token == null) { if (tkz.status == LXB_STATUS_OK) { tkz.status = LXB_STATUS_ERROR; } return end; } lxb_html_token_clean(tkz.token); tkz.pos = tkz.start; } while (0);
 
         data++;
     }
@@ -97,20 +99,18 @@ private const(lxb_char_t)* lxb_html_tokenizer_state_comment_start_dash(lxb_html_
                                      LXB_HTML_TOKENIZER_ERROR_ABCLOFEMCO);
 
         do { tkz.token.text_start = tkz.start; tkz.token.text_end = tkz.pos; } while (0);
-        do { tkz.token = tkz.callback_token_done(tkz, tkz.token, tkz.callback_token_ctx); if (tkz.token == null) { if (tkz.status == LXB_STATUS_OK) { tkz.status = LXB_STATUS_ERROR; } return end; } lxb_html_token_clean(tkz.token); } while (0);
+        do { if (!(tkz.opt & LXB_HTML_TOKENIZER_OPT_ATTR_KEEP_DUPLICATE)) { lxb_html_tokenizer_attr_last_duplicate(tkz); } if (tkz.token.type & LXB_HTML_TOKEN_TYPE_CLOSE) { lxb_html_tokenizer_validate_close_tag(tkz); } tkz.token = tkz.callback_token_done(tkz, tkz.token, tkz.callback_token_ctx); if (tkz.token == null) { if (tkz.status == LXB_STATUS_OK) { tkz.status = LXB_STATUS_ERROR; } return end; } lxb_html_token_clean(tkz.token); tkz.pos = tkz.start; } while (0);
 
         return (data + 1);
     }
     /* EOF */
     else if (*data == 0x00) {
         if (tkz.is_eof) {
-            do { if (lxb_html_tokenizer_temp_append(tkz, cast(const(lxb_char_t)*) ("-"), (1))) { return end; } } while (0);
-
             lxb_html_tokenizer_error_add(tkz.parse_errors, tkz.last,
                                          LXB_HTML_TOKENIZER_ERROR_EOINCO);
 
             do { tkz.token.text_start = tkz.start; tkz.token.text_end = tkz.pos; } while (0);
-            do { tkz.token = tkz.callback_token_done(tkz, tkz.token, tkz.callback_token_ctx); if (tkz.token == null) { if (tkz.status == LXB_STATUS_OK) { tkz.status = LXB_STATUS_ERROR; } return end; } lxb_html_token_clean(tkz.token); } while (0);
+            do { if (!(tkz.opt & LXB_HTML_TOKENIZER_OPT_ATTR_KEEP_DUPLICATE)) { lxb_html_tokenizer_attr_last_duplicate(tkz); } if (tkz.token.type & LXB_HTML_TOKEN_TYPE_CLOSE) { lxb_html_tokenizer_validate_close_tag(tkz); } tkz.token = tkz.callback_token_done(tkz, tkz.token, tkz.callback_token_ctx); if (tkz.token == null) { if (tkz.status == LXB_STATUS_OK) { tkz.status = LXB_STATUS_ERROR; } return end; } lxb_html_token_clean(tkz.token); tkz.pos = tkz.start; } while (0);
 
             return end;
         }
@@ -190,7 +190,7 @@ private const(lxb_char_t)* lxb_html_tokenizer_state_comment(lxb_html_tokenizer_t
                                                  LXB_HTML_TOKENIZER_ERROR_EOINCO);
 
                     do { tkz.token.text_start = tkz.start; tkz.token.text_end = tkz.pos; } while (0);
-                    do { if (tkz.token.begin != tkz.token.end) { tkz.token = tkz.callback_token_done(tkz, tkz.token, tkz.callback_token_ctx); if (tkz.token == null) { if (tkz.status == LXB_STATUS_OK) { tkz.status = LXB_STATUS_ERROR; } return end; } } lxb_html_token_clean(tkz.token); tkz.pos = tkz.start; } while (0);
+                    do { if (!(tkz.opt & LXB_HTML_TOKENIZER_OPT_ATTR_KEEP_DUPLICATE)) { lxb_html_tokenizer_attr_last_duplicate(tkz); } if (tkz.token.type & LXB_HTML_TOKEN_TYPE_CLOSE) { lxb_html_tokenizer_validate_close_tag(tkz); } tkz.token = tkz.callback_token_done(tkz, tkz.token, tkz.callback_token_ctx); if (tkz.token == null) { if (tkz.status == LXB_STATUS_OK) { tkz.status = LXB_STATUS_ERROR; } return end; } lxb_html_token_clean(tkz.token); tkz.pos = tkz.start; } while (0);
 
                     return end;
                 }
@@ -320,7 +320,7 @@ private const(lxb_char_t)* lxb_html_tokenizer_state_comment_end_dash(lxb_html_to
                                          LXB_HTML_TOKENIZER_ERROR_EOINCO);
 
             do { tkz.token.text_start = tkz.start; tkz.token.text_end = tkz.pos; } while (0);
-            do { tkz.token = tkz.callback_token_done(tkz, tkz.token, tkz.callback_token_ctx); if (tkz.token == null) { if (tkz.status == LXB_STATUS_OK) { tkz.status = LXB_STATUS_ERROR; } return end; } lxb_html_token_clean(tkz.token); } while (0);
+            do { if (!(tkz.opt & LXB_HTML_TOKENIZER_OPT_ATTR_KEEP_DUPLICATE)) { lxb_html_tokenizer_attr_last_duplicate(tkz); } if (tkz.token.type & LXB_HTML_TOKEN_TYPE_CLOSE) { lxb_html_tokenizer_validate_close_tag(tkz); } tkz.token = tkz.callback_token_done(tkz, tkz.token, tkz.callback_token_ctx); if (tkz.token == null) { if (tkz.status == LXB_STATUS_OK) { tkz.status = LXB_STATUS_ERROR; } return end; } lxb_html_token_clean(tkz.token); tkz.pos = tkz.start; } while (0);
 
             return end;
         }
@@ -346,7 +346,7 @@ private const(lxb_char_t)* lxb_html_tokenizer_state_comment_end(lxb_html_tokeniz
         tkz.state = &lxb_html_tokenizer_state_data_before;
 
         do { tkz.token.text_start = tkz.start; tkz.token.text_end = tkz.pos; } while (0);
-        do { tkz.token = tkz.callback_token_done(tkz, tkz.token, tkz.callback_token_ctx); if (tkz.token == null) { if (tkz.status == LXB_STATUS_OK) { tkz.status = LXB_STATUS_ERROR; } return end; } lxb_html_token_clean(tkz.token); } while (0);
+        do { if (!(tkz.opt & LXB_HTML_TOKENIZER_OPT_ATTR_KEEP_DUPLICATE)) { lxb_html_tokenizer_attr_last_duplicate(tkz); } if (tkz.token.type & LXB_HTML_TOKEN_TYPE_CLOSE) { lxb_html_tokenizer_validate_close_tag(tkz); } tkz.token = tkz.callback_token_done(tkz, tkz.token, tkz.callback_token_ctx); if (tkz.token == null) { if (tkz.status == LXB_STATUS_OK) { tkz.status = LXB_STATUS_ERROR; } return end; } lxb_html_token_clean(tkz.token); tkz.pos = tkz.start; } while (0);
 
         return (data + 1);
     }
@@ -369,7 +369,7 @@ private const(lxb_char_t)* lxb_html_tokenizer_state_comment_end(lxb_html_tokeniz
                                          LXB_HTML_TOKENIZER_ERROR_EOINCO);
 
             do { tkz.token.text_start = tkz.start; tkz.token.text_end = tkz.pos; } while (0);
-            do { tkz.token = tkz.callback_token_done(tkz, tkz.token, tkz.callback_token_ctx); if (tkz.token == null) { if (tkz.status == LXB_STATUS_OK) { tkz.status = LXB_STATUS_ERROR; } return end; } lxb_html_token_clean(tkz.token); } while (0);
+            do { if (!(tkz.opt & LXB_HTML_TOKENIZER_OPT_ATTR_KEEP_DUPLICATE)) { lxb_html_tokenizer_attr_last_duplicate(tkz); } if (tkz.token.type & LXB_HTML_TOKEN_TYPE_CLOSE) { lxb_html_tokenizer_validate_close_tag(tkz); } tkz.token = tkz.callback_token_done(tkz, tkz.token, tkz.callback_token_ctx); if (tkz.token == null) { if (tkz.status == LXB_STATUS_OK) { tkz.status = LXB_STATUS_ERROR; } return end; } lxb_html_token_clean(tkz.token); tkz.pos = tkz.start; } while (0);
 
             return end;
         }
@@ -387,8 +387,12 @@ private const(lxb_char_t)* lxb_html_tokenizer_state_comment_end(lxb_html_tokeniz
  */
 private const(lxb_char_t)* lxb_html_tokenizer_state_comment_end_bang(lxb_html_tokenizer_t* tkz, const(lxb_char_t)* data, const(lxb_char_t)* end)
 {
+    static const(lexbor_str_t) two = {data: cast(lxb_char_t*) "--!".ptr, "--!".length};
+
     /* U+002D HYPHEN-MINUS (-) */
     if (*data == 0x2D) {
+        do { if (lxb_html_tokenizer_temp_append(tkz, cast(const(lxb_char_t)*) (two.data), (two.length))) { return end; } } while (0);
+
         tkz.state = &lxb_html_tokenizer_state_comment_end_dash;
 
         return (data + 1);
@@ -401,7 +405,7 @@ private const(lxb_char_t)* lxb_html_tokenizer_state_comment_end_bang(lxb_html_to
                                      LXB_HTML_TOKENIZER_ERROR_INCLCO);
 
         do { tkz.token.text_start = tkz.start; tkz.token.text_end = tkz.pos; } while (0);
-        do { tkz.token = tkz.callback_token_done(tkz, tkz.token, tkz.callback_token_ctx); if (tkz.token == null) { if (tkz.status == LXB_STATUS_OK) { tkz.status = LXB_STATUS_ERROR; } return end; } lxb_html_token_clean(tkz.token); } while (0);
+        do { if (!(tkz.opt & LXB_HTML_TOKENIZER_OPT_ATTR_KEEP_DUPLICATE)) { lxb_html_tokenizer_attr_last_duplicate(tkz); } if (tkz.token.type & LXB_HTML_TOKEN_TYPE_CLOSE) { lxb_html_tokenizer_validate_close_tag(tkz); } tkz.token = tkz.callback_token_done(tkz, tkz.token, tkz.callback_token_ctx); if (tkz.token == null) { if (tkz.status == LXB_STATUS_OK) { tkz.status = LXB_STATUS_ERROR; } return end; } lxb_html_token_clean(tkz.token); tkz.pos = tkz.start; } while (0);
 
         return (data + 1);
     }
@@ -412,10 +416,15 @@ private const(lxb_char_t)* lxb_html_tokenizer_state_comment_end_bang(lxb_html_to
                                          LXB_HTML_TOKENIZER_ERROR_EOINCO);
 
             do { tkz.token.text_start = tkz.start; tkz.token.text_end = tkz.pos; } while (0);
-            do { tkz.token = tkz.callback_token_done(tkz, tkz.token, tkz.callback_token_ctx); if (tkz.token == null) { if (tkz.status == LXB_STATUS_OK) { tkz.status = LXB_STATUS_ERROR; } return end; } lxb_html_token_clean(tkz.token); } while (0);
+            do { if (!(tkz.opt & LXB_HTML_TOKENIZER_OPT_ATTR_KEEP_DUPLICATE)) { lxb_html_tokenizer_attr_last_duplicate(tkz); } if (tkz.token.type & LXB_HTML_TOKEN_TYPE_CLOSE) { lxb_html_tokenizer_validate_close_tag(tkz); } tkz.token = tkz.callback_token_done(tkz, tkz.token, tkz.callback_token_ctx); if (tkz.token == null) { if (tkz.status == LXB_STATUS_OK) { tkz.status = LXB_STATUS_ERROR; } return end; } lxb_html_token_clean(tkz.token); tkz.pos = tkz.start; } while (0);
 
             return end;
         }
+
+        do { if (lxb_html_tokenizer_temp_append(tkz, cast(const(lxb_char_t)*) (two.data), (two.length))) { return end; } } while (0);
+    }
+    else {
+        do { if (lxb_html_tokenizer_temp_append(tkz, cast(const(lxb_char_t)*) (two.data), (two.length))) { return end; } } while (0);
     }
 
     tkz.state = &lxb_html_tokenizer_state_comment;

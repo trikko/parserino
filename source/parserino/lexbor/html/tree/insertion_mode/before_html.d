@@ -36,6 +36,8 @@ bool lxb_html_tree_insertion_mode_before_html(lxb_html_tree_t* tree, lxb_html_to
 
 private bool lxb_html_tree_insertion_mode_before_html_open(lxb_html_tree_t* tree, lxb_html_token_t* token)
 {
+    lxb_dom_processing_instruction_t* pi = void;
+
     switch (token.tag_id) {
         case LXB_TAG__EM_DOCTYPE:
             lxb_html_tree_parse_error(tree, token,
@@ -53,6 +55,15 @@ private bool lxb_html_tree_insertion_mode_before_html_open(lxb_html_tree_t* tree
 
             break;
         }
+
+        case LXB_TAG__PROCESSINGINSTRUCTION:
+            pi = lxb_html_tree_insert_processing_instruction(tree, token,
+                                        (cast(lxb_dom_node_t*) (tree.document)));
+            if (pi == null) {
+                return lxb_html_tree_process_abort(tree);
+            }
+
+            break;
 
         case LXB_TAG_HTML: {
             lxb_dom_node_t* node_html = void;

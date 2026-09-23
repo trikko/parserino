@@ -12,15 +12,15 @@ __gshared:
 
 // ---- base.h ----
 /*
- * Copyright (C) 2021-2024 Alexander Borisov
+ * Copyright (C) 2021-2025 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
 enum LXB_CSS_SELECTORS_VERSION_MAJOR = 1;
-enum LXB_CSS_SELECTORS_VERSION_MINOR = 1;
+enum LXB_CSS_SELECTORS_VERSION_MINOR = 3;
 enum LXB_CSS_SELECTORS_VERSION_PATCH = 0;
 
-enum LXB_CSS_SELECTORS_VERSION_STRING = "1.1.0";
+enum LXB_CSS_SELECTORS_VERSION_STRING = "0.0.0";
 
 alias lxb_css_selectors_t = lxb_css_selectors;
 alias lxb_css_selector_t = lxb_css_selector;

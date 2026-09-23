@@ -10,12 +10,12 @@ __gshared:
 
 // ---- base.h ----
 /*
- * Copyright (C) 2019-2024 Alexander Borisov
+ * Copyright (C) 2019-2026 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
-enum LXB_DOM_VERSION_MAJOR = 1;
-enum LXB_DOM_VERSION_MINOR = 8;
+enum LXB_DOM_VERSION_MAJOR = 2;
+enum LXB_DOM_VERSION_MINOR = 1;
 enum LXB_DOM_VERSION_PATCH = 0;
 
-enum LXB_DOM_VERSION_STRING = "1.8.0";
+enum LXB_DOM_VERSION_STRING = "0.0.0";

@@ -4,26 +4,37 @@ module parserino.lexbor.css.state;
 // Original author: Alexander Borisov <borisov@lexbor.com>
 
 public import parserino.lexbor.css.base;
+public import parserino.lexbor.css.syntax.syntax;
 import parserino.lexbor.css.css;
-import parserino.lexbor.css.at_rule.state;
 
 extern(C) @nogc nothrow:
 __gshared:
 
 // ---- state.h ----
 /*
- * Copyright (C) 2021-2022 Alexander Borisov
+ * Copyright (C) 2021-2026 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
 
 
 
+
+ const(lxb_css_syntax_cb_list_rules_t)* lxb_css_state_cb_list_rules();
+
+ const(lxb_css_syntax_cb_at_rule_t)* lxb_css_state_cb_at_rule();
+
+ const(lxb_css_syntax_cb_qualified_rule_t)* lxb_css_state_cb_qualified_rule();
+
+ const(lxb_css_syntax_cb_block_t)* lxb_css_state_cb_block();
+
+ const(lxb_css_syntax_cb_declarations_t)* lxb_css_state_cb_declarations();
+
+const(lxb_css_syntax_cb_block_t)* lxb_css_state_at_rule_block_begin(lxb_css_parser_t* parser, const(lxb_css_syntax_token_t)* token, void* ctx, void** out_rule);
+
 // ---- state.c ----
 /*
- * Copyright (C) 2021-2022 Alexander Borisov
- *
- * Author: Alexander Borisov <borisov@lexbor.com>
+ * Trimmed for parserino: only the generic parser states are kept.
  */
 
 bool lxb_css_state_success(lxb_css_parser_t* parser, const(lxb_css_syntax_token_t)* token, void* ctx)
@@ -59,4 +70,9 @@ bool lxb_css_state_failed(lxb_css_parser_t* parser, const(lxb_css_syntax_token_t
 bool lxb_css_state_stop(lxb_css_parser_t* parser, const(lxb_css_syntax_token_t)* token, void* ctx)
 {
     return lxb_css_parser_stop(parser);
+}
+
+bool lxb_css_state_blank(lxb_css_parser_t* parser, const(lxb_css_syntax_token_t)* token, void* ctx)
+{
+    return lxb_css_parser_success(parser);
 }

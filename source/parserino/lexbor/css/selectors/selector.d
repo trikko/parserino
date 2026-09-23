@@ -114,6 +114,11 @@ struct lxb_css_selector_anb_of_t {
     lxb_css_selector_list_t* of;
 }
 
+struct lxb_css_selector_contains_t {
+    lexbor_str_t str;
+    bool insensitive;
+}
+
 struct lxb_css_selector {
     lxb_css_selector_type_t type;
     lxb_css_selector_combinator_t combinator;
@@ -139,6 +144,30 @@ struct lxb_css_selector {
 alias lxb_css_selector_specificity_t = uint;
 
 enum LXB_CSS_SELECTOR_SPECIFICITY_MASK = (((cast(uint32_t) 1 << (32 - 9)) - 1) << (9));
+
+/*
+ * CSS Selector Specificity field accessors.
+ *
+ * Specificity is packed into a single uint32_t:
+ *   bits [31..28] — i: !important flag (1 = declaration is !important)
+ *   bit  [27]     — s: style attribute flag (1 = from element's style="...")
+ *   bits [26..18] — a: count of ID selectors
+ *   bits [17..9]  — b: count of class selectors, attribute selectors,
+ *                       and pseudo-classes
+ *   bits [8..0]   — c: count of type selectors and pseudo-elements
+ *
+ * Per CSS cascade order: !important > style attribute > (a, b, c).
+ */
+
+/* Extract the !important flag (bits 31..28). */
+
+/* Extract the style attribute flag (bit 27). */
+
+/* Extract the ID selector count — component "a" (bits 26..18). */
+
+/* Extract the class/attribute/pseudo-class count — component "b" (bits 17..9). */
+
+/* Extract the type/pseudo-element count — component "c" (bits 8..0). */
 enum LXB_CSS_SELECTOR_SP_S_MAX = ((1 << 28) - 1);
 enum LXB_CSS_SELECTOR_SP_A_MAX = ((1 << 27) - 1);
 enum LXB_CSS_SELECTOR_SP_B_MAX = ((1 << 18) - 1);
@@ -207,6 +236,7 @@ alias lxb_css_selector_serialize_f = lxb_status_t function(lxb_css_selector_t* s
 
 
 
+
 private const(lxb_css_selector_destroy_f)[LXB_CSS_SELECTOR_TYPE__LAST_ENTRY] lxb_selector_destroy_map = [
     &lxb_css_selector_destroy_undef,
     &lxb_css_selector_destroy_any,
@@ -214,9 +244,9 @@ private const(lxb_css_selector_destroy_f)[LXB_CSS_SELECTOR_TYPE__LAST_ENTRY] lxb
     &lxb_css_selector_destroy_id,
     &lxb_css_selector_destroy_id,
     &lxb_css_selector_destroy_attribute,
-    &lxb_css_selector_destroy_undef,
+    &lxb_css_selector_destroy_pseudo,
     &lxb_css_selector_destroy_pseudo_class_function,
-    &lxb_css_selector_destroy_undef,
+    &lxb_css_selector_destroy_pseudo,
     &lxb_css_selector_destroy_pseudo_element_function
 ];
 
@@ -389,9 +419,17 @@ private void lxb_css_selector_destroy_attribute(lxb_css_selector_t* selector, lx
     }
 }
 
+private void lxb_css_selector_destroy_pseudo(lxb_css_selector_t* selector, lxb_css_memory_t* mem)
+{
+    if (selector.name.data != null) {
+        lexbor_mraw_free(mem.mraw, selector.name.data);
+    }
+}
+
 private void lxb_css_selector_destroy_pseudo_class_function(lxb_css_selector_t* selector, lxb_css_memory_t* mem)
 {
     lxb_css_selector_anb_of_t* anbof = void;
+    lxb_css_selector_contains_t* contains = void;
     lxb_css_selector_pseudo_t* pseudo = void;
 
     pseudo = &selector.u.pseudo;
@@ -432,14 +470,28 @@ private void lxb_css_selector_destroy_pseudo_class_function(lxb_css_selector_t* 
             lxb_css_selector_list_destroy_chain(cast(lxb_css_selector_list*) pseudo.data);
             break;
 
+        case LXB_CSS_SELECTOR_PSEUDO_CLASS_FUNCTION_LEXBOR_CONTAINS:
+            contains = cast(lxb_css_selector_contains_t*) pseudo.data;
+
+            if (contains != null) {
+                if (contains.str.data != null) {
+                    lexbor_mraw_free(mem.mraw, contains.str.data);
+                }
+
+                lexbor_mraw_free(mem.mraw, contains);
+            }
+            break;
+
         default:
             break;
     }
+
+    lxb_css_selector_destroy_pseudo(selector, mem);
 }
 
 private void lxb_css_selector_destroy_pseudo_element_function(lxb_css_selector_t* selector, lxb_css_memory_t* mem)
 {
-
+    lxb_css_selector_destroy_pseudo(selector, mem);
 }
 
 lxb_status_t lxb_css_selector_serialize(lxb_css_selector_t* selector, lexbor_serialize_cb_f cb, void* ctx)
@@ -464,7 +516,7 @@ lxb_status_t lxb_css_selector_serialize_chain(lxb_css_selector_t* selector, lexb
         }
 
         do { (status) = cb(cast(lxb_char_t*) (data), (length), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
-        do { (status) = cb(cast(lxb_char_t*) (" "), (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+        do { (status) = cb(cast(lxb_char_t*) " ".ptr, (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
     }
 
     status = lxb_css_selector_serialize(selector, cb, ctx);
@@ -481,11 +533,11 @@ lxb_status_t lxb_css_selector_serialize_chain(lxb_css_selector_t* selector, lexb
         }
 
         if (length != 0) {
-            do { (status) = cb(cast(lxb_char_t*) (" "), (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+            do { (status) = cb(cast(lxb_char_t*) " ".ptr, (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
 
             if (*data != ' ') {
                 do { (status) = cb(cast(lxb_char_t*) (data), (length), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
-                do { (status) = cb(cast(lxb_char_t*) (" "), (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+                do { (status) = cb(cast(lxb_char_t*) " ".ptr, (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
             }
         }
 
@@ -613,7 +665,7 @@ lxb_status_t lxb_css_selector_serialize_list_chain(lxb_css_selector_list_t* list
     list = list.next;
 
     while (list != null) {
-        do { (status) = cb(cast(lxb_char_t*) (", "), (2), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+        do { (status) = cb(cast(lxb_char_t*) ", ".ptr, (2), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
 
         status = lxb_css_selector_serialize_chain(list.first, cb, ctx);
         if (status != LXB_STATUS_OK) {
@@ -682,7 +734,7 @@ private lxb_status_t lxb_css_selector_serialize_any(lxb_css_selector_t* selector
     if (selector.ns.data != null) {
         do { (status) = cb(cast(lxb_char_t*) (selector.ns.data), (selector.ns.length), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false)
                                                              ;
-        do { (status) = cb(cast(lxb_char_t*) ("|"), (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+        do { (status) = cb(cast(lxb_char_t*) "|".ptr, (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
     }
 
     if (selector.name.data != null) {
@@ -696,7 +748,7 @@ private lxb_status_t lxb_css_selector_serialize_id(lxb_css_selector_t* selector,
 {
     lxb_status_t status = void;
 
-    do { (status) = cb(cast(lxb_char_t*) ("#"), (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+    do { (status) = cb(cast(lxb_char_t*) "#".ptr, (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
 
     if (selector.name.data != null) {
         return cb(selector.name.data, selector.name.length, ctx);
@@ -709,7 +761,7 @@ private lxb_status_t lxb_css_selector_serialize_class(lxb_css_selector_t* select
 {
     lxb_status_t status = void;
 
-    do { (status) = cb(cast(lxb_char_t*) ("."), (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+    do { (status) = cb(cast(lxb_char_t*) ".".ptr, (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
 
     if (selector.name.data != null) {
         return cb(selector.name.data, selector.name.length, ctx);
@@ -718,13 +770,45 @@ private lxb_status_t lxb_css_selector_serialize_class(lxb_css_selector_t* select
     return LXB_STATUS_OK;
 }
 
+private lxb_status_t lxb_css_selector_serialize_escape_write(lxb_char_t* p, lxb_char_t* end, lexbor_serialize_cb_f cb, void* ctx)
+{
+    lxb_char_t* begin = void;
+    lxb_status_t status = void;
+
+    begin = p;
+
+    do { (status) = cb(cast(lxb_char_t*) "\"".ptr, (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+
+    while (p < end) {
+        if (*p == '"') {
+            if (begin < p) {
+                do { (status) = cb(cast(lxb_char_t*) (begin), (p - begin), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+            }
+
+            do { (status) = cb(cast(lxb_char_t*) "\\000022".ptr, (7), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+
+            begin = p + 1;
+        }
+
+        p++;
+    }
+
+    if (begin < p) {
+        do { (status) = cb(cast(lxb_char_t*) (begin), (p - begin), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+    }
+
+    do { (status) = cb(cast(lxb_char_t*) "\"".ptr, (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+
+    return LXB_STATUS_OK;
+}
+
 private lxb_status_t lxb_css_selector_serialize_attribute(lxb_css_selector_t* selector, lexbor_serialize_cb_f cb, void* ctx)
 {
-    lxb_char_t* p = void, begin = void, end = void;
+    lxb_char_t* p = void, end = void;
     lxb_status_t status = void;
     lxb_css_selector_attribute_t* attr = void;
 
-    do { (status) = cb(cast(lxb_char_t*) ("["), (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+    do { (status) = cb(cast(lxb_char_t*) "[".ptr, (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
 
     status = lxb_css_selector_serialize_any(selector, cb, ctx);
     if (status != LXB_STATUS_OK) {
@@ -739,22 +823,22 @@ private lxb_status_t lxb_css_selector_serialize_attribute(lxb_css_selector_t* se
 
     switch (attr.match) {
         case LXB_CSS_SELECTOR_MATCH_EQUAL:
-            do { (status) = cb(cast(lxb_char_t*) ("="), (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+            do { (status) = cb(cast(lxb_char_t*) "=".ptr, (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
             break;
         case LXB_CSS_SELECTOR_MATCH_INCLUDE:
-            do { (status) = cb(cast(lxb_char_t*) ("~="), (2), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+            do { (status) = cb(cast(lxb_char_t*) "~=".ptr, (2), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
             break;
         case LXB_CSS_SELECTOR_MATCH_DASH:
-            do { (status) = cb(cast(lxb_char_t*) ("|="), (2), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+            do { (status) = cb(cast(lxb_char_t*) "|=".ptr, (2), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
             break;
         case LXB_CSS_SELECTOR_MATCH_PREFIX:
-            do { (status) = cb(cast(lxb_char_t*) ("^="), (2), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+            do { (status) = cb(cast(lxb_char_t*) "^=".ptr, (2), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
             break;
         case LXB_CSS_SELECTOR_MATCH_SUFFIX:
-            do { (status) = cb(cast(lxb_char_t*) ("$="), (2), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+            do { (status) = cb(cast(lxb_char_t*) "$=".ptr, (2), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
             break;
         case LXB_CSS_SELECTOR_MATCH_SUBSTRING:
-            do { (status) = cb(cast(lxb_char_t*) ("*="), (2), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+            do { (status) = cb(cast(lxb_char_t*) "*=".ptr, (2), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
             break;
 
         default:
@@ -764,38 +848,19 @@ private lxb_status_t lxb_css_selector_serialize_attribute(lxb_css_selector_t* se
     p = attr.value.data;
     end = attr.value.data + attr.value.length;
 
-    begin = p;
-
-    do { (status) = cb(cast(lxb_char_t*) ("\""), (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
-
-    while (p < end) {
-        if (*p == '"') {
-            if (begin < p) {
-                do { (status) = cb(cast(lxb_char_t*) (begin), (p - begin), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
-            }
-
-            do { (status) = cb(cast(lxb_char_t*) ("\\000022"), (7), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
-
-            begin = p + 1;
-        }
-
-        p++;
+    status = lxb_css_selector_serialize_escape_write(p, end, cb, ctx);
+    if (status != LXB_STATUS_OK) {
+        return status;
     }
-
-    if (begin < p) {
-        do { (status) = cb(cast(lxb_char_t*) (begin), (p - begin), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
-    }
-
-    do { (status) = cb(cast(lxb_char_t*) ("\""), (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
 
     if (attr.modifier != LXB_CSS_SELECTOR_MODIFIER_UNSET) {
         switch (attr.modifier) {
             case LXB_CSS_SELECTOR_MODIFIER_I:
-                do { (status) = cb(cast(lxb_char_t*) ("i"), (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+                do { (status) = cb(cast(lxb_char_t*) "i".ptr, (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
                 break;
 
             case LXB_CSS_SELECTOR_MODIFIER_S:
-                do { (status) = cb(cast(lxb_char_t*) ("s"), (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+                do { (status) = cb(cast(lxb_char_t*) "s".ptr, (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
                 break;
 
             default:
@@ -814,16 +879,18 @@ private lxb_status_t lxb_css_selector_serialize_pseudo_class(lxb_css_selector_t*
 private lxb_status_t lxb_css_selector_serialize_pseudo_class_function(lxb_css_selector_t* selector, lexbor_serialize_cb_f cb, void* ctx)
 {
     lxb_status_t status = void;
+    lxb_char_t* p = void, end = void;
     lxb_css_selector_pseudo_t* pseudo = void;
+    lxb_css_selector_contains_t* contains = void;
     const(lxb_css_selectors_pseudo_data_func_t)* pfunc = void;
 
     pseudo = &selector.u.pseudo;
 
     pfunc = &lxb_css_selectors_pseudo_data_pseudo_class_function[pseudo.type];
 
-    do { (status) = cb(cast(lxb_char_t*) (":"), (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+    do { (status) = cb(cast(lxb_char_t*) ":".ptr, (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
     do { (status) = cb(cast(lxb_char_t*) (pfunc.name), (pfunc.length), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
-    do { (status) = cb(cast(lxb_char_t*) ("("), (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+    do { (status) = cb(cast(lxb_char_t*) "(".ptr, (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
 
     switch (pseudo.type) {
         case LXB_CSS_SELECTOR_PSEUDO_CLASS_FUNCTION_CURRENT:
@@ -863,6 +930,22 @@ private lxb_status_t lxb_css_selector_serialize_pseudo_class_function(lxb_css_se
                                                            cb, ctx);
             break;
 
+        case LXB_CSS_SELECTOR_PSEUDO_CLASS_FUNCTION_LEXBOR_CONTAINS:
+            contains = cast(lxb_css_selector_contains_t*) pseudo.data;
+            p = contains.str.data;
+            end = p + contains.str.length;
+
+            status = lxb_css_selector_serialize_escape_write(p, end, cb, ctx);
+            if (status != LXB_STATUS_OK) {
+                return status;
+            }
+
+            if (contains.insensitive) {
+                do { (status) = cb(cast(lxb_char_t*) " i".ptr, (2), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+            }
+
+            break;
+
         default:
             status = LXB_STATUS_OK;
             break;
@@ -872,7 +955,7 @@ private lxb_status_t lxb_css_selector_serialize_pseudo_class_function(lxb_css_se
         return status;
     }
 
-    do { (status) = cb(cast(lxb_char_t*) (")"), (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+    do { (status) = cb(cast(lxb_char_t*) ")".ptr, (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
 
     return LXB_STATUS_OK;
 }
@@ -897,11 +980,11 @@ private lxb_status_t lxb_css_selector_serialize_pseudo_single(lxb_css_selector_t
 
     if (is_class) {
         pclass = &lxb_css_selectors_pseudo_data_pseudo_class[pseudo.type];
-        do { (status) = cb(cast(lxb_char_t*) (":"), (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+        do { (status) = cb(cast(lxb_char_t*) ":".ptr, (1), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
     }
     else {
         pclass = &lxb_css_selectors_pseudo_data_pseudo_element[pseudo.type];
-        do { (status) = cb(cast(lxb_char_t*) ("::"), (2), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
+        do { (status) = cb(cast(lxb_char_t*) "::".ptr, (2), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);
     }
 
     do { (status) = cb(cast(lxb_char_t*) (pclass.name), (pclass.length), (ctx)); if ((status) != LXB_STATUS_OK) { return (status); } } while (false);

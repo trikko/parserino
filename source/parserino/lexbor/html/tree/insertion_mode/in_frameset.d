@@ -18,6 +18,8 @@ __gshared:
 
 bool lxb_html_tree_insertion_mode_in_frameset(lxb_html_tree_t* tree, lxb_html_token_t* token)
 {
+    lxb_dom_processing_instruction_t* pi = void;
+
     if (token.type & LXB_HTML_TOKEN_TYPE_CLOSE) {
         if (token.tag_id == LXB_TAG_FRAMESET)
         {
@@ -59,6 +61,14 @@ bool lxb_html_tree_insertion_mode_in_frameset(lxb_html_tree_t* tree, lxb_html_to
 
             break;
         }
+
+        case LXB_TAG__PROCESSINGINSTRUCTION:
+            pi = lxb_html_tree_insert_processing_instruction(tree, token, null);
+            if (pi == null) {
+                return lxb_html_tree_process_abort(tree);
+            }
+
+            break;
 
         case LXB_TAG__EM_DOCTYPE:
             lxb_html_tree_parse_error(tree, token,

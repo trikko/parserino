@@ -12,15 +12,15 @@ __gshared:
 
 // ---- base.h ----
 /*
- * Copyright (C) 2018-2024 Alexander Borisov
+ * Copyright (C) 2018-2026 Alexander Borisov
  *
  * Author: Alexander Borisov <borisov@lexbor.com>
  */
 enum LXB_HTML_VERSION_MAJOR = 2;
-enum LXB_HTML_VERSION_MINOR = 6;
+enum LXB_HTML_VERSION_MINOR = 10;
 enum LXB_HTML_VERSION_PATCH = 0;
 
-enum LXB_HTML_VERSION_STRING = "2.6.0";
+enum LXB_HTML_VERSION_STRING = "0.0.0";
 
 alias lxb_html_tokenizer_t = lxb_html_tokenizer;
 alias lxb_html_tokenizer_opt_t = uint;
