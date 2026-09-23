@@ -12,5 +12,4 @@ parserino-test-*
 *.o
 *.obj
 *.lst
-liblexbor_parserino.a
 source/app.d

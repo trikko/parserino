@@ -37,7 +37,17 @@ OTHER DEALINGS IN THE SOFTWARE.
  */
 module parserino;
 
-import parserino.c.lexbor;
+import parserino.lexbor.html.interfaces.document;
+import parserino.lexbor.html.interfaces.element;
+import parserino.lexbor.html.serialize;
+import parserino.lexbor.dom.interfaces.element;
+import parserino.lexbor.dom.interfaces.node;
+import parserino.lexbor.dom.interfaces.attr;
+import parserino.lexbor.dom.interfaces.document;
+import parserino.lexbor.css.parser;
+import parserino.lexbor.css.selectors.selectors;
+import parserino.lexbor.css.selectors.selector;
+import parserino.lexbor.selectors.selectors;
 import std.string : representation;
 import std.conv : to;
 import std.experimental.logger;
@@ -120,7 +130,7 @@ struct Document
         {
             document = lxb_html_document_create();
             parser = lxb_css_parser_create();
-            lxb_css_parser_init(parser, null, null);
+            lxb_css_parser_init(parser, null);
         }
 
         Document.RefCounter.add(payload);
@@ -140,7 +150,7 @@ struct Document
 
         string output;
 
-        lxb_html_serialize_tree_cb(cast(lxb_dom_node*)&(payload.document.dom_document.node), &cb, &output);
+        lxb_html_serialize_tree_cb(cast(lxb_dom_node*)&(payload.document.dom_document.node), cast(lxb_html_serialize_cb_f) &cb, &output);
         return output;
     }
 
@@ -1035,7 +1045,7 @@ struct Element
         }
 
         string output;
-        lxb_html_serialize_deep_cb(&(element.node), &cb, &output);
+        lxb_html_serialize_deep_cb(&(element.node), cast(lxb_html_serialize_cb_f) &cb, &output);
         return output;
     }
 
@@ -1528,8 +1538,8 @@ struct Element
         string output;
 
 
-        if (deep) lxb_html_serialize_tree_cb(cast(lxb_dom_node*)&(element.node), &cb, &output);
-        else lxb_html_serialize_cb(cast(lxb_dom_node*)&(element.node), &cb, &output);
+        if (deep) lxb_html_serialize_tree_cb(cast(lxb_dom_node*)&(element.node), cast(lxb_html_serialize_cb_f) &cb, &output);
+        else lxb_html_serialize_cb(cast(lxb_dom_node*)&(element.node), cast(lxb_html_serialize_cb_f) &cb, &output);
 
         return output;
     }
@@ -1931,7 +1941,7 @@ class SelectorElementRange
         // A parser for each query: newer lexbor keeps the selector memory
         // inside the parser, so the list must not outlive a shared parser.
         parser = lxb_css_parser_create();
-        lxb_css_parser_init(parser, null, null);
+        lxb_css_parser_init(parser, null);
         list = CallWithLexborString!lxb_css_selectors_parse(parser, selector);
 
         Document.RefCounter.add(docPayload);
@@ -1947,7 +1957,7 @@ class SelectorElementRange
     class CBFiber : Fiber {
 
         this() {
-            super({lxb_selectors_find(selectors, &(element.node), list, &find_callback, &current);});
+            super({lxb_selectors_find(selectors, &(element.node), list, cast(lxb_selectors_cb_f) &find_callback, &current);});
         }
 
         ~this() {
