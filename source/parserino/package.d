@@ -1074,11 +1074,15 @@ struct Element
         onlyValidElements();
         impl.ensureClosed(node);
 
-        if (node.type != LXB_DOM_NODE_TYPE_ELEMENT)
+        if (node.type == LXB_DOM_NODE_TYPE_TEXT || node.type == LXB_DOM_NODE_TYPE_COMMENT
+            || node.type == LXB_DOM_NODE_TYPE_PROCESSING_INSTRUCTION)
         {
             auto cd = cast(lxb_dom_character_data_t*) node;
             return (cast(const(char)[]) cd.data.data[0 .. cd.data.length]).idup;
         }
+
+        if (node.type != LXB_DOM_NODE_TYPE_ELEMENT && node.type != LXB_DOM_NODE_TYPE_DOCUMENT)
+            return string.init;
 
         size_t len;
         auto s = lxb_dom_node_text_content(node, &len);

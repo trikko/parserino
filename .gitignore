@@ -14,3 +14,4 @@ parserino-test-*
 *.lst
 source/app.d
 tools/difftest/lazytest
+tools/difftest/dump
