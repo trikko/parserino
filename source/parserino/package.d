@@ -59,11 +59,9 @@ import parserino.lexbor.html.interfaces.document;
 import parserino.lexbor.html.parser;
 import parserino.lexbor.html.tree;
 import parserino.lexbor.html.serialize;
-import parserino.lexbor.css.parser;
-import parserino.lexbor.css.selectors.selectors;
-import parserino.lexbor.css.selectors.selector;
-import parserino.lexbor.css.selectors.pseudo_const;
-import parserino.lexbor.selectors.selectors;
+import parserino.arena : Arena;
+import parserino.css.selector : SelectorList, parseSelector;
+static import parserino.css.matcher;
 
 import core.stdc.stdlib : calloc, realloc, free, malloc;
 import core.stdc.string : memchr, memcpy;
@@ -1772,15 +1770,20 @@ struct Selector
     /// Compile a selector. It throws on invalid syntax.
     this(const(char)[] selector)
     {
-        auto list = compileSelector(selector);
-        if (list is null) throw new ParserinoException("Invalid selector: `" ~ selector.idup ~ "`");
-
         impl = cast(SelImpl*) calloc(1, SelImpl.sizeof);
-        if (impl is null) { lxb_css_selector_list_destroy_memory(list); throw new ParserinoException("Out of memory"); }
+        if (impl is null) throw new ParserinoException("Out of memory");
+
+        impl.list = parseSelector(selector, impl.arena);
+        if (impl.list is null)
+        {
+            impl.arena.release();
+            free(impl);
+            impl = null;
+            throw new ParserinoException("Invalid selector: `" ~ selector.idup ~ "`");
+        }
 
         impl.refs = 1;
-        impl.list = list;
-        impl.forward = looksForward(list);
+        impl.forward = impl.list.looksForward;
     }
 
     this(this) { if (impl !is null) atomicOp!"+="(impl.refs, 1); }
@@ -1789,7 +1792,7 @@ struct Selector
     {
         if (impl !is null && atomicOp!"-="(impl.refs, 1) == 0)
         {
-            lxb_css_selector_list_destroy_memory(impl.list);
+            impl.arena.release();
             free(impl);
         }
         impl = null;
@@ -2135,7 +2138,6 @@ struct DocImpl
 {
     shared size_t refs;
     lxb_html_document_t* html;
-    lxb_selectors_t* selectors;
 
     // Incremental parsing
     bool parsing;
@@ -2170,7 +2172,6 @@ struct DocImpl
         if (atomicOp!"-="(d.refs, 1) != 0) return;
 
         if (d.source !is null) free(d.source);
-        if (d.selectors !is null) lxb_selectors_destroy(d.selectors, true);
         lxb_html_document_destroy(d.html);
         d.tables.dispose();
         d.formatting.dispose();
@@ -2332,30 +2333,10 @@ struct DocImpl
     void ensureClosed(lxb_dom_node_t* n) { while (parsing && (isOpen(n) || !isStable(n))) advance(); }
     void ensureAttrs(lxb_dom_node_t* n) { if (isRootElement(n)) while (parsing && !rootAttrsFinal()) advance(); }
 
-    bool matches(lxb_dom_node_t* n, lxb_css_selector_list_t* list)
+    bool matches(lxb_dom_node_t* n, const(SelectorList)* list)
     {
-        if (n.type != LXB_DOM_NODE_TYPE_ELEMENT) return false;
-
-        if (selectors is null)
-        {
-            selectors = lxb_selectors_create();
-            if (selectors is null || lxb_selectors_init(selectors) != LXB_STATUS_OK)
-                throw new ParserinoException("Out of memory");
-
-            lxb_selectors_opt_set(selectors, LXB_SELECTORS_OPT_MATCH_FIRST);
-        }
-
-        bool found = false;
-        auto status = lxb_selectors_match_node(selectors, n, list, cast(lxb_selectors_cb_f) &matchCallback, &found);
-        if (status != LXB_STATUS_OK && !found) throw new ParserinoException("Selector matching failed");
-        return found;
+        return parserino.css.matcher.matches(list, n);
     }
-}
-
-extern(C) lxb_status_t matchCallback(lxb_dom_node_t*, lxb_css_selector_specificity_t, void* ctx) nothrow @nogc
-{
-    *(cast(bool*) ctx) = true;
-    return LXB_STATUS_STOP;
 }
 
 // A small malloc'd list of nodes
@@ -2523,98 +2504,9 @@ unittest
 struct SelImpl
 {
     shared size_t refs;
-    lxb_css_selector_list_t* list;
+    Arena arena;
+    const(SelectorList)* list;
     bool forward;   // does it look at following siblings or at children? (:last-child, :has, ...)
-}
-
-// A css parser for each thread: the compiled lists own their memory, so they outlive it.
-lxb_css_parser_t* cssParser;
-
-static ~this()
-{
-    if (cssParser !is null) lxb_css_parser_destroy(cssParser, true);
-    cssParser = null;
-}
-
-lxb_css_selector_list_t* compileSelector(const(char)[] selector)
-{
-    if (cssParser is null)
-    {
-        cssParser = lxb_css_parser_create();
-        if (lxb_css_parser_init(cssParser, null) != LXB_STATUS_OK)
-        {
-            lxb_css_parser_destroy(cssParser, true);
-            cssParser = null;
-            throw new ParserinoException("Can't create the css parser");
-        }
-    }
-
-    // A new memory for every list: the list keeps it (freed by lxb_css_selector_list_destroy_memory)
-    lxb_css_parser_memory_set(cssParser, null);
-    auto list = lxb_css_selectors_parse(cssParser, cast(const(ubyte)*) selector.ptr, selector.length);
-    lxb_css_parser_memory_set(cssParser, null);
-
-    if (list !is null && cssParser.status != LXB_STATUS_OK)
-    {
-        lxb_css_selector_list_destroy_memory(list);
-        return null;
-    }
-
-    return list;
-}
-
-bool looksForward(const(lxb_css_selector_list_t)* list) nothrow @nogc
-{
-    for (const(lxb_css_selector_list_t)* l = list; l !is null; l = l.next)
-    {
-        for (const(lxb_css_selector_t)* s = l.first; s !is null; s = s.next)
-        {
-            if (s.type == LXB_CSS_SELECTOR_TYPE_PSEUDO_CLASS)
-            {
-                switch (s.u.pseudo.type)
-                {
-                    case LXB_CSS_SELECTOR_PSEUDO_CLASS_BLANK:
-                    case LXB_CSS_SELECTOR_PSEUDO_CLASS_EMPTY:
-                    case LXB_CSS_SELECTOR_PSEUDO_CLASS_LAST_CHILD:
-                    case LXB_CSS_SELECTOR_PSEUDO_CLASS_LAST_OF_TYPE:
-                    case LXB_CSS_SELECTOR_PSEUDO_CLASS_ONLY_CHILD:
-                    case LXB_CSS_SELECTOR_PSEUDO_CLASS_ONLY_OF_TYPE:
-                        return true;
-                    default: break;
-                }
-            }
-            else if (s.type == LXB_CSS_SELECTOR_TYPE_PSEUDO_CLASS_FUNCTION)
-            {
-                switch (s.u.pseudo.type)
-                {
-                    case LXB_CSS_SELECTOR_PSEUDO_CLASS_FUNCTION_HAS:
-                    case LXB_CSS_SELECTOR_PSEUDO_CLASS_FUNCTION_NTH_LAST_CHILD:
-                    case LXB_CSS_SELECTOR_PSEUDO_CLASS_FUNCTION_NTH_LAST_OF_TYPE:
-                    case LXB_CSS_SELECTOR_PSEUDO_CLASS_FUNCTION_LEXBOR_CONTAINS:
-                        return true;
-
-                    case LXB_CSS_SELECTOR_PSEUDO_CLASS_FUNCTION_NOT:
-                    case LXB_CSS_SELECTOR_PSEUDO_CLASS_FUNCTION_IS:
-                    case LXB_CSS_SELECTOR_PSEUDO_CLASS_FUNCTION_WHERE:
-                    case LXB_CSS_SELECTOR_PSEUDO_CLASS_FUNCTION_CURRENT:
-                        if (looksForward(cast(const(lxb_css_selector_list_t)*) s.u.pseudo.data)) return true;
-                        break;
-
-                    case LXB_CSS_SELECTOR_PSEUDO_CLASS_FUNCTION_NTH_CHILD:
-                    case LXB_CSS_SELECTOR_PSEUDO_CLASS_FUNCTION_NTH_OF_TYPE:
-                        auto anb = cast(const(lxb_css_selector_anb_of_t)*) s.u.pseudo.data;
-                        if (anb !is null && looksForward(anb.of)) return true;
-                        break;
-
-                    default:
-                        // Unknown functions: be conservative
-                        return true;
-                }
-            }
-        }
-    }
-
-    return false;
 }
 
 
