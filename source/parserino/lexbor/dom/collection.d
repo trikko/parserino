@@ -31,20 +31,7 @@ struct lxb_dom_collection_t {
 /*
  * Inline functions
  */
- lxb_dom_collection_t* lxb_dom_collection_make(lxb_dom_document_t* document, size_t start_list_size)
-{
-    lxb_status_t status = void;
-    lxb_dom_collection_t* col = void;
-
-    col = lxb_dom_collection_create(document);
-    status = lxb_dom_collection_init(col, start_list_size);
-
-    if(status != LXB_STATUS_OK) {
-        return lxb_dom_collection_destroy(col, true);
-    }
-
-    return col;
-}
+/* D port: lxb_dom_collection_make removed (collection.c not ported). */
 
  void lxb_dom_collection_clean(lxb_dom_collection_t* col)
 {
