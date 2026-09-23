@@ -6,8 +6,8 @@ void main()
 	// Get the html of a random wikipedia page
 	auto data = "https://en.wikipedia.org/wiki/Special:Random".get.to!string;
 
-	// Parse the html
-	Document doc = Document(data);
+	// Parse the html lazily: the tree is built only as far as our queries need
+	Document doc = Document.parseLazy(data);
 
 	// Get the canonical url of the page
 	// We use a CSS selector to get the first element that matches the filter
@@ -31,5 +31,8 @@ void main()
 	// Print the title and the link of each element
 	foreach(l; internalLinks)
 		writeln(" - ", l.getAttribute("title"), " => https://en.wikipedia.org", l.getAttribute("href"));
+
+	writeln();
+	writeln("Parsed ", doc.bytesParsed, " bytes of ", data.length);
 
 }

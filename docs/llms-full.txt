@@ -7,8 +7,13 @@ Parserino is a high-performance HTML5 parser and DOM manipulation library for th
 ### `Document`
 The root of the DOM tree. Created from an HTML string.
 
-- `this(string html)`: Constructor.
+- `this(string html)`: Constructor, parses the whole document.
+- `static Document parseLazy(string html, size_t chunkSize = 16 * 1024)`: Parses incrementally, only as far as queries and accessors need. Results are identical to a full parse. Mutations complete the parsing first.
+- `void finishParsing()`: Completes a lazy parsing.
+- `bool isParsing`: True while a lazy document is not fully parsed.
+- `size_t bytesParsed`: Input bytes given to the parser so far.
 - `bool isValid`: True if the document is successfully parsed.
+- `Element documentElement`: Returns the `<html>` element.
 - `string title`: Property to get or set the content of the `<title>` tag.
 - `Element head`: Returns the `<head>` element.
 - `Element body`: Returns the `<body>` element.
@@ -16,23 +21,28 @@ The root of the DOM tree. Created from an HTML string.
 - `Element createText(string text)`: Creates a text node.
 - `Element createComment(string text)`: Creates a comment node (`<!-- text -->`).
 - `Element fragment(string html)`: Creates a document fragment from a string.
-- `string toString()`: Serializes the entire document back to HTML.
-- `byId(string id)`: Finds an element by its ID (throws if not found).
+- `string toString()`: Serializes the entire document back to HTML. `toString(sink)` writes to a delegate or an output range.
+- `byId(string id)`: Finds an element by its ID (returns an invalid element, `== null`, if not found).
 - `byClass(string name)`: Returns a lazy range of elements with the specified class.
 - `byTagName(string name)`: Returns a lazy range of elements with the specified tag name.
-- `bySelector(string selector)`: Returns a lazy range of elements matching a CSS selector.
+- `bySelector(string selector)` / `bySelector(Selector)`: Returns a lazy range of elements matching a CSS selector (each element once).
+- `descendants(bool returnAllElements = false)`: All the nodes in tree order.
 - `byComment(string comment)`: Returns a lazy range of comment nodes matching the specified text.
 
 ### `Element`
 Represents a node in the DOM.
 
 - `bool isValid`: True if the element is not null.
+- `bool isElement`, `bool isText`, `bool isComment`: Node type.
+- `Document owner`: The document (each element keeps it alive).
 - `string name`: The tag name (e.g., "div", "p", "#text", "!--").
 - `string id`: The `id` attribute value.
 - `auto classes`: A range of classes (split by space).
 - `auto attributes`: A range of `Attribute` structs (containing `name` and `value`).
 - `bool hasAttribute(string attr)`: Checks for attribute existence.
-- `string getAttribute(string attr)`: Retrieves an attribute's value.
+- `string getAttribute(string attr)`: Retrieves an attribute's value (`null` if missing, `""` if empty).
+- `const(char)[] getAttributeView(string attr)`: Same, without copying (valid while the attribute is unchanged).
+- `bool matches(string selector)`: Checks if the element matches a CSS selector.
 - `void setAttribute(string name, string value)`: Sets or updates an attribute.
 - `void removeAttribute(string attr)`: Removes an attribute.
 - `string innerHTML`: Get/set the HTML content inside the element.
@@ -42,7 +52,7 @@ Represents a node in the DOM.
 - `void prependChild(T)(T el)`: Adds a child at the beginning.
 - `void appendSibling(T)(T el)`: Adds a sibling after the current element.
 - `void prependSibling(T)(T el)`: Adds a sibling before the current element.
-- `bool remove()`: Detaches the element from its parent.
+- `bool remove()`: Detaches the element from its parent. The element stays valid and can be inserted again.
 - `void replaceWith(T)(T el)`: Replaces the element with another.
 - `void copyFrom(Element e, bool deep = true)`: Copies attributes and optionally children from another element.
 - `Element parent`, `Element next`, `Element prev`: Navigation.
@@ -51,6 +61,21 @@ Represents a node in the DOM.
 - `auto children(VisitOrder order = VisitOrder.Normal)(bool returnAllElements = false)`: Immediate children range.
 - `auto descendants(VisitOrder order = VisitOrder.Normal)(bool returnAllElements = false)`: Recursive descendants range.
 - `bool contains(Element e, bool deep = true)`: Checks if the element contains another.
+
+### `Selector`
+A compiled CSS selector, reusable with any document.
+- `this(string css)`: Compiles the selector (throws `ParserinoException` on invalid syntax).
+- `bool isValid`.
+
+```d
+auto sel = Selector("div > a[href]");
+foreach (doc; docs)
+    foreach (a; doc.bySelector(sel))
+        writeln(a.getAttribute("href"));
+```
+
+### `ParserinoException`
+Thrown on invalid operations (invalid elements, wrong node type, invalid selectors, empty ranges in `frontOrThrow`).
 
 ### `VisitOrder` (Enum)
 Used with `children` and `descendants` ranges.
@@ -85,7 +110,7 @@ doc.body.firstChild.appendChild("<b>Bold</b>".asFragment);
 import std, parserino;
 void main() {
     auto data = "https://en.wikipedia.org/wiki/Special:Random".get.to!string;
-    Document doc = Document(data);
+    Document doc = Document.parseLazy(data); // parse only what the queries need
 
     // Get the canonical URL from <head>
     auto canonicalUrl = doc.head.bySelector("link[rel=canonical]").frontOrThrow.getAttribute("href");
@@ -120,4 +145,5 @@ void main() {
 ```
 
 ## Notes on Performance
-Parserino uses lazy ranges for traversal. This means searching through a large document often doesn't require visiting every node unless the entire range is consumed (e.g., using `.array` or `.take(N)`).
+Parserino uses lazy ranges for traversal. This means searching through a large document often doesn't require visiting every node unless the entire range is consumed (e.g., using `.array`).
+With `Document.parseLazy`, even the parsing stops as soon as the range has what it needs: `doc.byTagName("a").take(3)` on a 1 MB page parses a few KB. Content inside tables that are still open is returned only when the table is closed, so table-based layouts parse further.

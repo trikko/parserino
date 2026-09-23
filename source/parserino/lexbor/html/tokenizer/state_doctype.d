@@ -462,7 +462,8 @@ private const(lxb_char_t)* lxb_html_tokenizer_state_doctype_after_name_public(lx
 
         tkz.state = &lxb_html_tokenizer_state_doctype_after_public_keyword;
 
-        return (pos + 1);
+        /* parserino: was `pos + 1`, which skipped the char after the keyword split between chunks */
+        return pos;
     }
 
     tkz.markup = pos;
@@ -510,7 +511,8 @@ private const(lxb_char_t)* lxb_html_tokenizer_state_doctype_after_name_system(lx
 
         tkz.state = &lxb_html_tokenizer_state_doctype_after_system_keyword;
 
-        return (pos + 1);
+        /* parserino: was `pos + 1`, which skipped the char after the keyword split between chunks */
+        return pos;
     }
 
     tkz.markup = pos;

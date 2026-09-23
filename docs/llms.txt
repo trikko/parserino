@@ -6,7 +6,9 @@ Parserino is a high-performance HTML5 parser and DOM manipulation library for th
 
 - **Document**: The main entry point for parsing and managing HTML content.
 - **Element**: Represents a single node in the DOM tree (tags, text, comments).
-- **Lazy Ranges**: Most search methods (`byTagName`, `bySelector`, etc.) return lazy ranges, allowing for efficient memory usage and partial document processing.
+- **Lazy Ranges**: Most search methods (`byTagName`, `bySelector`, etc.) return lazy struct ranges (forward ranges), allowing for efficient memory usage and partial document processing.
+- **Lazy Parsing**: `Document.parseLazy(html)` builds the tree only as far as the queries need (`doc.byClass("x").take(3)` stops early). Results are identical to a full parse.
+- **Memory**: `Document` is reference counted; each `Element` keeps its document alive. Removed elements stay valid. Getters return `string` copies.
 
 ## Installation & Basic Usage
 
@@ -24,6 +26,9 @@ void main() {
 
 ### Document
 - `this(string html)`: Parses HTML string into a DOM tree.
+- `static Document parseLazy(string html, size_t chunkSize = 16 KiB)`: Incremental parsing, driven by the queries.
+- `finishParsing()`, `isParsing`, `bytesParsed`: Control and inspect lazy parsing.
+- `documentElement`: The `<html>` element.
 - `title`, `title(string)`: Get or set the document title.
 - `body`, `head`: Properties to access the `<body>` and `<head>` elements.
 - `createElement(string tag)`: Creates a new element.
@@ -31,13 +36,18 @@ void main() {
 - `createComment(string text)`: Creates a comment node.
 - `fragment(string html)`: Parses a string into an unattached DOM fragment.
 - `toString()`: Serializes the entire document back to HTML.
-- **Search Methods**: `byId(id)`, `byClass(class)`, `byTagName(tag)`, `bySelector(css)`, `byComment(text)`.
+- **Search Methods**: `byId(id)` (returns a null `Element` if not found), `byClass(class)`, `byTagName(tag)`, `bySelector(css or Selector)`, `byComment(text)`, `descendants`.
+
+### Selector
+- `Selector(string css)`: A compiled css selector, reusable with any document (throws `ParserinoException` on invalid syntax).
 
 ### Element
 - `name`: The tag name (e.g., "div", "p", "#text", "!--").
 - `id`, `classes`: Shortcuts for `id` and `class` attributes.
 - `attributes`: A range of `Attribute` (struct with `name` and `value`).
-- `getAttribute(name)`, `setAttribute(name, value)`, `hasAttribute(name)`, `removeAttribute(name)`.
+- `getAttribute(name)` (returns `null` if missing), `getAttributeView(name)` (no copy), `setAttribute(name, value)`, `hasAttribute(name)`, `removeAttribute(name)`.
+- `matches(css)`: Checks if the element matches a selector.
+- `isElement`, `isText`, `isComment`: Node type checks.
 - `innerHTML`, `innerText`, `outerHTML`: Get or set content. Setting `innerHTML` parses the string as HTML.
 - `appendChild(node)`, `prependChild(node)`: Add children nodes. Accepts `Element`, `string` (as text), or `FragmentString`.
 - `appendSibling(node)`, `prependSibling(node)`: Add siblings.
@@ -48,7 +58,7 @@ void main() {
 
 ### Range Helpers
 Since many operations return ranges, Parserino provides convenient helpers:
-- `frontOrThrow(range)`: Returns the first element of the range. Throws an `Exception` if the range is empty.
+- `frontOrThrow(range)`: Returns the first element of the range. Throws a `ParserinoException` if the range is empty.
 - `frontOr(range, fallback)`: Returns the first element or a provided `fallback` element if empty.
 - `frontOrInit(range)`: Returns the first element or `Element.init` (an invalid element) if empty.
 

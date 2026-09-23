@@ -1392,9 +1392,17 @@ private const(lxb_char_t)* lxb_html_tokenizer_state_markup_declaration_doctype(l
 private const(lxb_char_t)* lxb_html_tokenizer_state_markup_declaration_cdata(lxb_html_tokenizer_t* tkz, const(lxb_char_t)* data, const(lxb_char_t)* end)
 {
     const(lxb_char_t)* pos = void;
+    import core.stdc.string : strlen;
+
+    /* parserino: the part of "[CDATA[" read in the previous chunks. It belongs
+     * to the bogus comment if this is not a CDATA section. */
+    size_t prev_len = 7 - strlen(cast(const(char)*) tkz.markup);
+
     pos = lexbor_str_data_ncasecmp_first(tkz.markup, data, (end - data));
 
     if (pos == null) {
+        do { if (lxb_html_tokenizer_temp_append(tkz, cast(const(lxb_char_t)*) ("[CDATA["), (prev_len))) { return end; } } while (0);
+
         lxb_html_tokenizer_error_add(tkz.parse_errors, data,
                                      LXB_HTML_TOKENIZER_ERROR_INOPCO);
 
@@ -1412,7 +1420,7 @@ private const(lxb_char_t)* lxb_html_tokenizer_state_markup_declaration_cdata(lxb
             return data;
         }
 
-        do { if (lxb_html_tokenizer_temp_append(tkz, cast(const(lxb_char_t)*) ("[CDATA"), (6))) { return end; } } while (0);
+        do { if (lxb_html_tokenizer_temp_append(tkz, cast(const(lxb_char_t)*) ("[CDATA["), (prev_len))) { return end; } } while (0);
 
         lxb_html_tokenizer_error_add(tkz.parse_errors, data,
                                      LXB_HTML_TOKENIZER_ERROR_CDINHTCO);
