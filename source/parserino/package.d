@@ -2540,6 +2540,28 @@ unittest
 
 unittest
 {
+    import std.array : replicate;
+    import std.algorithm : map;
+    import std.array : array;
+
+    // The bloom filter of the ancestors: deeper than its capacity, quirks mode, changes in the middle
+    string deep = `<div id=top class=Box>` ~ "<div>".replicate(40) ~ `<p class=x>a</p>` ~ "</div>".replicate(40)
+        ~ `<p class=x>b</p></div><p class=x>c</p>`;
+    Document doc = deep;
+    assert(doc.bySelector("#top p.x").map!(e => e.textContent).array == ["a", "b"]);
+    assert(doc.bySelector(".box p").walkLength == 2);          // quirks mode: classes ignore the case
+    assert(Document("<!DOCTYPE html>" ~ deep).bySelector(".box p").walkLength == 0);
+
+    auto r = doc.bySelector("div p");
+    assert(r.front.textContent == "a");
+    doc.byId("top").id = "moved";
+    r.popFront();
+    assert(r.front.textContent == "b");
+    assert(doc.bySelector("#top p").empty && doc.bySelector("#moved p").walkLength == 2);
+}
+
+unittest
+{
     import core.memory : GC;
 
     // A selector doesn't depend on the memory of its text
@@ -3080,11 +3102,11 @@ struct SelectorFilter
         auto p = n.parent;
         while (pathLength && pathNodes[pathLength - 1] !is p) pathLength--;
         if (bloomsValid > pathLength) bloomsValid = pathLength;
-        bool known = pathLength > 0 || p is null || p.type != NodeType.Element || rebuild(p);
+        // Deeper than the capacity: no filter (and nothing on the path, it would lose the ancestors)
+        if (pathLength == 0 && p !is null && p.type == NodeType.Element && !rebuild(p)) return true;
 
         size_t parentIndex = pathLength;    // the parent is at parentIndex - 1
         if (pathLength < Capacity) pathNodes[pathLength++] = n;
-        if (!known) return true;
 
         // First the last compound (cheap), then the ancestors: only for the candidates
         bool candidate = false;
