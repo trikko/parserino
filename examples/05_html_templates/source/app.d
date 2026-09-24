@@ -61,6 +61,14 @@ void table(Request request, Output output) { respond(load!"table.html", request,
 @endpoint @route!"/cards"
 void cards(Request request, Output output) { respond(load!"cards.html", request, output); }
 
+// The raw templates, as they are before the code fills them
+@endpoint @route!"/views/table.html" @route!"/views/cards.html"
+void raw(Request request, Output output)
+{
+    output.addHeader("content-type", "text/html; charset=utf-8");
+    output ~= request.path.endsWith("table.html") ? import("table.html") : import("cards.html");
+}
+
 // A new copy of a template, parsed at compile time: no parsing at runtime.
 // With `dub -c live` it's read from disk at each request: edit the html and refresh.
 version (LiveTemplates) Document load(string file)() { return Document(readText("views/" ~ file)); }
