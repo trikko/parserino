@@ -244,10 +244,7 @@ struct Matcher
             case PseudoClass.Enabled: return canBeDisabled(node) && !isDisabled(node);
 
             case PseudoClass.Empty:
-                // Only comments inside
-                for (auto n = nextInSubtree(node, node, true); n !is null; n = nextInSubtree(n, node, true))
-                    if (n.name != Tag.CommentNode) return false;
-                return true;
+                return node.isEmpty;
 
             case PseudoClass.FirstChild: return prevElement(node) is null;
             case PseudoClass.LastChild: return nextElement(node) is null;

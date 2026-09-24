@@ -221,15 +221,23 @@ struct DomNode
         return document.tagName(name);
     }
 
-    /// Does this subtree contain only whitespace text and comments?
-    bool isBlank() const pure
+    /++ Does it have no children that are elements or non-empty text? Comments and processing
+     + instructions don't count (as for the `:empty` selector).
+     +/
+    bool isEmpty() const { return hasNoContent(false); }
+
+    /// Like `isEmpty`, but text made only of whitespace doesn't count either (the `:blank` selector)
+    bool isBlank() const { return hasNoContent(true); }
+
+    private bool hasNoContent(bool ignoreSpaces) const
     {
-        for (const(DomNode)* n = firstChild; n !is null; n = n.nextInTree(&this))
+        for (const(DomNode)* n = firstChild; n !is null; n = n.next)
         {
-            if (n.type == NodeType.Comment) continue;
-            if (n.type != NodeType.Text) return false;
+            if (n.type == NodeType.Element) return false;
+            if (n.type != NodeType.Text && n.type != NodeType.CDataSection) continue;
+
             foreach (c; n.as!DomCharacterData.data)
-                if (c != ' ' && c != '\t' && c != '\n' && c != '\f' && c != '\r') return false;
+                if (!ignoreSpaces || (c != ' ' && c != '\t' && c != '\n' && c != '\f' && c != '\r')) return false;
         }
         return true;
     }
@@ -444,8 +452,22 @@ struct DomDocument
     bool scripting;
 
     DomDocumentType* doctype;
-    DomElement* head;
-    DomElement* body;
+
+    /// The `<head>`: the first `head` child of the `<html>` root element (as in the standard)
+    auto head(this This)() { return rootChild!This(Tag.Head, Tag.Head); }
+
+    /// The `<body>`: the first `body` or `frameset` child of the `<html>` root element (as in the standard)
+    auto body(this This)() { return rootChild!This(Tag.Body, Tag.Frameset); }
+
+    // The first child of the html root element with one of these tags
+    private CopyConstness!(This, DomElement)* rootChild(This)(uint a, uint b)
+    {
+        auto html = (cast(This*) &this).documentElement;
+        if (html is null || !html.node.isHtml(Tag.Html)) return null;
+        for (auto n = html.node.firstChild; n !is null; n = n.next)
+            if (n.isHtml(a) || n.isHtml(b)) return n.as!DomElement;
+        return null;
+    }
 
     /// The root element (`<html>`)
     DomElement* documentElement() pure

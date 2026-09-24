@@ -58,8 +58,6 @@ struct Snapshot
                     }
                     nextAttr += r.attributes;
 
-                    if (r.isHead) doc.head = e;
-                    if (r.isBody) doc.body = e;
                     n = &e.node;
                     break;
 
@@ -87,7 +85,7 @@ struct Snapshot
                     assert(0, "Not a child node");
             }
 
-            if (!r.detached) parent.appendChild(n);
+            parent.appendChild(n);
             parents.put(n);
         }
 
@@ -100,8 +98,6 @@ struct SnapshotNode
     NodeType type;
     Ns ns;
     bool inTemplate;            // a child of the template content of its parent
-    bool isHead, isBody;        // the head / body of the document
-    bool detached;              // not in the tree (the body removed by a frameset)
     uint depth;                 // 0 for the children of the document
     uint name;                  // the tag id if known (else 0 and the name is in `text`)
     uint attributes;            // how many attributes
@@ -127,14 +123,13 @@ Snapshot takeSnapshot(const(DomDocument)* doc) pure
     s.compatMode = doc.compatMode;
     s.scripting = doc.scripting;
 
-    void add(const(DomNode)* n, uint depth, bool inTemplate, bool detached)
+    void add(const(DomNode)* n, uint depth, bool inTemplate)
     {
         SnapshotNode r;
         r.type = n.type;
         r.ns = n.ns;
         r.depth = depth;
         r.inTemplate = inTemplate;
-        r.detached = detached;
 
         switch (n.type)
         {
@@ -143,8 +138,6 @@ Snapshot takeSnapshot(const(DomDocument)* doc) pure
                 if (n.name < Tag.Last) r.name = n.name;
                 else r.text = doc.tagName(n.name).idup;
                 r.qualifiedName = e.qualifiedName.idup;
-                r.isHead = e is doc.head;
-                r.isBody = e is doc.body;
 
                 for (const(DomAttribute)* a = e.firstAttr; a !is null; a = a.next)
                 {
@@ -179,7 +172,7 @@ Snapshot takeSnapshot(const(DomDocument)* doc) pure
 
     // Visit `root` and its subtree in tree order, the template contents before the children.
     // It's iterative, so deep trees don't overflow the stack.
-    void visit(const(DomNode)* root, bool detached)
+    void visit(const(DomNode)* root)
     {
         const(DomNode)* n = root;
         uint depth = 0;
@@ -187,7 +180,7 @@ Snapshot takeSnapshot(const(DomDocument)* doc) pure
 
         while (true)
         {
-            add(n, depth, inTemplate, detached && n is root);
+            add(n, depth, inTemplate);
 
             // Down: the template content, else the children
             if (auto first = n.firstChildOrContent)
@@ -229,11 +222,8 @@ Snapshot takeSnapshot(const(DomDocument)* doc) pure
     }
 
     for (const(DomNode)* c = doc.node.firstChild; c !is null; c = c.next)
-        visit(c, false);
+        visit(c);
 
-    // A frameset removes the body from the tree, but the document still points to it
-    if (doc.body !is null && doc.body.node.parent is null)
-        visit(&doc.body.node, true);
 
     return s;
 }
@@ -302,11 +292,11 @@ unittest
     assert(text.data == "Hi!");
     assert(ct.nodes.length == s.nodes.length);
 
-    // The body removed by a frameset
+    // A frameset replaces the body: the body of the document is the frameset (as in the standard)
     static immutable Snapshot fs = parseToSnapshot("<span><frameset>");
     auto d = newDoc();
     scope(exit) { d.release(); pureFree(d); }
     assert(fs.restore(d));
     assert(toHtml(d) == `<html><head></head><frameset></frameset></html>`);
-    assert(d.body !is null && d.body.node.parent is null && d.body.node.firstChild.isHtml(Tag.Span));
+    assert(d.body !is null && d.body.node.isHtml(Tag.Frameset) && d.body.node.parent !is null);
 }

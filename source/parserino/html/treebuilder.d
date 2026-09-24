@@ -691,8 +691,8 @@ struct TreeBuilder
         mode = Mode.Text;
     }
 
-    void setHead(DomElement* e) { head = e; if (context is null) doc.head = e; }
-    void setBody(DomElement* e) { body = e; if (context is null) doc.body = e; }
+    void setHead(DomElement* e) { head = e; }
+    void setBody(DomElement* e) { body = e; }
 
     // ------------------------------------------------------------ foreign attributes
 
