@@ -87,7 +87,8 @@ void main(string[] args)
         foreach (ref d; docs) foreach (ref s; sels) d.bySelector(s).walkLength;
     }));
 
-    auto descendant = [Selector("div div a"), Selector("body div span"), Selector("ul li a"), Selector("div p")];
+    auto descendant = [Selector("div div a"), Selector("body div span"), Selector("ul li a"), Selector("div p"),
+        Selector("#mw-content-text p a"), Selector(".infobox td a"), Selector("table td a"), Selector("nav ul li a")];
     report("descendant selectors", median(roundsOf("descendant selectors"), {
         foreach (ref d; docs) foreach (ref s; descendant) d.bySelector(s).walkLength;
     }));

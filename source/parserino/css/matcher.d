@@ -22,6 +22,13 @@ bool matches(const(SelectorList)* list, DomNode* node, DomNode* scopeElement = n
     return Matcher(scopeElement).matchList(*list, node);
 }
 
+/// Does the element match the last compound of the selector `item` of the list? (a quick test)
+bool matchesLastCompound(const(SelectorList)* list, size_t item, DomNode* node, DomNode* scopeElement = null)
+{
+    auto cs = list.items[item].compounds;
+    return Matcher(scopeElement).matchCompound(cs[$ - 1], node);
+}
+
 private:
 
 // The state of a match
@@ -119,7 +126,7 @@ struct Matcher
                 if (!nsMatches(s.ns, node.ns)) return false;
                 // HTML elements: the selector in lowercase; the others: as written (`clipPath`)
                 if (node.ns != Ns.Html) return e.fullName == s.rawName;
-                auto id = node.document.findTagName(s.name);
+                auto id = s.knownId ? s.knownId : node.document.findTagName(s.name);
                 return id != Tag.Undef && node.name == id;
 
             case SimpleKind.Never:
@@ -196,7 +203,7 @@ struct Matcher
 
     bool matchAttribute(ref const Simple s, DomNode* node)
     {
-        auto id = node.document.findAttrName(s.name);
+        auto id = s.knownId ? s.knownId : node.document.findAttrName(s.name);
         if (id == 0) return false;
 
         // The names of the attributes of HTML elements are lowercase; for the other elements, and

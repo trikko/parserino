@@ -11,6 +11,7 @@ module parserino.css.selector;
 
 import parserino.arena;
 import parserino.css.tokenizer;
+import parserino.names : knownTag, knownAttr;
 
 @nogc nothrow pure @safe:
 
@@ -93,6 +94,7 @@ struct Simple
     NsMatch ns;                     /// type, universal and attribute selectors
     const(char)[] name;             /// type (lowercase), id, class, attribute (lowercase) or contains text
     const(char)[] rawName;          /// type and attribute: the name as written (for the non-html elements)
+    uint knownId;                   /// type and attribute: the id of a known name (`Tag`, `AttrName`), else 0
     const(char)[] value;            /// attribute value
     long a, b;                      /// an+b
     const(SelectorList)* list;      /// argument of :not, :is, :has, :nth-*(... of list)
@@ -363,6 +365,7 @@ struct Parser
         if (t == TokenType.Ident || isDelim('*') || isDelim('|'))
         {
             if (!parseType(s)) return false;
+            setKnownId(s);
             simples.put(s);
         }
 
@@ -401,6 +404,7 @@ struct Parser
             }
             else break;
 
+            setKnownId(s);
             simples.put(s);
         }
 
@@ -408,6 +412,13 @@ struct Parser
         if (simples.failed) { tokens.failed = true; return false; }
         comp.simples = arena.dup(simples[]);
         return comp.simples !is null;
+    }
+
+    // The known names have fixed ids: the matcher doesn't need to look them up in each document
+    static void setKnownId(ref Simple s)
+    {
+        if (s.kind == SimpleKind.Type) s.knownId = knownTag(s.name);
+        else if (s.kind == SimpleKind.Attribute) s.knownId = knownAttr(s.name);
     }
 
     // `name`, `*`, `ns|name`, `ns|*`, `*|name`, `|name`

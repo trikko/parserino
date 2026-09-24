@@ -3044,7 +3044,174 @@ struct SelectorFilter
 
     DomNode* scope_;     // the root of the query, for :scope
 
-    bool match(DocImpl* d, DomNode* n) { return d.matches(n, selector.list, scope_); }
+    bool match(DocImpl* d, DomNode* n)
+    {
+        // The bloom filter only on a parsed document: while parsing, the attributes of <html> and
+        // <body> can still change
+        if (!d.parsing && !mayMatch(d, n)) return false;
+        return d.matches(n, selector.list, scope_);
+    }
+
+    private:
+
+    /+ A bloom filter of the ancestors, as in the browsers: for `div p a`, an `a` can match only
+     + if its ancestors have the keys `div` and `p` (tags, ids, classes of the compounds on the
+     + left of a descendant or child combinator). The filters of the chain of ancestors are kept
+     + while the range goes on in tree order.
+     +/
+    enum Capacity = 32;
+    Bloom[] required;               // for each selector of the list; empty: the filter can't help
+    bool prepared;
+    bool needIds, needClasses;      // only the kinds of keys the selectors look for are hashed
+    size_t mutations;
+    size_t pathLength;
+    size_t bloomsValid;             // the filters of pathNodes[0 .. bloomsValid] are computed
+    DomNode*[Capacity] pathNodes;
+    Bloom[Capacity] pathBlooms;     // the keys of the node and of all its ancestors
+
+    bool mayMatch(DocImpl* d, DomNode* n)
+    {
+        if (!prepared) prepare();
+        if (required.length == 0) return true;
+
+        if (d.mutations != mutations) { pathLength = bloomsValid = 0; mutations = d.mutations; }
+
+        // The chain up to the parent: the nodes come in tree order, so it's on the path
+        auto p = n.parent;
+        while (pathLength && pathNodes[pathLength - 1] !is p) pathLength--;
+        if (bloomsValid > pathLength) bloomsValid = pathLength;
+        bool known = pathLength > 0 || p is null || p.type != NodeType.Element || rebuild(p);
+
+        size_t parentIndex = pathLength;    // the parent is at parentIndex - 1
+        if (pathLength < Capacity) pathNodes[pathLength++] = n;
+        if (!known) return true;
+
+        // First the last compound (cheap), then the ancestors: only for the candidates
+        bool candidate = false;
+        foreach (i, ref r; required)
+            if (parserino.css.matcher.matchesLastCompound(selector.list, i, n, scope_)) { candidate = true; break; }
+        if (!candidate) return false;
+        if (parentIndex == 0) return true;
+
+        // The filters of the chain, computed only when needed
+        foreach (i; bloomsValid .. parentIndex)
+        {
+            pathBlooms[i] = i ? pathBlooms[i - 1] : Bloom.init;
+            addKeys(pathBlooms[i], pathNodes[i], needIds, needClasses);
+        }
+        if (bloomsValid < parentIndex) bloomsValid = parentIndex;
+
+        foreach (i, ref r; required)
+            if (pathBlooms[parentIndex - 1].covers(r) && parserino.css.matcher.matchesLastCompound(selector.list, i, n, scope_))
+                return true;
+        return false;
+    }
+
+    // The chain of nodes from the root element to `p`; false if it's deeper than the capacity
+    bool rebuild(DomNode* p)
+    {
+        size_t depth = 0;
+        for (auto a = p; a !is null && a.type == NodeType.Element; a = a.parent) depth++;
+        if (depth > Capacity) return false;
+
+        pathLength = depth;
+        bloomsValid = 0;
+        auto a = p;
+        foreach_reverse (i; 0 .. depth)
+        {
+            pathNodes[i] = a;
+            a = a.parent;
+        }
+        return true;
+    }
+
+    static void addKeys(ref Bloom b, DomNode* n, bool ids, bool classes)
+    {
+        b.add(Bloom.tagKey(n.name));
+        auto e = n.as!DomElement;
+        if (ids && e.idAttr !is null) b.add(Bloom.key('#', attrValue(e.idAttr)));
+        if (classes && e.classAttr !is null)
+        {
+            auto v = attrValue(e.classAttr);
+            size_t i = 0;
+            while (i < v.length)
+            {
+                while (i < v.length && isHtmlSpace(v[i])) i++;
+                size_t start = i;
+                while (i < v.length && !isHtmlSpace(v[i])) i++;
+                if (i > start) b.add(Bloom.key('.', v[start .. i]));
+            }
+        }
+    }
+
+    // The keys each selector of the list needs in the ancestors
+    void prepare()
+    {
+        import parserino.css.selector : SimpleKind, Combinator, NsMatch;
+
+        prepared = true;
+        Bloom[] r;
+        foreach (ref item; selector.list.items)
+        {
+            Bloom need;
+            bool any = false;
+            auto cs = item.compounds;
+            foreach_reverse (i; 1 .. cs.length)
+            {
+                if (cs[i].combinator != Combinator.Descendant && cs[i].combinator != Combinator.Child) continue;
+                foreach (ref x; cs[i - 1].simples)
+                {
+                    switch (x.kind)
+                    {
+                        case SimpleKind.Type:
+                            if (x.knownId && (x.ns == NsMatch.Any || x.ns == NsMatch.Html)) { need.add(Bloom.tagKey(x.knownId)); any = true; }
+                            break;
+                        case SimpleKind.Id: need.add(Bloom.key('#', x.name)); any = needIds = true; break;
+                        case SimpleKind.Class: need.add(Bloom.key('.', x.name)); any = needClasses = true; break;
+                        default: break;
+                    }
+                }
+            }
+
+            // A selector with nothing to look for in the ancestors: the filter can't reject anything
+            if (!any) return;
+            r ~= need;
+        }
+        required = r;
+    }
+}
+
+// 256 bits, 2 per key. Ids and classes are hashed in ASCII lowercase: in quirks mode they are
+// case-insensitive (a false positive only costs the full match).
+struct Bloom
+{
+    ulong[4] bits;
+
+    void add(uint h) nothrow @nogc
+    {
+        bits[(h & 0xFF) >> 6] |= 1UL << (h & 63);
+        h >>= 8;
+        bits[(h & 0xFF) >> 6] |= 1UL << (h & 63);
+    }
+
+    bool covers(ref const Bloom need) const nothrow @nogc
+    {
+        foreach (i; 0 .. 4) if ((bits[i] & need.bits[i]) != need.bits[i]) return false;
+        return true;
+    }
+
+    static uint key(char kind, scope const(char)[] s) nothrow @nogc
+    {
+        uint h = 2166136261u ^ kind;
+        foreach (c; s) { h ^= c >= 'A' && c <= 'Z' ? c | 0x20 : c; h *= 16777619u; }
+        return h ^ (h >> 16);
+    }
+
+    static uint tagKey(uint id) nothrow @nogc
+    {
+        uint h = (id + 1) * 2654435761u;
+        return h ^ (h >> 15);
+    }
 }
 
 
