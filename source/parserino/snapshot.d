@@ -29,6 +29,10 @@ struct DomSnapshot
         doc.compatMode = compatMode;
         doc.scripting = scripting;
 
+        // All the nodes in one block (the strings are borrowed, not copied); 8 bytes for alignment
+        enum nodeSize = (DomElement.sizeof > DomCharacterData.sizeof ? DomElement.sizeof : DomCharacterData.sizeof) + 8;
+        doc.arena.reserve(nodes.length * nodeSize + attributes.length * (DomAttribute.sizeof + 8));
+
         // parents[d] is the parent of the nodes at depth d
         Buffer!(DomNode*) parents;
         parents.put(&doc.node);

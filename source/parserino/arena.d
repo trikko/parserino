@@ -83,6 +83,21 @@ struct Arena
         return a;
     }
 
+    /// Make room for `bytes` more bytes in a single block (when the total is known in advance)
+    void reserve(size_t bytes) @trusted
+    {
+        if (__ctfe || bytes == 0) return;
+        if (head !is null && head.size - head.used >= bytes) return;
+
+        auto header = (Block.sizeof + 15) & ~15;
+        auto b = cast(Block*) pureCalloc(1, header + bytes);
+        if (b is null) return;      // not an error: the allocations will ask for smaller blocks
+        b.size = header + bytes;
+        b.used = header;
+        b.next = head;
+        head = b;
+    }
+
     /// Free everything.
     void release() @trusted
     {
