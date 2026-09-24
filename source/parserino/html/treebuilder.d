@@ -23,7 +23,7 @@ enum Mode : ubyte
 enum : ubyte
 {
     FlagSelected = 1,           // option selectedness
-    FlagContentDisabled = 2,    // selectedcontent not in a select
+    FlagContentDisabled = 2,    // the "disabled" of a selectedcontent (not in a select, or nested)
 }
 
 struct TreeBuilder
@@ -169,6 +169,12 @@ struct TreeBuilder
     // ------------------------------------------------------------ stack of open elements
 
     DomNode* current() { return openElements.length ? openElements[openElements.length - 1] : null; }
+
+    // A template on the stack, or a template as fragment context: the form element pointer is ignored
+    bool parsingTemplateContents()
+    {
+        return findInStack(Tag.Template) !is null || (context !is null && context.isHtml(Tag.Template));
+    }
 
     DomNode* adjustedCurrent()
     {
@@ -737,10 +743,30 @@ struct TreeBuilder
         else if (n.name == Tag.Select) selectednessSetting(n.as!DomElement);
         else if (n.name == Tag.Selectedcontent)
         {
+            // The "post-connection steps" of selectedcontent: it's disabled inside a second
+            // select, an option or another selectedcontent
             auto e = n.as!DomElement;
-            if (n.parent is null || !n.parent.isHtml(Tag.Select)) { e.flags |= FlagContentDisabled; return; }
             e.flags &= ~FlagContentDisabled;
-            selectednessSetting(n.parent.as!DomElement);
+
+            DomElement* select = null;
+            for (auto a = n.parent; a !is null; a = a.parent)
+            {
+                if (a.type != NodeType.Element || a.ns != Ns.Html) continue;
+                if (a.name == Tag.Select)
+                {
+                    if (select is null) { select = a.as!DomElement; continue; }
+                    e.flags |= FlagContentDisabled;
+                    break;
+                }
+                if (a.name == Tag.Option || a.name == Tag.Selectedcontent)
+                {
+                    e.flags |= FlagContentDisabled;
+                    break;
+                }
+            }
+
+            if ((e.flags & FlagContentDisabled) || select is null || select.attribute(AttrName.Multiple) !is null) return;
+            selectednessSetting(select);
         }
     }
 
@@ -1287,7 +1313,9 @@ struct TreeBuilder
             default: break;
         }
 
+        // Nothing before this point was body content: a <template> in the head doesn't count
         setBody(insertImplied(Tag.Body));
+        framesetOk = true;
         mode = Mode.InBody;
         return false;
     }
@@ -1382,11 +1410,11 @@ struct TreeBuilder
 
             case Tag.Form:
             {
-                auto tmpl = findInStack(Tag.Template);
-                if (form !is null && tmpl is null) return true;
+                bool inTemplate = parsingTemplateContents();
+                if (form !is null && !inTemplate) return true;
                 closePIfInButtonScope();
                 auto e = insertElement(t);
-                if (tmpl is null) form = e;
+                if (!inTemplate) form = e;
                 return true;
             }
 
@@ -1634,7 +1662,7 @@ struct TreeBuilder
 
             case Tag.Form:
             {
-                if (findInStack(Tag.Template) is null)
+                if (!parsingTemplateContents())
                 {
                     DomNode* node = form is null ? null : &form.node;
                     form = null;
@@ -1927,10 +1955,11 @@ struct TreeBuilder
                     }
                     case Tag.Form:
                     {
-                        if (form !is null || findInStack(Tag.Template) !is null) return true;
+                        bool inTemplate = parsingTemplateContents();
+                        if (form !is null && !inTemplate) return true;
                         auto e = insertElement(t);
                         if (e is null) return true;
-                        form = e;
+                        if (!inTemplate) form = e;
                         popUntilNode(&e.node);
                         return true;
                     }

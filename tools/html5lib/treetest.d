@@ -49,7 +49,7 @@ Test[] readTests(string path)
         lines = null;
     }
 
-    foreach (line; readText(path).splitLines ~ ["#data"])
+    foreach (line; readText(path).split("\n") ~ ["#data"])
     {
         switch (line)
         {

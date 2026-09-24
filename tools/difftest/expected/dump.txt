@@ -102657,19 +102657,19 @@ innerhtml 2703296806
 titleset 229289500
 rmattr 229289500
 === h5_template_0043.html
-doc 67 1446080587
-<html><head><template></template></head><body><p></p></body></html>
+doc 68 965700158
+<html><head><template></template></head><frameset></frameset></html>
 title [] raw []
-body 0 1556954116
+body 0 0
 head 663457399
-all 5 3054570880 0.0 <html> | 0.0.0 <head> | 0.0.0.0 <template>
+all 4 1654578696 0.0 <html> | 0.0.0 <head> | 0.0.0.0 <template>
 tag a 0 0 
-tag p 1 4108314116 0.0.1.0 <p>
+tag p 0 0 
 tag td 0 0 
 tag b 0 0 
 tag div 0 0 
 tag html 1 2757144502 0.0 <html>
-tag body 1 3959011304 0.0.1 <body>
+tag body 0 0 
 tag title 0 0 
 tag !-- 0 0 
 tag #text 0 0 
@@ -102677,8 +102677,8 @@ tag svg 0 0
 tag select 0 0 
 tag template 1 2618206110 0.0.0.0 <template>
 tag X-Y 0 0 
-sel * 5 3054570880 0.0 <html> | 0.0.0 <head> | 0.0.0.0 <template>
-sel p 1 4108314116 0.0.1.0 <p>
+sel * 4 1654578696 0.0 <html> | 0.0.0 <head> | 0.0.0.0 <template>
+sel p 0 0 
 sel div p 0 0 
 sel div > p 0 0 
 sel a + b 0 0 
@@ -102699,11 +102699,11 @@ sel tr:nth-child(2n+1) 0 0
 sel tr:nth-child(odd) 0 0 
 sel td:nth-last-child(2) 0 0 
 sel p:nth-of-type(2) 0 0 
-sel p:nth-last-of-type(1) 1 4108314116 0.0.1.0 <p>
+sel p:nth-last-of-type(1) 0 0 
 sel span:first-of-type 0 0 
 sel span:last-of-type 0 0 
 sel b:only-of-type 0 0 
-sel p:empty 1 4108314116 0.0.1.0 <p>
+sel p:empty 0 0 
 sel :root 1 2757144502 0.0 <html>
 sel div:not(.x) 0 0 
 sel a:not([href]) 0 0 
@@ -102718,7 +102718,7 @@ sel input:enabled 0 0
 sel option:checked 0 0 
 sel p:lang(en) 0 0 
 sel html body div 0 0 
-sel body > * 1 4108314116 0.0.1.0 <p>
+sel body > * 0 0 
 sel table tr td 0 0 
 sel head title 0 0 
 sel script 0 0 
@@ -102731,12 +102731,12 @@ sel div#x.y 0 0
 sel ::before 0 0 
 sel p::first-line 0 0 
 sel a:hover 0 0 
-sel *|* 5 3054570880 0.0 <html> | 0.0.0 <head> | 0.0.0.0 <template>
+sel *|* 4 1654578696 0.0 <html> | 0.0.0 <head> | 0.0.0.0 <template>
 sel svg|rect 0 0 
 sel img[alt=""] 0 0 
 sel [data-x] 0 0 
 sel div:nth-child(-n+3) 0 0 
-sel :first-child:last-child 3 2455926817 0.0 <html> | 0.0.0.0 <template> | 0.0.1.0 <p>
+sel :first-child:last-child 2 3119094677 0.0 <html> | 0.0.0.0 <template>
 sel a:any-link 0 0 
 sel a:link 0 0 
 sel p:lexbor-contains(x) 0 0 
@@ -102744,7 +102744,7 @@ sel 1bad EXC parserino.ParserinoException
 sel a[ EXC parserino.ParserinoException
 sel div > EXC parserino.ParserinoException
 sel :nth-child( EXC parserino.ParserinoException
-sel p:nth-child(n) 1 4108314116 0.0.1.0 <p>
+sel p:nth-child(n) 0 0 
 sel p:nth-child(0n+0) 0 0 
 sel span:nth-child(3n-1) 0 0 
 sel A[HREF] 0 0 
@@ -102777,34 +102777,29 @@ sel .\.x 0 0
 match 0.0 <html> 100000000000000000000000000100000000000000000000000000100001000EEEE000000000000000000000000000000
 match 0.0.0 <head> 100000000000000000000000000000000000000000000000000000100000000EEEE000000000000000000000000000000
 match 0.0.0.0 <template> 100000000000000000000000000000000000000000000000000000100001000EEEE000000000000000000000000000000
-match 0.0.1 <body> 100000000000000000000000000000000000000000000000000000100000000EEEE000000000000000000000000000000
-match 0.0.1.0 <p> 110000000000000000000010001000000000000001000000000000100001000EEEE100000000000000000000000000000
-el html  inner 1414764892 text 0 empty false fc head lc body nx -
-el head  inner 3726490539 text 0 empty false fc template lc template nx body
+match 0.0.1 <frameset> 100000000000000000000000000000000000000000000000000000100000000EEEE000000000000000000000000000000
+el html  inner 2268079231 text 0 empty false fc head lc frameset nx -
+el head  inner 3726490539 text 0 empty false fc template lc template nx frameset
 el template  inner 0 text 0 empty true fc - lc - nx -
-el body  inner 1556954116 text 0 empty false fc p lc p nx -
-el p  inner 0 text 0 empty true fc - lc - nx -
+el frameset  inner 0 text 0 empty true fc - lc - nx -
 fragment 3311043780
 innerhtml 1462614683
-mutate 412113790
-outer 2246121563
-copy 4163062690
-titleset 1899416393
-rmattr 1899416393
+titleset 3851819878
+rmattr 3851819878
 === h5_template_0044.html
-doc 68 23670873
-<html><head><template>x</template></head><body><p></p></body></html>
+doc 69 4067127264
+<html><head><template>x</template></head><frameset></frameset></html>
 title [] raw []
-body 0 1556954116
+body 0 0
 head 891227322
-all 5 3054570880 0.0 <html> | 0.0.0 <head> | 0.0.0.0 <template>
+all 4 1654578696 0.0 <html> | 0.0.0 <head> | 0.0.0.0 <template>
 tag a 0 0 
-tag p 1 4108314116 0.0.1.0 <p>
+tag p 0 0 
 tag td 0 0 
 tag b 0 0 
 tag div 0 0 
 tag html 1 2757144502 0.0 <html>
-tag body 1 3959011304 0.0.1 <body>
+tag body 0 0 
 tag title 0 0 
 tag !-- 0 0 
 tag #text 0 0 
@@ -102812,8 +102807,8 @@ tag svg 0 0
 tag select 0 0 
 tag template 1 2618206110 0.0.0.0 <template>
 tag X-Y 0 0 
-sel * 5 3054570880 0.0 <html> | 0.0.0 <head> | 0.0.0.0 <template>
-sel p 1 4108314116 0.0.1.0 <p>
+sel * 4 1654578696 0.0 <html> | 0.0.0 <head> | 0.0.0.0 <template>
+sel p 0 0 
 sel div p 0 0 
 sel div > p 0 0 
 sel a + b 0 0 
@@ -102834,11 +102829,11 @@ sel tr:nth-child(2n+1) 0 0
 sel tr:nth-child(odd) 0 0 
 sel td:nth-last-child(2) 0 0 
 sel p:nth-of-type(2) 0 0 
-sel p:nth-last-of-type(1) 1 4108314116 0.0.1.0 <p>
+sel p:nth-last-of-type(1) 0 0 
 sel span:first-of-type 0 0 
 sel span:last-of-type 0 0 
 sel b:only-of-type 0 0 
-sel p:empty 1 4108314116 0.0.1.0 <p>
+sel p:empty 0 0 
 sel :root 1 2757144502 0.0 <html>
 sel div:not(.x) 0 0 
 sel a:not([href]) 0 0 
@@ -102853,7 +102848,7 @@ sel input:enabled 0 0
 sel option:checked 0 0 
 sel p:lang(en) 0 0 
 sel html body div 0 0 
-sel body > * 1 4108314116 0.0.1.0 <p>
+sel body > * 0 0 
 sel table tr td 0 0 
 sel head title 0 0 
 sel script 0 0 
@@ -102866,12 +102861,12 @@ sel div#x.y 0 0
 sel ::before 0 0 
 sel p::first-line 0 0 
 sel a:hover 0 0 
-sel *|* 5 3054570880 0.0 <html> | 0.0.0 <head> | 0.0.0.0 <template>
+sel *|* 4 1654578696 0.0 <html> | 0.0.0 <head> | 0.0.0.0 <template>
 sel svg|rect 0 0 
 sel img[alt=""] 0 0 
 sel [data-x] 0 0 
 sel div:nth-child(-n+3) 0 0 
-sel :first-child:last-child 3 2455926817 0.0 <html> | 0.0.0.0 <template> | 0.0.1.0 <p>
+sel :first-child:last-child 2 3119094677 0.0 <html> | 0.0.0.0 <template>
 sel a:any-link 0 0 
 sel a:link 0 0 
 sel p:lexbor-contains(x) 0 0 
@@ -102879,7 +102874,7 @@ sel 1bad EXC parserino.ParserinoException
 sel a[ EXC parserino.ParserinoException
 sel div > EXC parserino.ParserinoException
 sel :nth-child( EXC parserino.ParserinoException
-sel p:nth-child(n) 1 4108314116 0.0.1.0 <p>
+sel p:nth-child(n) 0 0 
 sel p:nth-child(0n+0) 0 0 
 sel span:nth-child(3n-1) 0 0 
 sel A[HREF] 0 0 
@@ -102912,34 +102907,29 @@ sel .\.x 0 0
 match 0.0 <html> 100000000000000000000000000100000000000000000000000000100001000EEEE000000000000000000000000000000
 match 0.0.0 <head> 100000000000000000000000000000000000000000000000000000100000000EEEE000000000000000000000000000000
 match 0.0.0.0 <template> 100000000000000000000000000000000000000000000000000000100001000EEEE000000000000000000000000000000
-match 0.0.1 <body> 100000000000000000000000000000000000000000000000000000100000000EEEE000000000000000000000000000000
-match 0.0.1.0 <p> 110000000000000000000010001000000000000001000000000000100001000EEEE100000000000000000000000000000
-el html  inner 3124139910 text 0 empty false fc head lc body nx -
-el head  inner 3532078572 text 0 empty false fc template lc template nx body
+match 0.0.1 <frameset> 100000000000000000000000000000000000000000000000000000100000000EEEE000000000000000000000000000000
+el html  inner 4101042045 text 0 empty false fc head lc frameset nx -
+el head  inner 3532078572 text 0 empty false fc template lc template nx frameset
 el template  inner 1050319643 text 0 empty true fc - lc - nx -
-el body  inner 1556954116 text 0 empty false fc p lc p nx -
-el p  inner 0 text 0 empty true fc - lc - nx -
+el frameset  inner 0 text 0 empty true fc - lc - nx -
 fragment 1796783238
 innerhtml 1922823413
-mutate 2806495506
-outer 786461977
-copy 3208390616
-titleset 2490808867
-rmattr 2490808867
+titleset 2669594352
+rmattr 2669594352
 === h5_template_0045.html
-doc 67 1446080587
-<html><head><template></template></head><body><p></p></body></html>
+doc 68 965700158
+<html><head><template></template></head><frameset></frameset></html>
 title [] raw []
-body 0 1556954116
+body 0 0
 head 663457399
-all 5 3054570880 0.0 <html> | 0.0.0 <head> | 0.0.0.0 <template>
+all 4 1654578696 0.0 <html> | 0.0.0 <head> | 0.0.0.0 <template>
 tag a 0 0 
-tag p 1 4108314116 0.0.1.0 <p>
+tag p 0 0 
 tag td 0 0 
 tag b 0 0 
 tag div 0 0 
 tag html 1 2757144502 0.0 <html>
-tag body 1 3959011304 0.0.1 <body>
+tag body 0 0 
 tag title 0 0 
 tag !-- 0 0 
 tag #text 0 0 
@@ -102947,8 +102937,8 @@ tag svg 0 0
 tag select 0 0 
 tag template 1 2618206110 0.0.0.0 <template>
 tag X-Y 0 0 
-sel * 5 3054570880 0.0 <html> | 0.0.0 <head> | 0.0.0.0 <template>
-sel p 1 4108314116 0.0.1.0 <p>
+sel * 4 1654578696 0.0 <html> | 0.0.0 <head> | 0.0.0.0 <template>
+sel p 0 0 
 sel div p 0 0 
 sel div > p 0 0 
 sel a + b 0 0 
@@ -102969,11 +102959,11 @@ sel tr:nth-child(2n+1) 0 0
 sel tr:nth-child(odd) 0 0 
 sel td:nth-last-child(2) 0 0 
 sel p:nth-of-type(2) 0 0 
-sel p:nth-last-of-type(1) 1 4108314116 0.0.1.0 <p>
+sel p:nth-last-of-type(1) 0 0 
 sel span:first-of-type 0 0 
 sel span:last-of-type 0 0 
 sel b:only-of-type 0 0 
-sel p:empty 1 4108314116 0.0.1.0 <p>
+sel p:empty 0 0 
 sel :root 1 2757144502 0.0 <html>
 sel div:not(.x) 0 0 
 sel a:not([href]) 0 0 
@@ -102988,7 +102978,7 @@ sel input:enabled 0 0
 sel option:checked 0 0 
 sel p:lang(en) 0 0 
 sel html body div 0 0 
-sel body > * 1 4108314116 0.0.1.0 <p>
+sel body > * 0 0 
 sel table tr td 0 0 
 sel head title 0 0 
 sel script 0 0 
@@ -103001,12 +102991,12 @@ sel div#x.y 0 0
 sel ::before 0 0 
 sel p::first-line 0 0 
 sel a:hover 0 0 
-sel *|* 5 3054570880 0.0 <html> | 0.0.0 <head> | 0.0.0.0 <template>
+sel *|* 4 1654578696 0.0 <html> | 0.0.0 <head> | 0.0.0.0 <template>
 sel svg|rect 0 0 
 sel img[alt=""] 0 0 
 sel [data-x] 0 0 
 sel div:nth-child(-n+3) 0 0 
-sel :first-child:last-child 3 2455926817 0.0 <html> | 0.0.0.0 <template> | 0.0.1.0 <p>
+sel :first-child:last-child 2 3119094677 0.0 <html> | 0.0.0.0 <template>
 sel a:any-link 0 0 
 sel a:link 0 0 
 sel p:lexbor-contains(x) 0 0 
@@ -103014,7 +103004,7 @@ sel 1bad EXC parserino.ParserinoException
 sel a[ EXC parserino.ParserinoException
 sel div > EXC parserino.ParserinoException
 sel :nth-child( EXC parserino.ParserinoException
-sel p:nth-child(n) 1 4108314116 0.0.1.0 <p>
+sel p:nth-child(n) 0 0 
 sel p:nth-child(0n+0) 0 0 
 sel span:nth-child(3n-1) 0 0 
 sel A[HREF] 0 0 
@@ -103047,20 +103037,15 @@ sel .\.x 0 0
 match 0.0 <html> 100000000000000000000000000100000000000000000000000000100001000EEEE000000000000000000000000000000
 match 0.0.0 <head> 100000000000000000000000000000000000000000000000000000100000000EEEE000000000000000000000000000000
 match 0.0.0.0 <template> 100000000000000000000000000000000000000000000000000000100001000EEEE000000000000000000000000000000
-match 0.0.1 <body> 100000000000000000000000000000000000000000000000000000100000000EEEE000000000000000000000000000000
-match 0.0.1.0 <p> 110000000000000000000010001000000000000001000000000000100001000EEEE100000000000000000000000000000
-el html  inner 1414764892 text 0 empty false fc head lc body nx -
-el head  inner 3726490539 text 0 empty false fc template lc template nx body
+match 0.0.1 <frameset> 100000000000000000000000000000000000000000000000000000100000000EEEE000000000000000000000000000000
+el html  inner 2268079231 text 0 empty false fc head lc frameset nx -
+el head  inner 3726490539 text 0 empty false fc template lc template nx frameset
 el template  inner 0 text 0 empty true fc - lc - nx -
-el body  inner 1556954116 text 0 empty false fc p lc p nx -
-el p  inner 0 text 0 empty true fc - lc - nx -
+el frameset  inner 0 text 0 empty true fc - lc - nx -
 fragment 3311043780
 innerhtml 1462614683
-mutate 412113790
-outer 2246121563
-copy 4163062690
-titleset 1899416393
-rmattr 1899416393
+titleset 3851819878
+rmattr 3851819878
 === h5_template_0046.html
 doc 67 42360794
 <html><head></head><body><p><template></template></p></body></html>
@@ -112112,11 +112097,11 @@ innerhtml 86215935
 titleset 1584970076
 rmattr 1584970076
 === h5_template_0116.html
-doc 75 2814201723
-<html><head><template><table></table></template></head><body></body></html>
+doc 88 2374397267
+<html><head><template><table><form></form></table></template></head><body></body></html>
 title [] raw []
 body 0 0
-head 3888736464
+head 4318964
 all 4 3920077371 0.0 <html> | 0.0.0 <head> | 0.0.0.0 <template>
 tag a 0 0 
 tag p 0 0 
@@ -112233,14 +112218,14 @@ match 0.0 <html> 100000000000000000000000000100000000000000000000000000100001000
 match 0.0.0 <head> 100000000000000000000000000000000000000000000000000000100000000EEEE000000000000000000000000000000
 match 0.0.0.0 <template> 100000000000000000000000000000000000000000000000000000100001000EEEE000000000000000000000000000000
 match 0.0.1 <body> 100000000000000000000000000000000000000000000000000000100000000EEEE000000000000000000000000000000
-el html  inner 30176224 text 0 empty false fc head lc body nx -
-el head  inner 2517880016 text 0 empty false fc template lc template nx body
-el template  inner 2561864109 text 0 empty true fc - lc - nx -
+el html  inner 2591440711 text 0 empty false fc head lc body nx -
+el head  inner 1200505952 text 0 empty false fc template lc template nx body
+el template  inner 917892165 text 0 empty true fc - lc - nx -
 el body  inner 0 text 0 empty true fc - lc - nx -
-fragment 4050497293
-innerhtml 2065525922
-titleset 1597367773
-rmattr 1597367773
+fragment 3618743018
+innerhtml 558865663
+titleset 1290115885
+rmattr 1290115885
 === h5_template_0118.html
 doc 93 3437655005
 <html><head><template><form><form><input></form></form></template></head><body></body></html>
@@ -253696,12 +253681,12 @@ copy 1116268865
 titleset 1794763290
 rmattr 1794763290
 === h5_webkit02_0044.html
-doc 126 3409023315
-<html><head></head><body><select><button><selectedcontent></selectedcontent></button><option>X</option></select></body></html>
+doc 127 1102657494
+<html><head></head><body><select><button><selectedcontent>X</selectedcontent></button><option>X</option></select></body></html>
 title [] raw []
-body 672454412 2323196882
+body 246822468 2971270285
 head 2895613773
-all 8 119509547 0.0 <html> | 0.0.0 <head> | 0.0.1 <body>
+all 9 2450261488 0.0 <html> | 0.0.0 <head> | 0.0.1 <body>
 tag a 0 0 
 tag p 0 0 
 tag td 0 0 
@@ -253711,7 +253696,7 @@ tag html 1 2757144502 0.0 <html>
 tag body 1 3959011304 0.0.1 <body>
 tag title 0 0 
 tag !-- 0 0 
-tag #text 1 4239535537 0.0.1.0.1.0 X
+tag #text 2 2168717704 0.0.1.0.0.0.0 X | 0.0.1.0.1.0 X
 tag svg 0 0 
 tag select 1 959624511 0.0.1.0 <select>
 tag template 0 0 
@@ -253820,43 +253805,44 @@ match 0.0.1.0 <select> 100000000000000000000000000000000000000001000000000000100
 match 0.0.1.0.0 <button> 100000000000000000000000000000000000000000000000000000100000000EEEE000000000000000000000000000000
 match 0.0.1.0.0.0 <selectedcontent> 100000000000000000000000000000000000000000000000000000100001000EEEE000000000000000000000000000000
 match 0.0.1.0.1 <option> 100000000000000000000000000000000000001000000000000000100000000EEEE000000000000000000000001000000
-el html  inner 3870605940 text 672454412 empty false fc head lc body nx -
+el html  inner 3995147049 text 246822468 empty false fc head lc body nx -
 el head  inner 0 text 0 empty true fc - lc - nx body
-el body  inner 2323196882 text 672454412 empty false fc select lc select nx -
-el select  inner 576221015 text 672454412 empty false fc button lc option nx -
-el button  inner 935820321 text 0 empty false fc selectedcontent lc selectedcontent nx option
-el selectedcontent  inner 0 text 0 empty true fc - lc - nx -
+el body  inner 2971270285 text 246822468 empty false fc select lc select nx -
+el select  inner 2655438161 text 246822468 empty false fc button lc option nx -
+el button  inner 562705116 text 672454412 empty false fc selectedcontent lc selectedcontent nx option
+el selectedcontent  inner 672454412 text 672454412 empty false fc - lc #text nx -
+node #text 672454412
 el option  inner 672454412 text 672454412 empty false fc - lc #text nx -
 node #text 672454412
-fragment 3793525739
-innerhtml 3409023315
+fragment 2479930310
+innerhtml 1102657494
 mutate 3307595500
 outer 3876648308
 copy 168307346
 titleset 3715971698
 rmattr 3715971698
 === h5_webkit02_0045.html
-doc 151 3032899699
-<html><head></head><body><select><button><selectedcontent></selectedcontent></button><option>x<i>i<b>ib</b></i><b>b</b></option></select></body></html>
+doc 177 1141479283
+<html><head></head><body><select><button><selectedcontent>x<i>i<b>ib</b></i><b>b</b></selectedcontent></button><option>x<i>i<b>ib</b></i><b>b</b></option></select></body></html>
 title [] raw []
-body 1723589897 2216936737
+body 2620155448 1187977119
 head 2895613773
-all 14 3655052452 0.0 <html> | 0.0.0 <head> | 0.0.1 <body>
+all 21 2595152224 0.0 <html> | 0.0.0 <head> | 0.0.1 <body>
 tag a 0 0 
 tag p 0 0 
 tag td 0 0 
-tag b 2 1741797887 0.0.1.0.1.1.1 <b> | 0.0.1.0.1.2 <b>
+tag b 4 738362895 0.0.1.0.0.0.1.1 <b> | 0.0.1.0.0.0.2 <b> | 0.0.1.0.1.1.1 <b>
 tag div 0 0 
 tag html 1 2757144502 0.0 <html>
 tag body 1 3959011304 0.0.1 <body>
 tag title 0 0 
 tag !-- 0 0 
-tag #text 4 3188910774 0.0.1.0.1.0 x | 0.0.1.0.1.1.0 i | 0.0.1.0.1.1.1.0 ib
+tag #text 8 1456717599 0.0.1.0.0.0.0 x | 0.0.1.0.0.0.1.0 i | 0.0.1.0.0.0.1.1.0 ib
 tag svg 0 0 
 tag select 1 959624511 0.0.1.0 <select>
 tag template 0 0 
 tag X-Y 0 0 
-sel * 10 2716547138 0.0 <html> | 0.0.0 <head> | 0.0.1 <body>
+sel * 13 648516487 0.0 <html> | 0.0.0 <head> | 0.0.1 <body>
 sel p 0 0 
 sel div p 0 0 
 sel div > p 0 0 
@@ -253881,7 +253867,7 @@ sel p:nth-of-type(2) 0 0
 sel p:nth-last-of-type(1) 0 0 
 sel span:first-of-type 0 0 
 sel span:last-of-type 0 0 
-sel b:only-of-type 2 1741797887 0.0.1.0.1.1.1 <b> | 0.0.1.0.1.2 <b>
+sel b:only-of-type 4 738362895 0.0.1.0.0.0.1.1 <b> | 0.0.1.0.0.0.2 <b> | 0.0.1.0.1.1.1 <b>
 sel p:empty 0 0 
 sel :root 1 2757144502 0.0 <html>
 sel div:not(.x) 0 0 
@@ -253910,12 +253896,12 @@ sel div#x.y 0 0
 sel ::before 0 0 
 sel p::first-line 0 0 
 sel a:hover 0 0 
-sel *|* 10 2716547138 0.0 <html> | 0.0.0 <head> | 0.0.1 <body>
+sel *|* 13 648516487 0.0 <html> | 0.0.0 <head> | 0.0.1 <body>
 sel svg|rect 0 0 
 sel img[alt=""] 0 0 
 sel [data-x] 0 0 
 sel div:nth-child(-n+3) 0 0 
-sel :first-child:last-child 4 653314080 0.0 <html> | 0.0.1.0 <select> | 0.0.1.0.0.0 <selectedcontent>
+sel :first-child:last-child 5 3170080323 0.0 <html> | 0.0.1.0 <select> | 0.0.1.0.0.0 <selectedcontent>
 sel a:any-link 0 0 
 sel a:link 0 0 
 sel p:lexbor-contains(x) 0 0 
@@ -253959,16 +253945,26 @@ match 0.0.1 <body> 1000000000000000000000000000000000000000000000000000001000000
 match 0.0.1.0 <select> 100000000000000000000000000000000000000001000000000000100001000EEEE000000000000000000000000000000
 match 0.0.1.0.0 <button> 100000000000000000000000000000000000000000000000000000100000000EEEE000000000000000000000000000000
 match 0.0.1.0.0.0 <selectedcontent> 100000000000000000000000000000000000000000000000000000100001000EEEE000000000000000000000000000000
+match 0.0.1.0.0.0.1 <i> 100000000000000000000000000000000000000000000000000000100000000EEEE000000000000000000000000000000
+match 0.0.1.0.0.0.1.1 <b> 100000000000000000000000010000000000000000000000000000100001000EEEE000000000000000000000000000000
+match 0.0.1.0.0.0.2 <b> 100000000000000000000000010000000000000000000000000000100000000EEEE000000000000000000000000000000
 match 0.0.1.0.1 <option> 100000000000000000000000000000000000001000000000000000100000000EEEE000000000000000000000001000000
 match 0.0.1.0.1.1 <i> 100000000000000000000000000000000000000000000000000000100000000EEEE000000000000000000000000000000
 match 0.0.1.0.1.1.1 <b> 100000000000000000000000010000000000000000000000000000100001000EEEE000000000000000000000000000000
 match 0.0.1.0.1.2 <b> 100000000000000000000000010000000000000000000000000000100000000EEEE000000000000000000000000000000
-el html  inner 2000048311 text 1723589897 empty false fc head lc body nx -
+el html  inner 1394433704 text 2620155448 empty false fc head lc body nx -
 el head  inner 0 text 0 empty true fc - lc - nx body
-el body  inner 2216936737 text 1723589897 empty false fc select lc select nx -
-el select  inner 1570373304 text 1723589897 empty false fc button lc option nx -
-el button  inner 935820321 text 0 empty false fc selectedcontent lc selectedcontent nx option
-el selectedcontent  inner 0 text 0 empty true fc - lc - nx -
+el body  inner 1187977119 text 2620155448 empty false fc select lc select nx -
+el select  inner 4149652709 text 2620155448 empty false fc button lc option nx -
+el button  inner 1088812395 text 1723589897 empty false fc selectedcontent lc selectedcontent nx option
+el selectedcontent  inner 1383829156 text 1723589897 empty false fc i lc b nx -
+node #text 1050319643
+el i  inner 3137626236 text 205154496 empty false fc b lc b nx b
+node #text 2165993515
+el b  inner 3351134710 text 3351134710 empty false fc - lc #text nx -
+node #text 3351134710
+el b  inner 2514386435 text 2514386435 empty false fc - lc #text nx -
+node #text 2514386435
 el option  inner 1383829156 text 1723589897 empty false fc i lc b nx -
 node #text 1050319643
 el i  inner 3137626236 text 205154496 empty false fc b lc b nx b
@@ -253977,20 +253973,20 @@ el b  inner 3351134710 text 3351134710 empty false fc - lc #text nx -
 node #text 3351134710
 el b  inner 2514386435 text 2514386435 empty false fc - lc #text nx -
 node #text 2514386435
-fragment 353806489
-innerhtml 3032899699
+fragment 3405729794
+innerhtml 1141479283
 mutate 3307595500
 outer 3876648308
 copy 168307346
 titleset 3715971698
 rmattr 3715971698
 === h5_webkit02_0046.html
-doc 144 4066648025
-<html><head></head><body><select><button><selectedcontent></selectedcontent></button><option>X</option><option>Y</option></select></body></html>
+doc 145 2798192829
+<html><head></head><body><select><button><selectedcontent>X</selectedcontent></button><option>X</option><option>Y</option></select></body></html>
 title [] raw []
-body 959174221 585625533
+body 577287164 2322410989
 head 2895613773
-all 10 2860503991 0.0 <html> | 0.0.0 <head> | 0.0.1 <body>
+all 11 310963520 0.0 <html> | 0.0.0 <head> | 0.0.1 <body>
 tag a 0 0 
 tag p 0 0 
 tag td 0 0 
@@ -254000,7 +253996,7 @@ tag html 1 2757144502 0.0 <html>
 tag body 1 3959011304 0.0.1 <body>
 tag title 0 0 
 tag !-- 0 0 
-tag #text 2 2940309617 0.0.1.0.1.0 X | 0.0.1.0.2.0 Y
+tag #text 3 2425991400 0.0.1.0.0.0.0 X | 0.0.1.0.1.0 X | 0.0.1.0.2.0 Y
 tag svg 0 0 
 tag select 1 959624511 0.0.1.0 <select>
 tag template 0 0 
@@ -254110,30 +254106,31 @@ match 0.0.1.0.0 <button> 1000000000000000000000000000000000000000000000000000001
 match 0.0.1.0.0.0 <selectedcontent> 100000000000000000000000000000000000000000000000000000100001000EEEE000000000000000000000000000000
 match 0.0.1.0.1 <option> 100000000000000000000000000000000000001000000000000000100000000EEEE000000000000000000000001000000
 match 0.0.1.0.2 <option> 100000000000000000000000000000000000000000000000000000100000000EEEE000000000000000000000001000000
-el html  inner 3717009580 text 959174221 empty false fc head lc body nx -
+el html  inner 1447997375 text 577287164 empty false fc head lc body nx -
 el head  inner 0 text 0 empty true fc - lc - nx body
-el body  inner 585625533 text 959174221 empty false fc select lc select nx -
-el select  inner 2013201630 text 959174221 empty false fc button lc option nx -
-el button  inner 935820321 text 0 empty false fc selectedcontent lc selectedcontent nx option
-el selectedcontent  inner 0 text 0 empty true fc - lc - nx -
+el body  inner 2322410989 text 577287164 empty false fc select lc select nx -
+el select  inner 1398212812 text 577287164 empty false fc button lc option nx -
+el button  inner 562705116 text 672454412 empty false fc selectedcontent lc selectedcontent nx option
+el selectedcontent  inner 672454412 text 672454412 empty false fc - lc #text nx -
+node #text 672454412
 el option  inner 672454412 text 672454412 empty false fc - lc #text nx option
 node #text 672454412
 el option  inner 3710514769 text 3710514769 empty false fc - lc #text nx -
 node #text 3710514769
-fragment 765428368
-innerhtml 4066648025
+fragment 2154168197
+innerhtml 2798192829
 mutate 3307595500
 outer 3876648308
 copy 168307346
 titleset 3715971698
 rmattr 3715971698
 === h5_webkit02_0047.html
-doc 156 353988676
-<html><head></head><body><select><button><selectedcontent></selectedcontent></button><option>X</option><option selected="">Y</option></select></body></html>
+doc 157 634548964
+<html><head></head><body><select><button><selectedcontent>Y</selectedcontent></button><option>X</option><option selected="">Y</option></select></body></html>
 title [] raw []
-body 959174221 2006609506
+body 3794642185 322930556
 head 2895613773
-all 10 1344284112 0.0 <html> | 0.0.0 <head> | 0.0.1 <body>
+all 11 3546260099 0.0 <html> | 0.0.0 <head> | 0.0.1 <body>
 tag a 0 0 
 tag p 0 0 
 tag td 0 0 
@@ -254143,7 +254140,7 @@ tag html 1 2757144502 0.0 <html>
 tag body 1 3959011304 0.0.1 <body>
 tag title 0 0 
 tag !-- 0 0 
-tag #text 2 2940309617 0.0.1.0.1.0 X | 0.0.1.0.2.0 Y
+tag #text 3 1831373118 0.0.1.0.0.0.0 Y | 0.0.1.0.1.0 X | 0.0.1.0.2.0 Y
 tag svg 0 0 
 tag select 1 959624511 0.0.1.0 <select>
 tag template 0 0 
@@ -254253,18 +254250,19 @@ match 0.0.1.0.0 <button> 1000000000000000000000000000000000000000000000000000001
 match 0.0.1.0.0.0 <selectedcontent> 100000000000000000000000000000000000000000000000000000100001000EEEE000000000000000000000000000000
 match 0.0.1.0.1 <option> 100000000000000000000000000000000000000000000000000000100000000EEEE000000000000000000000001000000
 match 0.0.1.0.2 <option selected=""> 100000000000000000000000000000000000001000000000000000100000000EEEE000000000000000000000001000000
-el html  inner 2892890396 text 959174221 empty false fc head lc body nx -
+el html  inner 253266734 text 3794642185 empty false fc head lc body nx -
 el head  inner 0 text 0 empty true fc - lc - nx body
-el body  inner 2006609506 text 959174221 empty false fc select lc select nx -
-el select  inner 487245626 text 959174221 empty false fc button lc option nx -
-el button  inner 935820321 text 0 empty false fc selectedcontent lc selectedcontent nx option
-el selectedcontent  inner 0 text 0 empty true fc - lc - nx -
+el body  inner 322930556 text 3794642185 empty false fc select lc select nx -
+el select  inner 3882006131 text 3794642185 empty false fc button lc option nx -
+el button  inner 1952404925 text 3710514769 empty false fc selectedcontent lc selectedcontent nx option
+el selectedcontent  inner 3710514769 text 3710514769 empty false fc - lc #text nx -
+node #text 3710514769
 el option  inner 672454412 text 672454412 empty false fc - lc #text nx option
 node #text 672454412
 el option selected= inner 3710514769 text 3710514769 empty false fc - lc #text nx -
 node #text 3710514769
-fragment 2431885752
-innerhtml 353988676
+fragment 1521507592
+innerhtml 634548964
 mutate 3307595500
 outer 3876648308
 copy 168307346
