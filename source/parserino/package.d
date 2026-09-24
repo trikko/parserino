@@ -58,7 +58,8 @@ import parserino.lexbor.dom.interfaces.character_data;
 import parserino.lexbor.html.interfaces.document;
 import parserino.lexbor.html.parser;
 import parserino.lexbor.html.tree;
-import parserino.lexbor.html.serialize;
+static import parserino.html.serializer;
+import parserino.html.serializer : Serialize;
 import parserino.arena : Arena;
 import parserino.css.selector : SelectorList, parseSelector;
 static import parserino.css.matcher;
@@ -272,7 +273,7 @@ struct Document
     {
         auto d = (cast() this).mutableImpl();
         d.finish();
-        serialize!lxb_html_serialize_tree_cb(&d.html.dom_document.node, sink);
+        serializeTo(Serialize.tree, &d.html.dom_document.node, sink);
     }
 
     /// ditto
@@ -1065,7 +1066,7 @@ struct Element
         impl.ensureClosed(node);
 
         auto app = appender!string;
-        serialize!lxb_html_serialize_deep_cb(node, (const(char)[] s) { app.put(s); });
+        serializeTo(Serialize.children, node, (const(char)[] s) { app.put(s); });
         return app.data;
     }
 
@@ -1571,13 +1572,13 @@ struct Element
         if (deep)
         {
             self.impl.ensureClosed(self.node);
-            serialize!lxb_html_serialize_tree_cb(self.node, sink);
+            serializeTo(Serialize.tree, self.node, sink);
         }
         else
         {
             self.impl.ensureStable(self.node);
             self.impl.ensureAttrs(self.node);
-            serialize!lxb_html_serialize_cb(self.node, sink);
+            serializeTo(Serialize.node, self.node, sink);
         }
     }
 
@@ -2626,29 +2627,8 @@ void check(lxb_status_t status, string msg)
     if (status != LXB_STATUS_OK) throw new ParserinoException(msg);
 }
 
-struct SinkContext
+// Serialize a node to a sink
+void serializeTo(Serialize what, lxb_dom_node_t* node, scope void delegate(const(char)[]) sink)
 {
-    void delegate(const(char)[]) sink;
-    Exception error;
-}
-
-extern(C) lxb_status_t sinkTrampoline(const(lxb_char_t)* data, size_t len, void* ctx) nothrow
-{
-    auto c = cast(SinkContext*) ctx;
-
-    try c.sink(cast(const(char)[]) data[0 .. len]);
-    catch (Exception e) { c.error = e; return LXB_STATUS_ERROR; }
-
-    return LXB_STATUS_OK;
-}
-
-// Serialize a node to a sink. Exceptions thrown by the sink are rethrown here.
-void serialize(alias fn)(lxb_dom_node_t* node, scope void delegate(const(char)[]) sink)
-{
-    SinkContext ctx;
-    ctx.sink = sink;
-
-    auto status = fn(node, cast(lxb_html_serialize_cb_f) &sinkTrampoline, &ctx);
-    if (ctx.error !is null) throw ctx.error;
-    if (status != LXB_STATUS_OK) throw new ParserinoException("Serialization failed");
+    parserino.html.serializer.serialize(node, sink, what);
 }
