@@ -270,6 +270,21 @@ struct Document
         foreach (c; counts) assert(c == 20 * 250);
     }
 
+    unittest
+    {
+        // The input is UTF-8: a BOM is removed, invalid bytes become U+FFFD (as in a browser)
+        foreach (parsing; [Parsing.Eager, Parsing.Lazy])
+        {
+            auto doc = Document("\xEF\xBB\xBF<!DOCTYPE html><p title=\"a\xFFb\">x\xC0\xAFy\xE2\x82", parsing, 1);
+            assert(!doc.children!(Show.DocumentType).empty);
+            assert(doc.body.textContent == "x\uFFFD\uFFFDy\uFFFD");
+            assert(doc.byTagName("p").front.getAttribute("title") == "a\uFFFDb");
+        }
+
+        // A BOM that is not at the beginning is a character (U+FEFF)
+        assert(Document("<p>\xEF\xBB\xBF").body.textContent == "\uFEFF");
+    }
+
     /++ Rebuild a document from a snapshot (see `snapshot`): much faster than parsing again.
     + Each call gives a new, independent document.
     +/

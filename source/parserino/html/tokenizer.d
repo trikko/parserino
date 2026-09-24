@@ -11,6 +11,7 @@ import parserino.arena;
 import parserino.names;
 import parserino.dom : DomDocument;
 import parserino.html.entities;
+import parserino.html.decoder;
 
 @nogc nothrow pure @safe:
 
@@ -125,18 +126,27 @@ struct Tokenizer
         lastStartTag.put(name);
     }
 
+    /// The UTF-8 decoding of the input (set `decoder.stripBom` for documents)
+    Utf8Decoder decoder;
+
     /// Tokenize a chunk. It returns false on errors (out of memory).
     bool feed(scope const(char)[] chunk)
     {
+        if (failed) return false;
+        auto decoded = decoder.decode(chunk);
+        return feedDecoded(decoded, decoder.hasCR);
+    }
+
+    // Tokenize a chunk of valid UTF-8 (`hasCR`: does it contain a '\r'?)
+    private bool feedDecoded(scope const(char)[] chunk, bool hasCR)
+    {
+        if (decoder.failed) failed = true;
         if (failed) return false;
 
         // Newlines: CR LF and CR become LF (also across chunks)
         const(char)[] input = chunk;
         if (skipLF && input.length && input[0] == '\n') input = input[1 .. $];
         skipLF = false;
-
-        bool hasCR = false;
-        foreach (c; input) if (c == '\r') { hasCR = true; break; }
 
         if (hasCR || carry.length)
         {
@@ -168,6 +178,9 @@ struct Tokenizer
     bool finish()
     {
         if (failed) return false;
+
+        // An incomplete UTF-8 sequence at the end
+        if (auto rest = decoder.finish()) if (!feedDecoded(rest, false)) return false;
 
         eof = true;
         if (carry.length)

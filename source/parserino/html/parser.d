@@ -25,6 +25,7 @@ struct Parser
     void begin(DomDocument* doc)
     {
         tokenizer = Tokenizer(doc, tree.sink());
+        tokenizer.decoder.stripBom = true;   // a document, not a fragment
         tree.beginDocument(doc, &tokenizer);
     }
 
