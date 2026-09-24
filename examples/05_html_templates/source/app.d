@@ -6,12 +6,16 @@
  an element around easily breaks the page.
 
  Here the templates (views/*.html) are plain html, with example content, that anyone can open
- in a browser and edit. The code only relies on ids and classes:
+ in a browser and edit. To fill in the data the code relies only on ids and classes, the
+ "contract" with the designer:
  - it fills an element by id, whatever tag it is and wherever it is in the page;
  - it repeats a "row" by cloning the first example (a <tr> or a <div>, it doesn't care) and
    removes the other examples;
  - it removes the parts of the page that are not needed in a given case;
  - it sets texts and attributes: the escaping is automatic, so the data is never read as html.
+
+ Beyond that the whole DOM is available: CSS selectors and tree navigation are used for changes
+ to the whole page (see `polish`).
 
  views/table.html and views/cards.html have completely different markup (a table, a grid of
  divs) but the same ids and classes: the same `render` function fills both.
@@ -79,6 +83,7 @@ void respond(Document page, Request request, Output output)
 {
     auto start = MonoTime.currTime;
     render(page, request.get.read("q").strip);
+    polish(page, request.path);
     page.byId("elapsed").innerText = (MonoTime.currTime - start).total!"usecs".to!string;
     respond(page, output);
 }
@@ -152,6 +157,34 @@ void render(Document page, string query)
 
     foreach (e; examples) e.remove();
 }
+
+/++ 6. Whole-page changes.
+ + Ids and classes are just the contract with the designer: the code has the whole DOM, with CSS
+ + selectors and tree navigation. These don't depend on where the elements are, but on what they are.
+ +/
+void polish(Document page, string path)
+{
+    // Every external link opens in a new tab, even the ones the designer will add tomorrow
+    foreach (a; page.bySelector(`a[href^="https://"]`))
+    {
+        a.setAttribute("target", "_blank");
+        a.setAttribute("rel", "noopener");
+    }
+
+    // Highlight the link to the current layout
+    foreach (a; page.bySelector("#layout-table, #layout-cards"))
+        if (a.getAttribute("href").startsWith(path ~ "?")) addClass(a, "current");
+
+    // Tree navigation: from each "sold out" label up to its book, whatever is in between
+    foreach (label; page.byClass("sold-out"))
+    {
+        auto e = label.parent;
+        while (e.isElement && !e.classes.canFind("book")) e = e.parent;
+        if (e.isElement) addClass(e, "unavailable");
+    }
+}
+
+void addClass(Element e, string name) { e.setAttribute("class", (e.getAttribute("class") ~ " " ~ name).strip); }
 
 bool matches(ref const Book b, string query)
 {

@@ -40,6 +40,11 @@
             the results when there are none, "Details" or "Sold out" on each book.</li>
         <li><b>Escaping is automatic</b>: texts are set as texts, never read as html.
             Try searching for <code>&lt;script&gt;alert(1)&lt;/script&gt;</code>.</li>
+        <li>Ids and classes are just the <b>contract with the designer</b>: the code has the whole DOM,
+            with CSS selectors and tree navigation, for changes that depend on what the elements are and not
+            on where they are. For example every external link (<code>a[href^="https://"]</code>) opens in a
+            new tab, even the ones the designer adds later, and every sold out book is greyed out, found by
+            walking up the tree from its "Sold out" label.</li>
         <li>The templates are <b>parsed at compile time</b>: each request just gets a fresh copy of the tree.</li>
     </ul>
 </body>
