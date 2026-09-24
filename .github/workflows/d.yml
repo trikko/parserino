@@ -6,7 +6,7 @@ name: Build & Test
 
 on:
   push:
-    branches: [ master ]
+    branches: [ master, pure-d ]
   pull_request:
     branches: [ master ]
 
@@ -43,16 +43,23 @@ jobs:
         # See https://dub.pm/package-format-json.html#configurations
         dub test
 
-  betterc:
+  # The oracles of tools/: reference dump, lazy parsing, snapshots, WPT tree construction and
+  # html5lib tokenizer tests, parse errors, the betterC core (see tools/check.sh)
+  conformance:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - uses: dlang-community/setup-dlang@v1
       with:
           compiler: ldc-latest
-    - name: 'The parser core builds and runs with -betterC'
-      run: |
-        cd source
-        CORE="parserino/arena.d parserino/names.d parserino/dom.d $(ls parserino/html/*.d parserino/css/*.d)"
-        ldc2 -betterC -oq -I. ../tools/betterc/app.d $CORE -of=/tmp/betterc_test
-        /tmp/betterc_test
+    - uses: actions/cache@v4
+      with:
+          path: |
+            tools/corpus/files
+            tools/corpus/wpt
+            tools/corpus/html5lib-tests
+          key: corpus-${{ hashFiles('tools/corpus/fetch.sh', 'tools/corpus/pages.txt', 'tools/corpus/extract_dat.py') }}
+    - name: 'Corpus (pinned commits and web.archive.org snapshots)'
+      run: tools/corpus/fetch.sh
+    - name: 'Dump, lazy parsing, snapshots, conformance, betterC'
+      run: tools/check.sh
