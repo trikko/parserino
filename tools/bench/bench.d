@@ -62,11 +62,11 @@ void main(string[] args)
     report("parse", median(rounds, { foreach (p; pages) { auto d = Document(p); } }), total);
 
     report("parse lazy + 5 links", median(rounds, {
-        foreach (p; pages) { auto d = Document(p, Parsing.lazy_); d.byTagName("a").take(5).walkLength; }
+        foreach (p; pages) { auto d = Document(p, Parsing.Lazy); d.byTagName("a").take(5).walkLength; }
     }));
 
     report("parse lazy + finish", median(rounds, {
-        foreach (p; pages) { auto d = Document(p, Parsing.lazy_); d.finishParsing(); }
+        foreach (p; pages) { auto d = Document(p, Parsing.Lazy); d.finishParsing(); }
     }), total);
 
     report("ctDocument (60 KB)", median(rounds, { foreach (_; 0 .. 10) { auto d = ctDocument!ctHtml; } }) / 10);

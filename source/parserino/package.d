@@ -20,41 +20,73 @@ FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
 OTHER DEALINGS IN THE SOFTWARE.
 */
 
-/** HTML5 parser and DOM manipulation library.
- *
- * Parserino is a fast html5 parser and DOM manipulation library written in pure D
- * (the tree construction is derived from the lexbor library).
- * ---
- * import parserino;
- * void main()
- * {
- *    auto doc = Document("<html><body><p>Hello World!</p></body></html>");
- *    assert(doc.body.firstChild.innerText == "Hello World!");
- *    assert(doc.byTagName("p").front.innerText == "Hello World!");
- * }
- * ---
- * The main types you will use are `parserino.Document` and `parserino.Element`.
- *
- * Memory: a `Document` is reference counted. Every `Element` keeps its document alive,
- * so elements are always safe to use, even after the `Document` variable goes out of scope.
- * Nodes removed from the tree stay valid (they are released with their document).
- *
- * Lazy parsing: `Document(html, Parsing.lazy_)` builds the tree only as far as your queries need.
- * `doc.byClass("x").take(3)` stops parsing a little after the third match.
- */
+
+/++ HTML5 parser and DOM manipulation library.
+ +
+ + Parserino is a fast html5 parser and DOM manipulation library written in pure D
+ + (the tree construction is derived from the lexbor library).
+ + ---
+ + import parserino;
+ + void main()
+ + {
+ +    auto doc = Document("<html><body><p>Hello World!</p></body></html>");
+ +    assert(doc.body.firstChild.textContent == "Hello World!");
+ +    assert(doc.byTagName("p").front.textContent == "Hello World!");
+ + }
+ + ---
+ + The main types are `Document`, `Node` and `Element`:
+ + - a `Node` is any node of the tree: an element, a text, a comment, a doctype, ...;
+ + - an `Element` is a node that is an element: it adds attributes, `innerHTML`, `matches`, ...
+ +   It converts implicitly to `Node`; `node.asElement` goes the other way.
+ +
+ + Navigation: one method for each direction, with the kinds of nodes to see as a template
+ + parameter (`Show`, as `whatToShow` in the DOM). The default is `Show.Element`, and then the
+ + result is an `Element` (or a range of `Element`); with other filters it's a `Node`.
+ + ---
+ + p.children                           // the child elements
+ + p.children!(Show.All)                // all the child nodes
+ + doc.descendants!(Show.Comment)       // all the comments of the document
+ + p.firstChild!(Show.Text)             // the first child text node
+ + doc.body.descendants.retro           // reverse document order
+ + ---
+ +
+ + Errors: searches and navigation give an invalid node (`== null`, `isValid` is false) or an
+ + empty range when nothing is found; a node that can't have children (a text, a comment) just
+ + has no children. Calling a method on an invalid node or document, or a mutation that is not
+ + possible (a child of a text, a node inside itself, a node of another document, a sibling of a
+ + node without parent), throws a `ParserinoException`.
+ +
+ + Views: the getters that copy a string stored in the document have a `...View` variant that
+ + returns a slice of the document memory instead (`localNameView`, `idView`, `getAttributeView`,
+ + `classesView`, `attributesView`, `dataView`). The slice is valid until that value changes or
+ + the document is destroyed. Computed values (`textContent` of an element, `innerHTML`, `title`)
+ + have no view.
+ +
+ + Memory: a `Document` is reference counted. Every `Node` keeps its document alive, so nodes are
+ + always safe to use, even after the `Document` variable goes out of scope. Nodes removed from
+ + the tree stay valid (they are released with their document).
+ +
+ + Lazy parsing: `Document(html, Parsing.Lazy)` builds the tree only as far as your queries need.
+ + `doc.byClass("x").take(3)` stops parsing a little after the third match.
+ +
+ + Input: the html must be UTF-8 (invalid bytes become U+FFFD, a BOM is removed). For other
+ + encodings see `parserino.encoding.toUtf8`.
+ +/
 module parserino;
 
 import parserino.names : Tag, Ns;
-import parserino.dom : textContent, DomNode, DomElement, DomAttribute, DomDocument,
-    DomCharacterData, NodeType;
+import parserino.dom : textContent, DomNode, DomElement, DomAttribute, DomDocument, DomCharacterData,
+    DomDocumentFragment, DomDocumentType;
 import parserino.html.parser : Parser, newParser, freeParser, parseDocument, parseFragment;
 import parserino.html.treebuilder : TreeBuilder;
 static import parserino.html.serializer;
 import parserino.html.serializer : Serialize;
 import parserino.arena : Arena;
-import parserino.snapshot : Snapshot, parseToSnapshot;
+import parserino.snapshot : DomSnapshot, takeSnapshot, parseToSnapshot;
 import parserino.css.selector : SelectorList, parseSelector;
 static import parserino.css.matcher;
+
+public import parserino.dom : NodeType;
 
 import core.stdc.stdlib : calloc, realloc, free, malloc;
 import core.stdc.string : memchr, memcpy;
@@ -62,14 +94,23 @@ import core.atomic : atomicOp;
 import std.range.primitives : isInputRange, isOutputRange, ElementType;
 import std.traits : isSomeString;
 
-/// Order of visit
-enum VisitOrder
+/++ The kinds of nodes that a navigation or a range gives: the same bits of `NodeFilter.whatToShow`
+ + in the DOM. Combine them with `|`: `children!(Show.Text | Show.Comment)`.
+ +/
+enum Show : uint
 {
-    Normal, /// Normal
-    Reverse /// Reverse
+    Element = 0x1,                  /// elements
+    Text = 0x4,                     /// text nodes
+    CDataSection = 0x8,             /// CDATA sections
+    ProcessingInstruction = 0x40,   /// processing instructions (`<?target data>`)
+    Comment = 0x80,                 /// comments
+    Document = 0x100,               /// the document
+    DocumentType = 0x200,           /// the doctype
+    DocumentFragment = 0x400,       /// document fragments
+    All = 0xFFFF_FFFF,              /// all the nodes
 }
 
-/// Thrown on invalid operations (invalid element, wrong node type, bad selector, ...)
+/// Thrown on invalid operations (invalid node, impossible mutation, bad selector, ...)
 class ParserinoException : Exception
 {
     this(string msg, string file = __FILE__, size_t line = __LINE__) pure nothrow @safe { super(msg, file, line); }
@@ -78,33 +119,56 @@ class ParserinoException : Exception
 /// How `Document` parses its input
 enum Parsing
 {
-    eager,  /// Parse everything at once
-    lazy_,  /// Parse chunk by chunk, only as far as queries and accessors need
+    Eager,  /// Parse everything at once
+    Lazy,   /// Parse chunk by chunk, only as far as queries and accessors need
 }
 
-/// Default chunk size for `Parsing.lazy_`
-enum size_t defaultChunkSize = 16 * 1024;
+/// Default chunk size for `Parsing.Lazy`
+enum size_t DefaultChunkSize = 16 * 1024;
+
+/// Options of the parser (see `Document.this`)
+struct ParseOptions
+{
+    Parsing parsing = Parsing.Eager;        /// eager or lazy parsing
+    size_t chunkSize = DefaultChunkSize;    /// the chunk size of lazy parsing
+
+    /++ Parse as a browser with scripting enabled: the content of `<noscript>` is text.
+     + Off by default, so the content of `<noscript>` is parsed as html (useful for scraping).
+     +/
+    bool scripting = false;
+}
 
 /// The HTML5 Document
 struct Document
 {
     /++ Parse a document.
-    + With `Parsing.lazy_` the tree is built chunk by chunk (`chunkSize` bytes), only when a query
+    + With `Parsing.Lazy` the tree is built chunk by chunk (`chunkSize` bytes), only when a query
     + or an accessor needs more of it. The results are always the same as for a fully parsed document.
     + ---
-    + auto doc = Document(hugeHtml, Parsing.lazy_);
+    + auto doc = Document(hugeHtml, Parsing.Lazy);
     + auto links = doc.byTagName("a").take(3).array;   // parses only the beginning of the document
     + assert(doc.bytesParsed < hugeHtml.length);
     + ---
-    + Any mutation of a lazy document (or of one of its elements) completes the parsing first.
+    + Any mutation of a lazy document (or of one of its nodes) completes the parsing first.
     + To parse at compile time, see `ctDocument`.
     +/
-    this(const(char)[] html, Parsing parsing = Parsing.eager, size_t chunkSize = defaultChunkSize)
+    this(const(char)[] html, Parsing parsing = Parsing.Eager, size_t chunkSize = DefaultChunkSize)
+    {
+        ParseOptions options;
+        options.parsing = parsing;
+        options.chunkSize = chunkSize;
+        this(html, options);
+    }
+
+    /// ditto
+    this(const(char)[] html, ParseOptions options)
     {
         impl = DocImpl.create();
         scope(failure) { DocImpl.release(impl); impl = null; }
 
-        if (parsing == Parsing.lazy_) impl.beginLazy(html, chunkSize == 0 ? defaultChunkSize : chunkSize);
+        impl.dom.scripting = options.scripting;
+        if (options.parsing == Parsing.Lazy)
+            impl.beginLazy(html, options.chunkSize == 0 ? DefaultChunkSize : options.chunkSize);
         else impl.parseAll(html);
     }
 
@@ -116,12 +180,12 @@ struct Document
 
         string html = "<html><body>" ~ `<p class="x">hello</p>`.replicate(10_000);
 
-        auto doc = Document(html, Parsing.lazy_, 1024);
+        auto doc = Document(html, Parsing.Lazy, 1024);
         assert(doc.isParsing);
 
         auto found = doc.byClass("x").take(3).array;
         assert(found.length == 3);
-        assert(found[0].innerText == "hello");
+        assert(found[0].textContent == "hello");
 
         // Only a small part of the input was parsed
         assert(doc.bytesParsed < 4096);
@@ -132,6 +196,20 @@ struct Document
         assert(doc.byClass("x").walkLength == 10_000);
     }
 
+    ///
+    unittest
+    {
+        // With scripting, <noscript> is text (as in a browser); by default it's parsed as html
+        string html = "<body><noscript><p>enable js</p></noscript>";
+
+        assert(Document(html).byTagName("p").walkLength == 1);
+
+        ParseOptions options = { scripting: true };
+        auto scripted = Document(html, options);
+        assert(scripted.byTagName("p").empty);
+        assert(scripted.byTagName("noscript").front.textContent == "<p>enable js</p>");
+    }
+
     unittest
     {
         import std.range : take;
@@ -139,7 +217,7 @@ struct Document
 
         // A mutation in the middle of a lazy query completes the parsing: the range goes on
         string html = "<body>" ~ `<div class="x"><b>a</b></div>`.replicate(2000);
-        auto doc = Document(html, Parsing.lazy_, 256);
+        auto doc = Document(html, Parsing.Lazy, 256);
 
         auto r = doc.byClass("x");
         r.front.setAttribute("id", "first");
@@ -151,14 +229,14 @@ struct Document
         assert(doc.byId("first").isValid);
 
         // Accessors wait for the element to be complete
-        auto doc2 = Document("<body><table><tr><td>1<td>2</table><p>after", Parsing.lazy_, 4);
+        auto doc2 = Document("<body><table><tr><td>1<td>2</table><p>after", Parsing.Lazy, 4);
         auto td = doc2.byTagName("td").front;
-        assert(td.next == "<td>2</td>");
-        assert(doc2.byTagName("p").front.innerText == "after");
+        assert(td.nextSibling == "<td>2</td>");
+        assert(doc2.byTagName("p").front.textContent == "after");
 
         // Foster parenting: text inside an open table goes before it
-        auto doc3 = Document("<body><table>moved<tr><td>x</table>", Parsing.lazy_, 3);
-        assert(doc3.body.firstChild(true).innerText == "moved");
+        auto doc3 = Document("<body><table>moved<tr><td>x</table>", Parsing.Lazy, 3);
+        assert(doc3.body.firstChild!(Show.All).textContent == "moved");
     }
 
     unittest
@@ -176,7 +254,7 @@ struct Document
             return {
                 foreach (_; 0 .. 20)
                 {
-                    auto doc = i % 2 ? Document(html) : Document(html, Parsing.lazy_, 512);
+                    auto doc = i % 2 ? Document(html) : Document(html, Parsing.Lazy, 512);
                     counts[i] += doc.bySelector("ul > li.a:nth-child(2n)").walkLength;
                 }
             };
@@ -190,6 +268,56 @@ struct Document
 
         foreach (t; threads) t.join();
         foreach (c; counts) assert(c == 20 * 250);
+    }
+
+    /++ Rebuild a document from a snapshot (see `snapshot`): much faster than parsing again.
+    + Each call gives a new, independent document.
+    +/
+    this(Snapshot snapshot)
+    {
+        if (!snapshot.isValid) throw new ParserinoException("Invalid snapshot");
+
+        impl = DocImpl.create();
+        scope(failure) { DocImpl.release(impl); impl = null; }
+
+        // The document uses the strings of the snapshot: keep it alive
+        impl.keepSnapshot(snapshot.data);
+        if (!snapshot.data.restore(impl.dom)) throw new ParserinoException("Out of memory");
+        impl.fed = snapshot.inputLength;
+    }
+
+    ///
+    unittest
+    {
+        Document page = `<ul><li class="item">template</li></ul>`;
+        auto snap = page.snapshot;
+
+        foreach (i; 0 .. 3)
+        {
+            auto copy = Document(snap);
+            copy.byClass("item").front.textContent = "copy";
+            assert(copy.byClass("item").front.textContent == "copy");
+        }
+
+        assert(page.byClass("item").front.textContent == "template");
+    }
+
+    unittest
+    {
+        import core.memory : GC;
+        import std.array : replicate;
+
+        // The document keeps the snapshot (and its strings) alive
+        Document make()
+        {
+            auto snap = Document(`<p title="t">` ~ "x".replicate(1000) ~ "</p>").snapshot;
+            return Document(snap);
+        }
+
+        auto d = make();
+        foreach (_; 0 .. 3) { GC.collect(); auto garbage = new char[](100_000); garbage[] = 'z'; }
+        assert(d.byTagName("p").front.textContent == "x".replicate(1000));
+        assert(d.byTagName("p").front.getAttribute("title") == "t");
     }
 
     // Postblit (not a copy constructor): copy constructors break ranges like `map!(x => ...)`
@@ -206,7 +334,7 @@ struct Document
         return this;
     }
 
-    ///
+    /// Parse `html` into a new document: `doc = "<html>...";`
     ref Document opAssign(const(char)[] html) return { return this = Document(html); }
 
     ///
@@ -242,7 +370,7 @@ struct Document
         assert(doc2 != docCpy);
     }
 
-    /// Is the document still being parsed? (see `Parsing.lazy_`)
+    /// Is the document still being parsed? (see `Parsing.Lazy`)
     @property bool isParsing() const @safe nothrow pure @nogc { return impl !is null && impl.parsing; }
 
     /// Number of input bytes given to the parser so far
@@ -250,6 +378,65 @@ struct Document
 
     /// Complete the parsing of a lazy document. It does nothing on a fully parsed one.
     void finishParsing() { onlyValid(); impl.finish(); }
+
+    /// A deep copy of the document, independent from this one
+    Document dup()
+    {
+        onlyValid();
+        impl.finish();
+
+        Document d;
+        d.impl = DocImpl.create();
+        scope(failure) { DocImpl.release(d.impl); d.impl = null; }
+
+        auto from = impl.dom;
+        auto to = d.impl.dom;
+        to.compatMode = from.compatMode;
+        to.scripting = from.scripting;
+
+        for (auto c = from.node.firstChild; c !is null; c = c.next)
+        {
+            auto n = to.importNode(c, true);
+            if (n is null) throw new ParserinoException("Out of memory");
+            to.node.appendChild(n);
+            if (n.type == NodeType.DocumentType && to.doctype is null) to.doctype = n.as!DomDocumentType;
+        }
+
+        d.impl.fed = impl.fed;
+        return d;
+    }
+
+    ///
+    unittest
+    {
+        Document a = `<!DOCTYPE html><title>A</title><p id="x">text</p>`;
+        Document b = a.dup;
+
+        b.byId("x").textContent = "changed";
+        assert(a.byId("x").textContent == "text");
+        assert(b.byId("x").textContent == "changed");
+        assert(b.title == "A");
+        import std.array : replace;
+        assert(b.toString == a.toString.replace("text", "changed"));
+    }
+
+    /++ A compact copy of the tree: `Document(snapshot)` rebuilds a document from it without
+    + parsing, many times faster. Parse a template once, then make many documents from it.
+    + (`ctDocument` does the same at compile time.)
+    +/
+    @property Snapshot snapshot()
+    {
+        onlyValid();
+        impl.finish();
+
+        auto data = new DomSnapshot;
+        *data = takeSnapshot(impl.dom);
+
+        Snapshot s;
+        s.data = cast(immutable) data;
+        s.inputLength = impl.fed;
+        return s;
+    }
 
     /// Return document as html string
     string toString() const
@@ -290,7 +477,7 @@ struct Document
         assert(format("%s", doc) == "<html><head></head><body></body></html>");
     }
 
-    /// The content of `<title>` tag
+    /// The content of `<title>`, with the whitespace stripped and collapsed (as in the DOM)
     @property string title() { return titleImpl(false); }
 
     /// ditto, without whitespace normalization
@@ -314,13 +501,14 @@ struct Document
             t = &e.node;
         }
 
-        Element(this, t).innerText = s;
+        Node(this, t).textContent = s;
     }
 
     unittest
     {
-        Document doc = Document("<html><head><title>Hello World!&gt;");
+        Document doc = Document("<html><head><title>Hello  World!&gt;\n");
         assert(doc.title == "Hello World!>");
+        assert(doc.rawTitle == "Hello  World!>\n");
 
         doc.title = "Goodbye";
         assert(doc.title == "Goodbye");
@@ -341,21 +529,21 @@ struct Document
     }
 
     /// Create a text node
-    Element createText(const(char)[] text)
+    Node createText(const(char)[] text)
     {
         onlyValid();
         auto t = impl.dom.createText(text);
         if (t is null) throw new ParserinoException("Can't create text node");
-        return Element(this, cast(DomNode*) t);
+        return Node(this, &t.node);
     }
 
     /// Create a comment
-    Element createComment(const(char)[] text)
+    Node createComment(const(char)[] text)
     {
         onlyValid();
         auto c = impl.dom.createComment(text);
         if (c is null) throw new ParserinoException("Can't create comment");
-        return Element(this, cast(DomNode*) c);
+        return Node(this, &c.node);
     }
 
     ///
@@ -364,12 +552,13 @@ struct Document
         Document d = `<p>`;
 
         Element p = d.body.firstChild;
-        Element t = d.createText("this is a test");
-        Element c = d.createComment("this is a comment");
-        p.appendChild(t);
-        p.appendChild(c);
+        Node t = d.createText("this is a test");
+        Node c = d.createComment("this is a comment");
+        p.append(t);
+        p.append(c);
 
         assert(p == "<p>this is a test<!--this is a comment--></p>");
+        assert(t.isText && c.isComment);
     }
 
     unittest
@@ -383,22 +572,27 @@ struct Document
         assert(html == "<html><head></head><body></body></html>");
     }
 
+    /// The document as a `Node` (for the functions that take any node)
+    @property Node node() { onlyValid(); return Node(this, &impl.dom.node); }
+
     /// The `<html>` element
     @property Element documentElement()
     {
         onlyValid();
         while (impl.dom.documentElement is null && impl.advance()) {}
-        return Element(this, cast(DomNode*) impl.dom.documentElement);
+        auto e = impl.dom.documentElement;
+        return Element(this, e is null ? null : &e.node);
     }
 
-    /// The `<body>` element
+    /// The `<body>` element: the first `<body>` or `<frameset>` child of `<html>`, as in the DOM
     @property Element body()
     {
         onlyValid();
-        while (impl.parsing && (impl.dom.body is null || !impl.isStable(cast(DomNode*) impl.dom.body)))
+        while (impl.parsing && (impl.dom.body is null || !impl.isStable(&impl.dom.body.node)))
             impl.advance();
 
-        return Element(this, cast(DomNode*) impl.dom.body);
+        auto b = impl.dom.body;
+        return Element(this, b is null ? null : &b.node);
     }
 
     /// The `<head>` element
@@ -408,7 +602,8 @@ struct Document
         while (impl.parsing && impl.dom.head is null)
             impl.advance();
 
-        return Element(this, cast(DomNode*) impl.dom.head);
+        auto h = impl.dom.head;
+        return Element(this, h is null ? null : &h.node);
     }
 
     unittest
@@ -417,42 +612,53 @@ struct Document
 
         assert(doc.head.isValid());
         assert(doc.body.isValid());
-        assert(doc.body.innerText == "Text");
-        assert(doc.documentElement.name == "html");
+        assert(doc.body.textContent == "Text");
+        assert(doc.documentElement.localName == "html");
+
+        // With a frameset, the body is the frameset
+        Document f = "<span><frameset><frame>";
+        assert(f.body.localName == "frameset");
+        assert(f.body.parent == f.documentElement);
     }
 
     // Note: the forwarders below use a local variable, because dmd 2.112 miscompiles
     // `return temporary().method();` when the result has a destructor.
 
     /// Get an element by id. It returns an invalid element (`== null`) if not found.
-    Element byId(string id) { auto root = rootElement; return root.byId(id); }
+    Element byId(const(char)[] id) { auto root = node; return root.byId(id); }
 
     /// A lazy range of elements filtered by class
-    auto byClass(string name) { auto root = rootElement; return root.byClass(name); }
+    auto byClass(string name) { auto root = node; return root.byClass(name); }
 
-    /// A lazy range of elements filtered by tag name
-    auto byTagName(string name) { auto root = rootElement; return root.byTagName(name); }
+    /// A lazy range of elements filtered by tag name (`"*"`: all the elements)
+    auto byTagName(string name) { auto root = node; return root.byTagName(name); }
 
-    /++ A lazy range of elements identified by an adjacent comment
+    /++ A lazy range of the comments with this text (whitespace at the ends ignored)
     + ---
-    + Document doc = "<div><!--hello--><p></p></div>";
-    + Element e = doc.byComment("hello").front;
-    + assert(e.next.name == "p");
+    + Document doc = "<div><!-- hello --><p></p></div>";
+    + Node c = doc.byComment("hello").front;
+    + assert(c.nextSibling.localName == "p");
     + ---
     +/
-    auto byComment(string comment, bool stripSpaces = true) { auto root = rootElement; return root.byComment(comment, stripSpaces); }
+    auto byComment(string text) { auto root = node; return root.byComment(text); }
+
+    /// A lazy range of the comments with exactly this text
+    auto byCommentExact(string text) { auto root = node; return root.byCommentExact(text); }
 
     /// A lazy range of elements filtered using a css selector
-    auto bySelector(const(char)[] selector) { auto root = rootElement; return root.bySelector(selector); }
+    auto bySelector(const(char)[] selector) { auto root = node; return root.bySelector(selector); }
 
     /// ditto
-    auto bySelector(Selector selector) { auto root = rootElement; return root.bySelector(selector); }
+    auto bySelector(Selector selector) { auto root = node; return root.bySelector(selector); }
 
     /// ditto, parsed at compile time
-    auto bySelector(string css)() { auto root = rootElement; return root.bySelector(ctSelector!css); }
+    auto bySelector(string css)() { auto root = node; return root.bySelector(ctSelector!css); }
+
+    /// The children of the document (the doctype, the `<html>` element, comments, ...)
+    auto children(Show show = Show.Element)() { auto root = node; return root.children!show; }
 
     /// All the nodes of the document, in tree order
-    auto descendants(VisitOrder order = VisitOrder.Normal)(bool returnAllElements = false) { auto root = rootElement; return root.descendants!order(returnAllElements); }
+    auto descendants(Show show = Show.Element)() { auto root = node; return root.descendants!show; }
 
     /++ You can cast a document to a string
     + ---
@@ -493,38 +699,59 @@ struct Document
 
     unittest
     {
-        // Elements keep the document alive
+        // Nodes keep the document alive
         Element p;
         {
             Document doc = "<p>hello</p>";
             p = doc.byTagName("p").front;
         }
 
-        assert(p.innerText == "hello");
-        assert(p.owner.isValid);
-        assert(p.owner.body.firstChild == p);
+        assert(p.textContent == "hello");
+        assert(p.ownerDocument.isValid);
+        assert(p.ownerDocument.body.firstChild == p);
     }
 
-    /// Parse a fragment of html. The fragment is not attached to the document.
-    Element fragment(const(char)[] html)
+    /++ Parse a fragment of html. The result is a `DocumentFragment` node, not attached to the
+    + document: inserting it (`append`, `before`, ...) moves its children.
+    +
+    + `context` is the element where the html is meant to go, as in the standard fragment
+    + parsing: the default is `body`. With `"tr"` the html `<td>x` gives a cell, with
+    + `"textarea"` everything is text, with `"template"` the content of a template, ...
+    + Use `"svg"` or `"math"` for foreign content.
+    +/
+    Node fragment(const(char)[] html, const(char)[] context = "body")
     {
         onlyValid();
         impl.finish();
 
-        auto context = impl.dom.createElement(Tag.Div, Ns.Html);
-        auto root = context is null ? null : parseFragment(impl.dom, context, html);
-        if (root is null) throw new ParserinoException("Can't parse the fragment (out of memory)");
-        return Element(this, &root.node);
+        import std.uni : toLower;
+        auto lower = context.toLower;
+        Ns ns = lower == "svg" ? Ns.Svg : lower == "math" ? Ns.Math : Ns.Html;
+        auto id = impl.dom.tagId(lower);
+        auto ctx = id == 0 ? null : impl.dom.createElement(id, ns);
+        if (ctx is null) throw new ParserinoException("Out of memory");
+
+        return Node(this, &parseToFragment(impl.dom, ctx, html).node);
     }
 
     ///
     unittest
     {
         Document doc = Document("<html>");
-        Element e = doc.fragment("<p><b>hello</b>world");
+        Node f = doc.fragment("<p><b>hello</b>world");
 
-        auto range = e.descendants();
-        assert(range.front.name == "p");
+        assert(f.nodeType == NodeType.DocumentFragment);
+        assert(f.descendants.front.localName == "p");
+
+        // The context changes the parsing
+        assert(doc.fragment("<td>x").children.empty);                  // in body, <td> is ignored
+        assert(doc.fragment("<td>x", "tr").children.front.localName == "td");
+        assert(doc.fragment("<b>x</b>", "textarea").textContent == "<b>x</b>");
+
+        // Inserting a fragment moves its children
+        doc.body.append(f);
+        assert(doc.body.innerHTML == "<p><b>hello</b>world</p>");
+        assert(!f.hasChildNodes);
     }
 
     private:
@@ -539,13 +766,11 @@ struct Document
             throw new ParserinoException("Can't call `" ~ fname ~ "` for an invalid/uninitialized document");
     }
 
-    Element rootElement() { onlyValid(); return Element(this, &impl.dom.node); }
-
     // The first html <title> in tree order (found lazily)
     DomNode* findTitle()
     {
-        foreach (t; rootElement.byTagName("title"))
-            if (t.node.ns == Ns.Html) return t.node;
+        foreach (t; node.byTagName("title"))
+            if (t.raw.ns == Ns.Html) return t.raw;
         return null;
     }
 
@@ -557,7 +782,7 @@ struct Document
         if (t is null) return "";
         impl.ensureClosed(t);
 
-        auto text = Element(this, t).innerText;
+        auto text = Node(this, t).textContent;
         if (raw) return text;
 
         // Strip and collapse the ASCII whitespace
@@ -566,7 +791,7 @@ struct Document
         bool space = false;
         foreach (c; text)
         {
-            if (c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r') { space = app.data.length > 0; continue; }
+            if (isHtmlSpace(c)) { space = app.data.length > 0; continue; }
             if (space) app.put(' ');
             space = false;
             app.put(c);
@@ -575,571 +800,112 @@ struct Document
     }
 }
 
-
-/// A html element (or a text/comment node)
-struct Element
+/++ A compact copy of a document tree, made by `Document.snapshot`: `Document(snapshot)` makes
++ new documents from it without parsing. It can be shared between threads.
++/
+struct Snapshot
 {
-    /// A simple key/value struct representing a html attribute
-    struct Attribute
+    /// Is this a snapshot of a document?
+    @property bool isValid() const @safe nothrow pure @nogc { return data !is null; }
+
+    private:
+    immutable(DomSnapshot)* data;
+    size_t inputLength;
+}
+
+
+/++ A node of a document: an element, a text, a comment, a doctype, the document itself, ...
++ See the module documentation for the navigation (`Show`) and the rules on errors.
++/
+struct Node
+{
+    /// The document of this node
+    @property Document ownerDocument() { return doc; }
+
+    /// Is this a valid node?
+    @property bool isValid() const @safe nothrow pure @nogc { return raw !is null; }
+
+    /// The type of the node (`NodeType.Element`, `NodeType.Text`, ...)
+    @property NodeType nodeType() const { onlyValid(); return raw.type; }
+
+    /++ The name of the node, as in the DOM: the tag name for elements (uppercase for html
+    + elements: `"DIV"`), `"#text"`, `"#comment"`, `"#document"`, `"#document-fragment"`, the
+    + name of a doctype, the target of a processing instruction.
+    +/
+    @property string nodeName()
     {
-        string name;    /// Name of the attribute. For example "href"
-        string value;   /// Value of the attribute. For example "https://dlang.org"
+        onlyValid();
+        final switch (raw.type)
+        {
+            case NodeType.Element: return Element(doc, raw).tagName;
+            case NodeType.Text: return "#text";
+            case NodeType.CDataSection: return "#cdata-section";
+            case NodeType.Comment: return "#comment";
+            case NodeType.Document: return "#document";
+            case NodeType.DocumentFragment: return "#document-fragment";
+            case NodeType.DocumentType: return raw.as!DomDocumentType.name.idup;
+            case NodeType.ProcessingInstruction: return raw.as!DomCharacterData.target.idup;
+        }
     }
 
-    /// The owner of this element
-    @property Document owner() { return doc; }
-
-    /// Is this element valid?
-    @property bool isValid() const @safe nothrow pure @nogc { return node !is null; }
-
-    /// Is this a html element? (and not a text or a comment node)
-    @property bool isElement() const @safe nothrow pure @nogc { return node !is null && node.type == NodeType.Element; }
+    /// Is this node an element?
+    @property bool isElement() const @safe nothrow pure @nogc { return raw !is null && raw.type == NodeType.Element; }
 
     /// Is this a text node?
-    @property bool isText() const @safe nothrow pure @nogc { return node !is null && node.type == NodeType.Text; }
+    @property bool isText() const @safe nothrow pure @nogc { return raw !is null && raw.type == NodeType.Text; }
 
     /// Is this a comment?
-    @property bool isComment() const @safe nothrow pure @nogc { return node !is null && node.type == NodeType.Comment; }
+    @property bool isComment() const @safe nothrow pure @nogc { return raw !is null && raw.type == NodeType.Comment; }
 
-    /// Is this element empty? (no elements and no text, whitespaces excluded)
-    @property bool isEmpty() { onlyValidElements(); impl.ensureClosed(node); return node.isBlank; }
+    /// This node as an `Element`, or an invalid element if it isn't one
+    Element asElement() { return isElement ? Element(doc, raw) : Element.init; }
 
     unittest
     {
-        Document doc = "<b>hello</b><br><b>";
-        import std.array;
-        import std.algorithm : map;
-        assert(doc.body.children.map!(x => x.isEmpty()).array == [false, true, true]);
+        Document doc = "<p>text<!--c--></p>";
+        Node p = doc.body.firstChild;
+        Node t = p.firstChild!(Show.All);
+
+        assert(p.isElement && p.asElement.localName == "p");
+        assert(t.isText && !t.asElement.isValid);
+        assert(p.nodeName == "P" && t.nodeName == "#text" && t.nextSibling!(Show.All).nodeName == "#comment");
+        assert(doc.node.nodeName == "#document" && doc.node.nodeType == NodeType.Document);
     }
 
-    /// Return a lazy range of attributes for this element
-    @property AttributeRange attributes()
-    {
-        onlyRealElements();
-        impl.ensureAttrs(node);
-        return AttributeRange(doc, element.firstAttr);
-    }
-
-    /// Check if an attribute exists
-    bool hasAttribute(const(char)[] attr)
-    {
-        onlyRealElements();
-        impl.ensureAttrs(node);
-        return attributeByName(element, attr) !is null;
-    }
-
-    /// Remove an attribute from this element
-    void removeAttribute(const(char)[] attr)
-    {
-        onlyRealElements();
-        impl.finish();
-        if (auto a = attributeByName(element, attr)) element.removeAttribute(a);
-    }
-
-    /// Set an attribute for this element
-    void setAttribute(const(char)[] name, const(char)[] value)
-    {
-        onlyRealElements();
-        impl.finish();
-        auto dom = impl.dom;
-        if (auto a = attributeByName(element, name))
-        {
-            a.value = dom.copy(value);
-            return;
-        }
-
-        import std.uni : toLower;
-        auto a = dom.createAttribute(name.toLower, value);
-        if (a is null) throw new ParserinoException("Can't set attribute `" ~ name.idup ~ "`");
-        element.appendAttribute(a);
-    }
-
-    /// Get an attribute. It returns `null` if the attribute is missing.
-    string getAttribute(const(char)[] attr)
-    {
-        auto v = getAttributeView(attr);
-        if (v is null) return null;
-        return v.length == 0 ? "" : v.idup;
-    }
-
-    /++ Get an attribute without copying it.
-    + The slice points into the document memory: it is valid until the attribute is changed
-    + or the document is destroyed. It returns `null` if the attribute is missing.
+    /++ The text of the node (DOM `textContent`): the text of all the descendants for elements
+    + and fragments, the data for texts, comments and processing instructions, `null` for the
+    + document and the doctype.
     +/
-    const(char)[] getAttributeView(const(char)[] attr)
+    @property string textContent()
     {
-        onlyRealElements();
-        impl.ensureAttrs(node);
-
-        auto a = attributeByName(element, attr);
-        if (a is null) return null;
-        return attrValue(a);
-    }
-
-    /// The id of this element (if present)
-    @property string id()
-    {
-        onlyRealElements();
-        impl.ensureAttrs(node);
-        if (element.idAttr is null) return string.init;
-        return attrValue(element.idAttr).idup;
-    }
-
-    /// All the classes of this element
-    @property auto classes()
-    {
-        import std.algorithm : splitter, filter;
-        import std.ascii : isWhite;
-
-        onlyRealElements();
-        impl.ensureAttrs(node);
-
-        string cls = element.classAttr is null ? "" : attrValue(element.classAttr).idup;
-        return cls.splitter!isWhite.filter!(x => x.length > 0);
-    }
-
-    unittest
-    {
-        import std.array;
-
-        Document doc = Document(`<html><p class="hello world" id="world" style><a>`);
-        assert(doc.byId("world").attributes.array == [Attribute("class", "hello world"), Attribute("id", "world"), Attribute("style", "")]);
-        assert(doc.byTagName("a").front.attributes.empty);
-
-        auto p = doc.byTagName("p").front;
-        auto a = doc.byTagName("a").front;
-
-        assert(p.hasAttribute("style"));
-        assert(p.hasAttribute("href") == false);
-        assert(p.classes.array == ["hello", "world"]);
-
-        assert(p.id == "world");
-
-        a.setAttribute("href", "url");
-
-        assert(a.hasAttribute("href"));
-        assert(a.getAttribute("href") == "url");
-        assert(a.getAttribute("title") is null);
-        assert(p.getAttribute("style") !is null);
-        assert(p.getAttribute("style") == "");
-
-        p.removeAttribute("id");
-        p.removeAttribute("class");
-
-        assert(p.hasAttribute("style"));
-        assert(!p.hasAttribute("id"));
-        assert(!p.hasAttribute("class"));
-        assert(p.id.length == 0);
-        assert(p.classes.array.length == 0);
-    }
-
-    bool opEquals(const typeof(null)) const @safe nothrow pure @nogc { return !isValid; }
-    bool opEquals(E)(auto ref const E e) const
-    {
-        static if (isSomeString!E) return isValid && e == this.toString;
-        else return e.node is this.node;
-    }
-
-    size_t toHash() const nothrow @safe { return hashOf(node); }
-
-    /// The tag name of this element. For example "p" or "div" ("#text" for texts, "!--" for comments)
-    @property string name() { return nameView.idup; }
-
-    /// ditto, without copying
-    @property const(char)[] nameView()
-    {
-        onlyValidElements();
-        return node.localName;
-    }
-
-    unittest
-    {
-        Document doc = Document(`<!doctype html><html><body id="bo"/>`);
-        Element a;
-        Element b = doc.body;
-        Element c = doc.head;
-        Element d = b;
-        Element e = a;
-
-        assert(a.isValid == false);
-        assert(a == e);
-        assert(a == null);
-
-        assert(b != a);
-        assert(b != c);
-        assert(d == b);
-
-        Element f = doc.byTagName("body").front;
-        Element g = doc.byId("bo");
-
-        assert(b == f);
-        assert(b == g);
-
-        assert(g.name == "body");
-        assert(c.name == "head");
-    }
-
-    alias clone = dup;
-
-    /// Clone this element. The new element is not attached to the document.
-    Element dup(bool deep = true)
-    {
-        onlyValidElements();
-        impl.ensureClosed(node);
-
-        auto n = impl.dom.importNode(node, deep);
-        if (n is null) throw new ParserinoException("Can't clone the element");
-        return Element(doc, n);
-    }
-
-    ///
-    unittest
-    {
-        import std.array;
-        import std.algorithm : map;
-
-        Document doc = Document(`<html><p data-a="a" data-b="b"><i></i><b></b>`);
-        Element e = doc.byTagName("p").front;
-        Element f = e;
-        Element g = e.dup(false);
-        Element h = g;
-
-        assert(e!=g);
-        assert(f!=g);
-        assert(g==h);
-
-        assert(g.name == "p");
-        assert(g.attributes.array == [Attribute("data-a", "a"), Attribute("data-b", "b")]);
-        assert(g.descendants.map!(x=>x.name).array == []);
-
-        g = e.clone(true);
-        assert(g.name == "p");
-        assert(g.attributes.array == [Attribute("data-a", "a"), Attribute("data-b", "b")]);
-        assert(g.descendants.map!(x=>x.name).array == ["i", "b"]);
-    }
-
-    /// Insert an element (or a text, or a fragment) before this one
-    void prependSibling(E)(auto ref E el)
-    {
-        onlyValidElements();
-        impl.finish();
-
-        foreach (n; nodesToInsert(el))
-            node.insertBefore(n);
-    }
-
-    /// Insert an element (or a text, or a fragment) after this one
-    void appendSibling(E)(auto ref E el)
-    {
-        onlyValidElements();
-        impl.finish();
-
-        DomNode* after = node;
-        foreach (n; nodesToInsert(el))
-        {
-            after.insertAfter(n);
-            after = n;
-        }
-    }
-
-    /// Put a new child (or a text, or a fragment) in the first position
-    void prependChild(E)(auto ref E el)
-    {
-        onlyRealElements();
-        impl.finish();
-
-        auto first = node.firstChild;
-        foreach (n; nodesToInsert(el))
-        {
-            if (first is null) node.appendChild(n);
-            else first.insertBefore(n);
-        }
-    }
-
-    /// Put a new child (or a text, or a fragment) in the last position
-    void appendChild(E)(auto ref E el)
-    {
-        onlyRealElements();
-        impl.finish();
-
-        foreach (n; nodesToInsert(el))
-            node.appendChild(n);
-    }
-
-    ///
-    unittest
-    {
-        Document doc = "<p>";
-        Element p = doc.byTagName("p").front;
-        p.prependSibling("<a>first-before</a><a><b>second</b></a>".asFragment);
-        p.appendSibling("<a>first-after</a><a><b>second</b></a>".asFragment);
-        assert(doc.toString() == `<html><head></head><body><a>first-before</a><a><b>second</b></a><p></p><a>first-after</a><a><b>second</b></a></body></html>`);
-    }
-
-    ///
-    unittest
-    {
-        Document doc = `<p id="start">`;
-
-        Element p = doc.byTagName("p").front;
-        p.appendChild("<p>post</p><p>post1</p>".asFragment);
-        p.prependChild("<p>pre</p><p>pre1</p>".asFragment);
-        p.appendChild("<p>text</p>");
-
-        assert(doc.body.toString == `<body><p id="start"><p>pre</p><p>pre1</p><p>post</p><p>post1</p>&lt;p&gt;text&lt;/p&gt;</p></body>`);
-    }
-
-    unittest
-    {
-        Document doc = "<p>";
-        Element e = doc.body.children.front;
-        e.appendChild("world");
-        e.prependChild("hello");
-        e.appendChild("!");
-        e.prependSibling("before");
-        e.appendSibling("after");
-        assert(doc == "<html><head></head><body>before<p>helloworld!</p>after</body></html>");
-    }
-
-    ///
-    void opOpAssign(string op, E)(auto ref E e) if (op == "~") { appendChild(e); }
-
-    /// Remove this element from the document. The element is still valid and can be inserted again.
-    bool remove()
-    {
-        onlyValidElements();
-        impl.finish();
-
-        if (node.parent is null) return false;
-        (node).remove();
-        return true;
-    }
-
-    unittest
-    {
-        Document doc = "<p>";
-        Element bod = doc.body;
-        Element other = doc.createElement("a");
-        bod ~= other;
-        bod ~= doc.createElement("a");
-        bod.appendChild(doc.createElement("b"));
-        bod.prependChild(doc.createElement("i"));
-        assert(doc.body.toString == "<body><i></i><p></p><a></a><a></a><b></b></body>");
-    }
-
-    unittest
-    {
-        Document doc = "<p><b>hello";
-        auto comment = doc.createComment("comment");
-        doc.byTagName("b").front.prependSibling(comment);
-        doc.byTagName("b").front.appendSibling(comment);
-        assert(!doc.byTagName("!--").empty);
-        assert(doc.byTagName("p").front.toString == `<p><b>hello</b><!--comment--></p>`);
-    }
-
-    unittest
-    {
-        Document doc = Document("<html>");
-
-        Element p = doc.createElement("p");
-        doc.body.appendChild(p);
-
-        Element b = doc.createElement("b");
-        Element i = doc.createElement("i");
-        Element a = doc.createElement("a");
-        p.prependSibling(b);
-        p.appendSibling(i);
-        p.appendChild(a);
-
-        assert(doc.toString == `<html><head></head><body><b></b><p><a></a></p><i></i></body></html>`);
-    }
-
-    unittest
-    {
-        Document doc = "<html>";
-        auto e = doc.createElement("a");
-        assert (doc == "<html><head></head><body></body></html>");
-
-        assert(e.remove() == false);
-
-        doc.body.appendChild(e);
-        assert (doc == "<html><head></head><body><a></a></body></html>");
-
-        assert(e.remove() == true);
-        assert(doc == "<html><head></head><body></body></html>");
-
-        assert(e.remove() == false);
-        assert(doc == "<html><head></head><body></body></html>");
-
-        assert(e == "<a></a>");
-    }
-
-    unittest
-    {
-        import std.exception : assertThrown;
-
-        Document a = "<p>";
-        Document b = "<i>";
-
-        // Elements can't be moved between documents
-        assertThrown!ParserinoException(a.body.appendChild(b.body.firstChild));
-
-        // An element can't become a child of itself
-        Element p = a.body.firstChild;
-        assertThrown!ParserinoException(p.appendChild(a.body));
-    }
-
-    /// Replace this element with another one
-    void replaceWith(E)(auto ref E el)
-    {
-        onlyValidElements();
-
-        static if (is(E == Element)) assert(el != this);
-
-        prependSibling(el);
-        remove();
-    }
-
-    /// Copy another element here (attributes and, if deep, children)
-    void copyFrom(E = Element)(auto ref E e, bool deep = true)
-    {
-        onlyRealElements();
-        e.onlyRealElements();
-        impl.finish();
-
-        assert(e != this);
-
-        while (element.firstAttr !is null) element.removeAttribute(element.firstAttr);
-
-        // The tag too
-        element.node.name = e.node.name;
-        element.node.ns = e.node.ns;
-        element.qualifiedName = e.element.qualifiedName;
-
-        auto dom = impl.dom;
-        for (auto a = e.element.firstAttr; a !is null; a = a.next)
-        {
-            auto na = dom.createAttribute(a.name, a.value, a.ns);
-            if (na is null) throw new ParserinoException("Out of memory");
-            na.qualifiedName = a.qualifiedName;
-            element.appendAttribute(na);
-        }
-
-        if (deep)
-        {
-            removeChildren();
-
-            for (auto c = e.node.firstChild; c !is null; c = c.next)
-            {
-                auto cl = dom.importNode(c, true);
-                if (cl is null) throw new ParserinoException("Can't clone the element");
-                node.appendChild(cl);
-            }
-        }
-    }
-
-    unittest
-    {
-        Document d = `<p id="hello"></p><a>`;
-
-        auto p = d.byId("hello");
-        auto a = d.byTagName("a").front;
-
-        p.copyFrom(a);
-
-        assert(p.attributes.empty);
-    }
-
-    unittest
-    {
-        Document doc = `<html><p class="p1"><b><p class="p2"><i>`;
-
-        Element p1 = doc.byClass("p1").frontOrThrow;
-        Element p1Copy = p1;
-
-        Element p2 = doc.byClass("p2").frontOrThrow;
-        Element b = p1.descendants.frontOrThrow;
-        Element i = p2.descendants.frontOrThrow;
-
-        i.replaceWith(b);
-        assert(p1.descendants.empty == true);
-        assert(p2.descendants.frontOrThrow.name == "b");
-        assert(p2.descendants.frontOrThrow == b);
-
-        p1.copyFrom(p2);
-        assert(p1.classes.frontOrThrow == "p2");
-        assert(p1Copy.classes.frontOrThrow == "p2");
-        assert(p1.descendants.frontOrThrow.name == "b");
-        assert(p1.descendants.frontOrThrow != b);
-        assert(p2.descendants.frontOrThrow == b);
-    }
-
-    /// Set the html content of this element
-    @property void innerHTML(const(char)[] html)
-    {
-        onlyRealElements();
-        impl.finish();
-
-        auto frag = parseFragment(impl.dom, element, html);
-        if (frag is null) throw new ParserinoException("Can't parse the fragment (out of memory)");
-
-        // Old children are detached (not destroyed): other `Element`s may still point to them.
-        removeChildren();
-
-        while (frag.firstChild !is null)
-        {
-            auto c = frag.firstChild;
-            (c).remove();
-            node.appendChild(c);
-        }
-    }
-
-    /// Get the html content of this element
-    @property string innerHTML()
-    {
-        import std.array : appender;
-
-        onlyRealElements();
-        impl.ensureClosed(node);
-
-        auto app = appender!string;
-        serializeTo(Serialize.Children, node, (const(char)[] s) { app.put(s); });
-        return app.data;
-    }
-
-    /// Get the text of this element (ignoring html tags)
-    @property string innerText()
-    {
-        onlyValidElements();
-        impl.ensureClosed(node);
-
-        if (node.type == NodeType.Text || node.type == NodeType.Comment
-            || node.type == NodeType.ProcessingInstruction)
-        {
-            return node.as!DomCharacterData.data.idup;
-        }
-
-        if (node.type != NodeType.Element && node.type != NodeType.Document)
-            return string.init;
+        onlyValid();
+        impl.ensureClosed(raw);
+
+        if (raw.isCharacterData) return raw.as!DomCharacterData.data.idup;
+        if (raw.type != NodeType.Element && raw.type != NodeType.DocumentFragment) return null;
 
         import std.array : appender;
         auto app = appender!string;
-        node.textContent(app);
+        raw.textContent(app);
         return app.data;
     }
 
-    /// Set the inner text of this element (replacing html)
-    @property void innerText(const(char)[] text)
+    /++ Set the text: for elements and fragments it replaces all the children with a text node,
+    + for texts, comments and processing instructions it replaces the data. It does nothing on
+    + the document and the doctype (as in the DOM).
+    +/
+    @property void textContent(const(char)[] text)
     {
-        onlyValidElements();
+        onlyValid();
         impl.finish();
 
-        if (node.type != NodeType.Element)
+        if (auto cd = raw.asCharacterData)
         {
-            if (auto cd = node.asCharacterData)
-                if (!cd.setData(text)) throw new ParserinoException("Out of memory");
+            if (!cd.setData(text)) throw new ParserinoException("Out of memory");
             return;
         }
+
+        if (raw.type != NodeType.Element && raw.type != NodeType.DocumentFragment) return;
 
         removeChildren();
 
@@ -1147,31 +913,39 @@ struct Element
         {
             auto t = impl.dom.createText(text);
             if (t is null) throw new ParserinoException("Can't create text node");
-            node.appendChild(cast(DomNode*) t);
+            raw.appendChild(&t.node);
         }
+    }
+
+    /// The data of a text, comment or processing instruction without copying it; `null` for other nodes
+    @property const(char)[] dataView()
+    {
+        onlyValid();
+        impl.ensureClosed(raw);
+        auto cd = raw.asCharacterData;
+        return cd is null ? null : cd.data;
     }
 
     ///
     unittest
     {
-        import std.array;
-
         Document doc = Document("<html><p>");
         Element p = doc.byTagName("p").front;
 
         assert(p.descendants.empty);
         p.innerHTML = `<a href="uri">link</a>`;
-        assert(p.descendants.front.name == "a");
-        assert(p.byTagName("a").front.innerText == "link");
+        assert(p.descendants.front.localName == "a");
+        assert(p.byTagName("a").front.textContent == "link");
 
-        p.byTagName("a").front.innerText = "hello";
-        assert(p.byTagName("a").front.innerText == "hello");
+        p.byTagName("a").front.textContent = "hello";
+        assert(p.byTagName("a").front.textContent == "hello");
 
         Element a = p.byTagName("a").front;
-        p.innerText = "plain text";
+        p.textContent = "plain text";
 
-        assert(p.descendants(true).front.name == "#text");
-        assert(p.innerText == "plain text");
+        assert(p.descendants!(Show.All).front.nodeName == "#text");
+        assert(p.textContent == "plain text");
+        assert(p.firstChild!(Show.Text).dataView == "plain text");
         assert(p.byTagName("a").empty);
 
         // The old child is detached, but still valid
@@ -1179,179 +953,58 @@ struct Element
         assert(a == `<a href="uri">hello</a>`);
     }
 
-    /// Search for an element by id. It returns an invalid element (`== null`) if not found.
-    Element byId(string id)
-    {
-        onlyRealOrDocument();
-        return NodeRange!IdFilter(doc, node, true, false, IdFilter(id)).frontOrInit;
-    }
-
-    /++ Search for elements by class
-    + See_also: `parserino.Document.byClass`
+    /++ The parent, if it matches `show` (else an invalid node). By default the parent element:
+    + the parent of `<html>` is the document, so `html.parent` is invalid and
+    + `html.parent!(Show.All)` is the document.
     +/
-    auto byClass(string name)
+    auto parent(Show show = Show.Element)()
     {
-        onlyRealOrDocument();
-        return NodeRange!ClassFilter(doc, node, true, false, ClassFilter(name));
+        onlyValid();
+        impl.ensureStable(raw);
+        auto p = raw.parent;
+        return NodeOf!show(doc, p !is null && shown(show, p) ? p : null);
     }
 
-    /++ Search for elements by tag name ("#text" and "!--" select text and comment nodes)
-    + See_also: `parserino.Document.byTagName`
-    +/
-    auto byTagName(string name)
+    /// The first child that matches `show`
+    auto firstChild(Show show = Show.Element)()
     {
-        onlyRealOrDocument();
-        return NodeRange!TagFilter(doc, node, true, true, TagFilter(name));
+        onlyValid();
+        return NodeRange!(AnyFilter, show)(doc, raw, false, AnyFilter.init).frontOrInit;
     }
 
-    /++ Search for elements by comment
-    + ---
-    + Document doc = "<div><!--hello--><p></p></div>";
-    + Element e = doc.byComment("hello").front;
-    + assert(e.next.name == "p");
-    + ---
-    + See_also: `parserino.Document.byComment`
-    +/
-    auto byComment(string comment, bool stripSpaces = true)
+    /// The last child that matches `show`
+    auto lastChild(Show show = Show.Element)()
     {
-        onlyRealOrDocument();
-        return NodeRange!CommentFilter(doc, node, true, true, CommentFilter(comment, stripSpaces));
+        onlyValid();
+        impl.ensureClosed(raw);
+
+        auto n = raw.lastChild;
+        while (n !is null && !shown(show, n)) n = n.prev;
+        return NodeOf!show(doc, n);
     }
 
-    /++ Search for elements by css selector
-    + See_also: `parserino.Document.bySelector`
-    +/
-    auto bySelector(const(char)[] selector) { return bySelector(Selector(selector)); }
-
-    /// ditto
-    auto bySelector(Selector selector)
+    /// The next sibling that matches `show`
+    auto nextSibling(Show show = Show.Element)()
     {
-        onlyRealOrDocument();
-        if (!selector.isValid) throw new ParserinoException("Invalid selector");
-        return NodeRange!SelectorFilter(doc, node, true, false, SelectorFilter(selector, node));
-    }
+        onlyValid();
+        impl.ensureStable(raw);
 
-    /// ditto, parsed at compile time
-    auto bySelector(string css)() { return bySelector(ctSelector!css); }
+        if (raw.parent is null) return NodeOf!show.init;
 
-    /// Does this element match a css selector?
-    bool matches(const(char)[] selector) { return matches(Selector(selector)); }
-
-    /// ditto
-    bool matches(Selector selector)
-    {
-        onlyValidElements();
-        if (!selector.isValid) throw new ParserinoException("Invalid selector");
-        if (node.type != NodeType.Element) return false;
-
-        impl.ensureStable(node);
-        if (selector.forward && node.parent !is null) impl.ensureClosed(node.parent);
-        return impl.matches(node, selector.list, node);
-    }
-
-    ///
-    unittest
-    {
-        Document doc = Document(
-        `<html><body>
-            <ul><li>one</li><li id="this">two</li></ul>
-            <h4>title</h4>
-            <ul><li>three</li><li>four</li><li>five</li></ul>
-        `);
-
-        import std.array;
-        import std.algorithm : map, canFind;
-        Element[] res = doc.bySelector("h4+ul li:nth-of-type(2), #this").array;
-
-        assert(res.length == 2);
-
-        auto elements = res.map!(x => x.innerText).array;
-        assert(elements.canFind("two"));
-        assert(elements.canFind("four"));
-
-        assert(doc.byId("this").matches("li:last-child"));
-        assert(!doc.byId("this").matches("li:first-child"));
-
-        // A compiled selector can be reused
-        auto sel = Selector("ul > li");
-        assert(doc.bySelector(sel).walkLength == 5);
-        assert(Document("<ul><li>").bySelector(sel).walkLength == 1);
-    }
-
-    unittest
-    {
-        import std.exception : assertThrown;
-
-        Document doc = "<div><!--hello--><p></p></div>";
-        Element e = doc.byComment("hello").front;
-        assert(e.next.name == "p");
-        assert(doc.byComment("hell").frontOrInit == null);
-
-        assertThrown!ParserinoException(doc.bySelector("div >"));
-        assertThrown!ParserinoException(doc.bySelector("a["));
-    }
-
-    unittest
-    {
-        Document doc = Document(`<html><body><p id="test"/><p id="another" class="hello world">this is a text`);
-
-        {
-            Element e = doc.byId("test");
-            assert(e.isValid);
-            assert(e.name == "p");
-            assert(e.id == "test");
-            assert(doc.byId("blah") == null);
-        }
-
-        import std.array;
-
-        {
-            Element[] res = doc.byClass("world").array;
-            assert(res.length == 1);
-            assert(res[0].id == "another");
-            assert(res[0].name == "p");
-        }
-
-        {
-            Element[] res = doc.byTagName("p").array;
-            assert(res.length == 2);
-            assert(res[0].id == "test");
-            assert(res[1].id == "another");
-        }
-    }
-
-    /// The next element in the document
-    @property Element next(bool includeAllElements = false)
-    {
-        onlyValidElements();
-        impl.ensureStable(node);
-
-        if (node.parent is null) return Element.init;
-
-        auto r = NodeRange!AnyFilter(doc, node.parent, false, includeAllElements, AnyFilter.init);
-        r.start(node);
+        auto r = NodeRange!(AnyFilter, show)(doc, raw.parent, false, AnyFilter.init);
+        r.start(raw);
         return r.frontOrInit;
     }
 
-    /// The previous element in the document
-    @property Element prev(bool includeAllElements = false)
+    /// The previous sibling that matches `show`
+    auto previousSibling(Show show = Show.Element)()
     {
-        onlyValidElements();
-        impl.ensureStable(node);
+        onlyValid();
+        impl.ensureStable(raw);
 
-        auto el = node.prev;
-        while (el !is null && !includeAllElements && el.type != NodeType.Element)
-            el = el.prev;
-
-        return Element(doc, el);
-    }
-
-    /// The parent element
-    @property Element parent()
-    {
-        onlyValidElements();
-        impl.ensureStable(node);
-        return Element(doc, node.parent);
+        auto n = raw.prev;
+        while (n !is null && !shown(show, n)) n = n.prev;
+        return NodeOf!show(doc, n);
     }
 
     unittest
@@ -1361,34 +1014,17 @@ struct Element
         Element p = d.byTagName("p").front;
         Element i = d.byTagName("i").front;
 
-        assert(i.prev == p);
-        assert(p.next == i);
-        assert(p.next(true).innerText == "hmm");
-        assert(i.prev(true).innerText == "hmm");
+        assert(i.previousSibling == p);
+        assert(p.nextSibling == i);
+        assert(p.nextSibling!(Show.All).textContent == "hmm");
+        assert(i.previousSibling!(Show.All).textContent == "hmm");
 
-        assert(i.next == null);
-        assert(i.next(true).innerText == "ohh");
-    }
+        assert(i.nextSibling == null);
+        assert(i.nextSibling!(Show.All).textContent == "ohh");
+        assert(i.nextSibling!(Show.Text) == null);
 
-    /// The first child
-    @property Element firstChild(bool includeAllElements = false)
-    {
-        onlyValidElements();
-        if (node.type != NodeType.Element && node.type != NodeType.Document) return Element.init;
-        return NodeRange!AnyFilter(doc, node, false, includeAllElements, AnyFilter.init).frontOrInit;
-    }
-
-    /// The last child
-    @property Element lastChild(bool includeAllElements = false)
-    {
-        onlyValidElements();
-        impl.ensureClosed(node);
-
-        auto el = node.lastChild;
-        while (el !is null && !includeAllElements && el.type != NodeType.Element)
-            el = el.prev;
-
-        return Element(doc, el);
+        assert(d.documentElement.parent == null);
+        assert(d.documentElement.parent!(Show.All) == d.node);
     }
 
     unittest
@@ -1397,92 +1033,82 @@ struct Element
 
         assert(d.body.firstChild.firstChild == "<b></b>");
         assert(d.body.firstChild.lastChild == "<b></b>");
-        assert(d.body.firstChild.firstChild(true) == "<!--hello-->");
-        assert(d.body.firstChild.lastChild(true) == "text");
+        assert(d.body.firstChild.firstChild!(Show.All) == "<!--hello-->");
+        assert(d.body.firstChild.lastChild!(Show.All) == "text");
+        assert(d.body.firstChild.lastChild!(Show.Comment) == "<!--hello-->");
     }
 
-    /// All the children contained in this element. (deep search)
-    auto descendants(VisitOrder order = VisitOrder.Normal)(bool returnAllElements = false)
+    /// The children that match `show`, as a lazy (bidirectional) range
+    auto children(Show show = Show.Element)()
     {
-        onlyRealOrDocument();
-        return NodeRange!(AnyFilter, order)(doc, node, true, returnAllElements, AnyFilter.init);
+        onlyValid();
+        return NodeRange!(AnyFilter, show)(doc, raw, false, AnyFilter.init);
     }
 
-    /// All the children contained in this element. (non-deep search)
-    auto children(VisitOrder order = VisitOrder.Normal)(bool returnAllElements = false)
+    /// All the descendants that match `show`, in tree order, as a lazy (bidirectional) range
+    auto descendants(Show show = Show.Element)()
     {
-        onlyRealOrDocument();
-        return NodeRange!(AnyFilter, order)(doc, node, false, returnAllElements, AnyFilter.init);
+        onlyValid();
+        return NodeRange!(AnyFilter, show)(doc, raw, true, AnyFilter.init);
+    }
+
+    /// Does this node have children? (any kind of node)
+    bool hasChildNodes()
+    {
+        onlyValid();
+        return !children!(Show.All).empty;
     }
 
     ///
     unittest
     {
-        Document d = "<p><b>test</b>test2</p>";
+        import std.array : array;
 
-        import std.array;
-        Element[] c = d.body.firstChild.children(true).array;
-        assert(c.length == 2);
+        Document d = "<p><b>test</b>test2<!--c--></p>";
+        Element p = d.body.firstChild;
+
+        Node[] c = p.children!(Show.All).array;
+        assert(c.length == 3);
         assert(c[0] == "<b>test</b>");
         assert(c[1] == "test2");
+
+        assert(p.children.walkLength == 1);
+        assert(p.children!(Show.Text | Show.Comment).walkLength == 2);
+        assert(p.hasChildNodes && p.firstChild.hasChildNodes);
+
+        // Texts and comments have no children
+        assert(c[1].children!(Show.All).empty);
+        assert(!c[1].hasChildNodes);
     }
 
     unittest
     {
-        Document d = "<p><!--comment-->text";
+        import std.algorithm : map;
+        import std.array : array, join;
+        import std.range : retro;
 
-        Element p = d.byTagName("p").frontOrThrow;
+        Document d =
+            `<p>
+                <b>
+                    <i>
+                    </i>
+                    <a>
+                    </a>
+                </b>
+            </p>
+            <br>`;
 
-        assert(p.children.empty == true);
-        assert(p.children(false).empty == true);
-        assert(p.children(true).empty == false);
-    }
+        assert(d.body.descendants.map!(x => x.localName).join("->") == "p->b->i->a->br");
+        assert(d.body.descendants.retro.map!(x => x.localName).join("->") == "br->a->i->b->p");
+        assert(d.body.children.map!(x => x.localName).join("->") == "p->br");
+        assert(d.body.children.retro.map!(x => x.localName).join("->") == "br->p");
 
-    alias canFind = contains;
-
-    /// Check if this element contains another one
-    bool contains(E = Element)(auto ref E e, bool deep = true)
-    {
-        onlyRealElements();
-
-        if (e == this) return false;
-
-        Element tmp = e.parent;
-        while (tmp != null)
-        {
-            if (tmp == this) return true;
-            else if (!deep) return false;
-            else tmp = tmp.parent;
-        }
-
-        return false;
-    }
-
-    /// Check if this element is the ancestor of another one
-    bool isAncestorOf(E = Element)(auto ref E e) { return this.contains(e); }
-
-    /// Check if this element is the descendant of another one
-    bool isDescendantOf(E = Element)(auto ref E e) { return e.contains(this); }
-
-    unittest
-    {
-        import std.exception : assertThrown;
-
-        Document d = "<html><p><!--hey<b>--><a>hello</a>";
-        Element p = d.byTagName("p").front;
-
-        Element c = p.children(true).front;
-        assert(c.innerText == "hey<b>");
-        assertThrown(c.hasAttribute("hello") == false);
-        assertThrown(c.children.empty);
-        assertThrown(c.byTagName("b").empty);
-        assert(c.name == "!--");
-        assert(c.isComment);
-
-        assert(p.contains(c));
-        assert(p.canFind(c));
-
-        assert(!d.head.canFind(c));
+        // Both ends
+        auto r = d.body.descendants;
+        assert(r.front.localName == "p" && r.back.localName == "br");
+        r.popFront();
+        r.popBack();
+        assert(r.map!(x => x.localName).array == ["b", "i", "a"]);
     }
 
     unittest
@@ -1507,74 +1133,881 @@ struct Element
         assert(doc.body.descendants.array == doc.body.children.array);
     }
 
-    unittest
+    /// Is `other` this node or one of its descendants? (as in the DOM)
+    bool contains(Node other)
     {
-        import std.array;
-
-        Document d = `<html><p><a><b>`;
-
-        assert(d.body.children.array.length == 1);
-        assert(d.body.descendants.array.length == 3);
-        assert(d.body.children.front.toString == d.body.descendants.front.toString);
-        assert(d.body.descendants.array[0].name == "p");
-        assert(d.body.descendants.array[1].name == "a");
-
-        auto b = d.byTagName("b").front;
-        auto p = d.byTagName("p").front;
-        assert(p.contains(b));
-        assert(!p.contains(b, false));
-
-        assert(p.isAncestorOf(b));
-        assert(b.isDescendantOf(p));
-        assert(!p.isDescendantOf(b));
-        assert(!b.isAncestorOf(p));
-
-        assert(!p.isDescendantOf(p));
-        assert(!b.isAncestorOf(b));
+        onlyValid();
+        if (!other.isValid) return false;
+        impl.ensureStable(other.raw);
+        return raw.contains(other.raw);
     }
 
     unittest
+    {
+        Document d = "<html><p><!--hey<b>--><a>hello<b></b></a>";
+        Element p = d.byTagName("p").front;
+        Element b = d.byTagName("b").front;
+
+        Node c = p.firstChild!(Show.All);
+        assert(c.textContent == "hey<b>");
+        assert(c.isComment && c.nodeName == "#comment");
+        assert(c.children!(Show.All).empty);
+
+        assert(p.contains(c));
+        assert(p.contains(b));
+        assert(p.contains(p));
+        assert(!b.contains(p));
+        assert(!d.head.contains(c));
+        assert(d.node.contains(c));
+    }
+
+    /// Search for an element by id. It returns an invalid element (`== null`) if not found.
+    Element byId(const(char)[] id)
+    {
+        onlyValid();
+        return NodeRange!(IdFilter, Show.Element)(doc, raw, true, IdFilter(id)).frontOrInit;
+    }
+
+    /++ Search for elements by class
+    + See_also: `parserino.Document.byClass`
+    +/
+    auto byClass(string name)
+    {
+        onlyValid();
+        return NodeRange!(ClassFilter, Show.Element)(doc, raw, true, ClassFilter(name));
+    }
+
+    /++ Search for elements by tag name (case-insensitive for html elements; `"*"` gives all the elements)
+    + See_also: `parserino.Document.byTagName`
+    +/
+    auto byTagName(string name)
+    {
+        onlyValid();
+        return NodeRange!(TagFilter, Show.Element)(doc, raw, true, TagFilter(name));
+    }
+
+    /++ Search for comments by text (whitespace at the ends ignored)
+    + See_also: `parserino.Document.byComment`
+    +/
+    auto byComment(string text)
+    {
+        onlyValid();
+        return NodeRange!(CommentFilter, Show.Comment)(doc, raw, true, CommentFilter(text, true));
+    }
+
+    /// Search for comments with exactly this text
+    auto byCommentExact(string text)
+    {
+        onlyValid();
+        return NodeRange!(CommentFilter, Show.Comment)(doc, raw, true, CommentFilter(text, false));
+    }
+
+    /++ Search for elements by css selector
+    + See_also: `parserino.Document.bySelector`
+    +/
+    auto bySelector(const(char)[] selector) { return bySelector(Selector(selector)); }
+
+    /// ditto
+    auto bySelector(Selector selector)
+    {
+        onlyValid();
+        if (!selector.isValid) throw new ParserinoException("Invalid selector");
+        return NodeRange!(SelectorFilter, Show.Element)(doc, raw, true, SelectorFilter(selector, raw));
+    }
+
+    /// ditto, parsed at compile time
+    auto bySelector(string css)() { return bySelector(ctSelector!css); }
+
+    unittest
+    {
+        import std.exception : assertThrown;
+
+        Document doc = "<div><!-- hello --><p></p><!--hello--></div>";
+        Node c = doc.byComment("hello").front;
+        assert(c.nextSibling.localName == "p");
+        assert(doc.byComment("hello").walkLength == 2);
+        assert(doc.byCommentExact("hello").walkLength == 1);
+        assert(doc.byComment("hell").frontOrInit == null);
+
+        assertThrown!ParserinoException(doc.bySelector("div >"));
+        assertThrown!ParserinoException(doc.bySelector("a["));
+    }
+
+    unittest
+    {
+        Document doc = Document(`<html><body><p id="test"/><p id="another" class="hello world">this is a text`);
+
+        {
+            Element e = doc.byId("test");
+            assert(e.isValid);
+            assert(e.localName == "p");
+            assert(e.id == "test");
+            assert(doc.byId("blah") == null);
+        }
+
+        import std.array;
+
+        {
+            Element[] res = doc.byClass("world").array;
+            assert(res.length == 1);
+            assert(res[0].id == "another");
+            assert(res[0].localName == "p");
+        }
+
+        {
+            Element[] res = doc.byTagName("p").array;
+            assert(res.length == 2);
+            assert(res[0].id == "test");
+            assert(res[1].id == "another");
+        }
+
+        assert(doc.byTagName("P").walkLength == 2);
+        assert(doc.byTagName("*").walkLength == 5);
+        assert(doc.byTagName("#text").empty);
+    }
+
+    /++ Append a node (or a text, or a fragment) as the last child.
+    + Strings become text nodes; `"<b>x</b>".asFragment` is parsed as html (in the context of
+    + this element); a `DocumentFragment` (see `Document.fragment`) gives its children.
+    +/
+    void append(E)(auto ref E what)
+    {
+        onlyParent();
+        impl.finish();
+
+        foreach (n; nodesToInsert(what, raw, raw))
+            raw.appendChild(n);
+    }
+
+    /// Insert a node (or a text, or a fragment) as the first child
+    void prepend(E)(auto ref E what)
+    {
+        onlyParent();
+        impl.finish();
+
+        auto first = raw.firstChild;
+        foreach (n; nodesToInsert(what, raw, raw))
+        {
+            if (first is null) raw.appendChild(n);
+            else first.insertBefore(n);
+        }
+    }
+
+    /// Insert a node (or a text, or a fragment) before this one
+    void before(E)(auto ref E what)
+    {
+        onlySibling();
+        impl.finish();
+
+        foreach (n; nodesToInsert(what, raw.parent, raw))
+            raw.insertBefore(n);
+    }
+
+    /// Insert a node (or a text, or a fragment) after this one
+    void after(E)(auto ref E what)
+    {
+        onlySibling();
+        impl.finish();
+
+        DomNode* last = raw;
+        foreach (n; nodesToInsert(what, raw.parent, raw))
+        {
+            last.insertAfter(n);
+            last = n;
+        }
+    }
+
+    /// Replace this node with another one (or with a text, or a fragment)
+    void replaceWith(E)(auto ref E what)
+    {
+        onlySibling();
+        static if (is(E : Node))
+        {
+            Node n = what;
+            if (n.raw is raw) return;
+        }
+
+        before(what);
+        remove();
+    }
+
+    /// Append a child node (as `append`, only for nodes)
+    void appendChild(Node child) { append(child); }
+
+    /// `node ~= x` is `node.append(x)`
+    void opOpAssign(string op : "~", E)(auto ref E what) { append(what); }
+
+    /++ Remove this node from its parent. The node is still valid and can be inserted again.
+    + It returns false if the node had no parent.
+    +/
+    bool remove()
+    {
+        onlyValid();
+        impl.finish();
+
+        if (raw.parent is null) return false;
+        raw.remove();
+        return true;
+    }
+
+    ///
+    unittest
+    {
+        Document doc = "<p>";
+        Element p = doc.byTagName("p").front;
+        p.before("<a>first-before</a><a><b>second</b></a>".asFragment);
+        p.after("<a>first-after</a><a><b>second</b></a>".asFragment);
+        assert(doc.toString() == `<html><head></head><body><a>first-before</a><a><b>second</b></a><p></p><a>first-after</a><a><b>second</b></a></body></html>`);
+    }
+
+    ///
+    unittest
+    {
+        Document doc = `<p id="start">`;
+
+        Element p = doc.byTagName("p").front;
+        p.append("<p>post</p><p>post1</p>".asFragment);
+        p.prepend("<p>pre</p><p>pre1</p>".asFragment);
+        p.append("<p>text</p>");
+
+        assert(doc.body.toString == `<body><p id="start"><p>pre</p><p>pre1</p><p>post</p><p>post1</p>&lt;p&gt;text&lt;/p&gt;</p></body>`);
+
+        // The fragment is parsed in the context of the element
+        Element table = doc.createElement("table");
+        doc.body.append(table);
+        table.append("<tr><td>cell".asFragment);
+        assert(table == "<table><tbody><tr><td>cell</td></tr></tbody></table>");
+    }
+
+    unittest
+    {
+        Document doc = "<p>";
+        Element e = doc.body.children.front;
+        e.append("world");
+        e.prepend("hello");
+        e.append("!");
+        e.before("before");
+        e.after("after");
+        assert(doc == "<html><head></head><body>before<p>helloworld!</p>after</body></html>");
+    }
+
+    unittest
+    {
+        Document doc = "<p>";
+        Element bod = doc.body;
+        Element other = doc.createElement("a");
+        bod ~= other;
+        bod ~= doc.createElement("a");
+        bod.appendChild(doc.createElement("b"));
+        bod.prepend(doc.createElement("i"));
+        assert(doc.body.toString == "<body><i></i><p></p><a></a><a></a><b></b></body>");
+    }
+
+    unittest
+    {
+        Document doc = "<p><b>hello";
+        auto comment = doc.createComment("comment");
+        doc.byTagName("b").front.before(comment);
+        doc.byTagName("b").front.after(comment);
+        assert(!doc.descendants!(Show.Comment).empty);
+        assert(doc.byTagName("p").front.toString == `<p><b>hello</b><!--comment--></p>`);
+    }
+
+    unittest
+    {
+        Document doc = "<html>";
+        auto e = doc.createElement("a");
+        assert (doc == "<html><head></head><body></body></html>");
+
+        assert(e.remove() == false);
+
+        doc.body.append(e);
+        assert (doc == "<html><head></head><body><a></a></body></html>");
+
+        assert(e.remove() == true);
+        assert(doc == "<html><head></head><body></body></html>");
+
+        assert(e.remove() == false);
+        assert(doc == "<html><head></head><body></body></html>");
+
+        assert(e == "<a></a>");
+    }
+
+    unittest
+    {
+        import std.exception : assertThrown;
+
+        Document a = "<p>text";
+        Document b = "<i>";
+
+        // Nodes can't be moved between documents
+        assertThrown!ParserinoException(a.body.append(b.body.firstChild));
+
+        // A node can't become a child of itself
+        Element p = a.body.firstChild;
+        assertThrown!ParserinoException(p.append(a.body));
+
+        // A text can't have children, a node without parent can't have siblings
+        assertThrown!ParserinoException(p.firstChild!(Show.Text).append("x"));
+        assertThrown!ParserinoException(a.createElement("b").before("x"));
+
+        // Invalid nodes
+        Node invalid;
+        assertThrown!ParserinoException(invalid.textContent);
+        assertThrown!ParserinoException(invalid.children.empty);
+    }
+
+    unittest
+    {
+        Document doc = `<html><p class="p1"><b><p class="p2"><i>`;
+
+        Element p1 = doc.byClass("p1").frontOrThrow;
+        Element p2 = doc.byClass("p2").frontOrThrow;
+        Element b = p1.descendants.frontOrThrow;
+        Element i = p2.descendants.frontOrThrow;
+
+        i.replaceWith(b);
+        assert(p1.descendants.empty == true);
+        assert(p2.descendants.frontOrThrow.localName == "b");
+        assert(p2.descendants.frontOrThrow == b);
+
+        b.replaceWith(b);
+        assert(p2.descendants.frontOrThrow == b);
+    }
+
+    /// A deep copy of this node (with all the descendants), not attached to the document
+    Node dup()
+    {
+        onlyValid();
+        impl.ensureClosed(raw);
+        return Node(doc, cloned(true));
+    }
+
+    /// A copy of this node alone (for an element: the tag and the attributes, without children)
+    Node shallowDup()
+    {
+        onlyValid();
+        impl.ensureStable(raw);
+        impl.ensureAttrs(raw);
+        return Node(doc, cloned(false));
+    }
+
+    /// The node as html (for an element: `outerHTML`)
+    string toString() const
+    {
+        import std.array : appender;
+        auto app = appender!string;
+        toString((const(char)[] s) { app.put(s); });
+        return app.data;
+    }
+
+    /// Write the node as html to a sink
+    void toString(scope void delegate(const(char)[]) sink) const
+    {
+        auto self = cast() this;
+        self.onlyValid();
+        self.impl.ensureClosed(self.raw);
+        serializeTo(Serialize.Tree, self.raw, sink);
+    }
+
+    /// ditto
+    void toString(W)(ref W writer) const
+    if (isOutputRange!(W, const(char)[]) && !is(W : void delegate(const(char)[])))
+    {
+        import std.range.primitives : put;
+        toString((const(char)[] s) { put(writer, s); });
+    }
+
+    ///
+    string opCast(T : string)() const { return toString(); }
+
+    unittest
+    {
+        Document d = "<p>";
+        Element e = d.byTagName("p").front;
+
+        string se = cast(string) e;
+        string de = cast(string) d;
+
+        assert(se == "<p></p>");
+        assert(de == "<html><head></head><body><p></p></body></html>");
+    }
+
+    bool opEquals(const typeof(null)) const @safe nothrow pure @nogc { return !isValid; }
+    bool opEquals(E)(auto ref const E e) const
+    {
+        static if (isSomeString!E) return isValid && e == this.toString;
+        else return e.raw is this.raw;
+    }
+
+    size_t toHash() const nothrow @safe { return hashOf(raw); }
+
+    ///
+    ref Node opAssign(typeof(null)) return { this = Node.init; return this; }
+
+    private:
+
+    Document doc;
+    DomNode* raw;
+
+    this(ref Document doc, DomNode* raw)
+    {
+        if (raw is null) return;
+        this.doc = doc;
+        this.raw = raw;
+    }
+
+    inout(DocImpl)* impl() inout { return doc.impl; }
+
+    void onlyValid(string fname = __FUNCTION__) const
+    {
+        if (raw is null)
+            throw new ParserinoException("Can't call `" ~ fname ~ "` for an invalid/uninitialized node");
+    }
+
+    // Nodes that can have children: elements, documents and fragments
+    void onlyParent(string fname = __FUNCTION__)
+    {
+        onlyValid(fname);
+        if (raw.type != NodeType.Element && raw.type != NodeType.Document && raw.type != NodeType.DocumentFragment)
+            throw new ParserinoException("Can't call `" ~ fname ~ "` for a node that can't have children (" ~ nodeName ~ ")");
+    }
+
+    // Nodes that can have siblings: the ones with a parent
+    void onlySibling(string fname = __FUNCTION__)
+    {
+        onlyValid(fname);
+        impl.ensureStable(raw);
+        if (raw.parent is null)
+            throw new ParserinoException("Can't call `" ~ fname ~ "` for a node without parent");
+    }
+
+    void removeChildren()
+    {
+        while (raw.firstChild !is null)
+            raw.firstChild.remove();
+    }
+
+    DomNode* cloned(bool deep)
+    {
+        auto n = impl.dom.importNode(raw, deep);
+        if (n is null) throw new ParserinoException("Out of memory");
+        return n;
+    }
+
+    /+ The nodes to insert for a node, a text or a fragment, detached from where they are.
+     + `parent` is where they go (it's also the context of the fragments), `target` the node
+     + they go into or next to.
+     +/
+    DomNode*[] nodesToInsert(E)(auto ref E what, DomNode* parent, DomNode* target)
+    {
+        static if (is(E == FragmentString))
+        {
+            auto context = parent !is null && parent.type == NodeType.Element ? parent.as!DomElement : null;
+            if (context is null)
+            {
+                context = impl.dom.createElement(Tag.Body, Ns.Html);
+                if (context is null) throw new ParserinoException("Out of memory");
+            }
+            return childrenOf(&parseToFragment(impl.dom, context, what.fragment).node);
+        }
+        else static if (isSomeString!E)
+        {
+            auto t = impl.dom.createText(what);
+            if (t is null) throw new ParserinoException("Can't create text node");
+            return [&t.node];
+        }
+        else static if (is(E : Node))
+        {
+            Node n = what;
+            n.onlyValid();
+            if (n.raw.document !is raw.document)
+                throw new ParserinoException("Can't insert a node of another document (use `dup` on a fragment of this document)");
+
+            if (n.raw.type == NodeType.DocumentFragment) return childrenOf(n.raw);
+            if (n.raw.type == NodeType.Document) throw new ParserinoException("Can't insert a document");
+            if (n.raw is target) return null;
+
+            for (auto p = parent; p !is null; p = p.parent)
+                if (p is n.raw) throw new ParserinoException("Can't insert a node inside itself");
+
+            if (n.raw.parent !is null) n.raw.remove();
+            return [n.raw];
+        }
+        else static assert(0, "Can't insert a " ~ E.stringof);
+    }
+
+    // The children of a node, detached
+    static DomNode*[] childrenOf(DomNode* parent)
+    {
+        DomNode*[] nodes;
+        for (auto c = parent.firstChild; c !is null; c = c.next) nodes ~= c;
+        foreach (n; nodes) n.remove();
+        return nodes;
+    }
+}
+
+
+/// A node that is an element. It converts implicitly to `Node`.
+struct Element
+{
+    Node node;          /// This element as a `Node`
+    alias node this;
+
+    /// A simple key/value struct representing a html attribute
+    struct Attribute
+    {
+        string name;    /// Name of the attribute. For example "href"
+        string value;   /// Value of the attribute. For example "https://dlang.org"
+    }
+
+    /// ditto, as slices of the document memory (see `attributesView`)
+    struct AttributeView
+    {
+        const(char)[] name;     /// Name of the attribute
+        const(char)[] value;    /// Value of the attribute
+    }
+
+    /// The local name, as in the DOM: `"div"`, `"foreignObject"`
+    @property string localName() { return localNameView.idup; }
+
+    /// ditto, without copying
+    @property const(char)[] localNameView() { onlyValid(); return element.fullName; }
+
+    /// The tag name, as in the DOM: uppercase for html elements (`"DIV"`), else the local name
+    @property string tagName()
+    {
+        onlyValid();
+        auto name = element.fullName;
+        if (raw.ns != Ns.Html) return name.idup;
+
+        import std.ascii : toUpper;
+        auto r = new char[name.length];
+        foreach (i, c; name) r[i] = toUpper(c);
+        return cast(string) r;
+    }
+
+    unittest
+    {
+        Document doc = Document(`<!doctype html><html><body id="bo"><svg><foreignObject/></svg>`);
+        Element a;
+        Element b = doc.body;
+        Element c = doc.head;
+        Element d = b;
+        Element e = a;
+
+        assert(a.isValid == false);
+        assert(a == e);
+        assert(a == null);
+
+        assert(b != a);
+        assert(b != c);
+        assert(d == b);
+
+        Element f = doc.byTagName("body").front;
+        Element g = doc.byId("bo");
+
+        assert(b == f);
+        assert(b == g);
+
+        assert(g.localName == "body" && g.tagName == "BODY");
+        assert(c.localName == "head");
+
+        Element fo = doc.byTagName("foreignObject").front;
+        assert(fo.localName == "foreignObject" && fo.tagName == "foreignObject");
+    }
+
+    /// Is this element empty? No element and no text children (comments don't count), as `:empty`
+    @property bool isEmpty() { onlyValid(); impl.ensureClosed(raw); return raw.isEmpty; }
+
+    /// Like `isEmpty`, but whitespace text doesn't count either, as `:blank`
+    @property bool isBlank() { onlyValid(); impl.ensureClosed(raw); return raw.isBlank; }
+
+    unittest
+    {
+        import std.array;
+        import std.algorithm : map;
+
+        Document doc = "<b>hello</b><br><b><!--x--></b><i> </i>";
+        assert(doc.body.children.map!(x => x.isEmpty()).array == [false, true, true, false]);
+        assert(doc.body.children.map!(x => x.isBlank()).array == [false, true, true, true]);
+    }
+
+    /// Return a lazy range of attributes for this element
+    @property AttributeRange!false attributes()
+    {
+        onlyValid();
+        impl.ensureAttrs(raw);
+        return AttributeRange!false(doc, element.firstAttr);
+    }
+
+    /// ditto, without copying names and values
+    @property AttributeRange!true attributesView()
+    {
+        onlyValid();
+        impl.ensureAttrs(raw);
+        return AttributeRange!true(doc, element.firstAttr);
+    }
+
+    /// Check if an attribute exists
+    bool hasAttribute(const(char)[] attr)
+    {
+        onlyValid();
+        impl.ensureAttrs(raw);
+        return attributeByName(element, attr) !is null;
+    }
+
+    /// Remove an attribute from this element
+    void removeAttribute(const(char)[] attr)
+    {
+        onlyValid();
+        impl.finish();
+        if (auto a = attributeByName(element, attr)) element.removeAttribute(a);
+    }
+
+    /// Set an attribute for this element
+    void setAttribute(const(char)[] name, const(char)[] value)
+    {
+        onlyValid();
+        impl.finish();
+        auto dom = impl.dom;
+        if (auto a = attributeByName(element, name))
+        {
+            a.value = dom.copy(value);
+            return;
+        }
+
+        import std.uni : toLower;
+        auto a = dom.createAttribute(name.toLower, value);
+        if (a is null) throw new ParserinoException("Can't set attribute `" ~ name.idup ~ "`");
+        element.appendAttribute(a);
+    }
+
+    /// Get an attribute. It returns `null` if the attribute is missing.
+    string getAttribute(const(char)[] attr)
+    {
+        auto v = getAttributeView(attr);
+        if (v is null) return null;
+        return v.length == 0 ? "" : v.idup;
+    }
+
+    /// ditto, without copying
+    const(char)[] getAttributeView(const(char)[] attr)
+    {
+        onlyValid();
+        impl.ensureAttrs(raw);
+
+        auto a = attributeByName(element, attr);
+        if (a is null) return null;
+        return attrValue(a);
+    }
+
+    /// The id of this element (empty if missing)
+    @property string id() { return idView.idup; }
+
+    /// ditto, without copying
+    @property const(char)[] idView()
+    {
+        onlyValid();
+        impl.ensureAttrs(raw);
+        return element.idAttr is null ? "" : attrValue(element.idAttr);
+    }
+
+    /// Set the id of this element
+    @property void id(const(char)[] value) { setAttribute("id", value); }
+
+    /// All the classes of this element
+    @property auto classes()
     {
         import std.algorithm : map;
-        import std.array;
-
-        Document d =
-            `<p>
-                <b>
-                    <i>
-                    </i>
-                    <a>
-                    </a>
-                </b>
-            </p>
-            <br>`;
-
-        {
-            string trip = d.body.descendants.map!(x => x.name).join("->");
-            string tripReverse = d.body.descendants!(VisitOrder.Reverse).map!(x => x.name).join("->");
-
-            assert(trip == "p->b->i->a->br");
-            assert(tripReverse == "br->p->b->a->i");
-        }
-
-        {
-            string trip = d.body.children.map!(x => x.name).join("->");
-            string tripReverse = d.body.children!(VisitOrder.Reverse).map!(x => x.name).join("->");
-
-            assert(trip == "p->br");
-            assert(tripReverse == "br->p");
-        }
+        return classesView.map!(c => c.idup);
     }
 
-    /// The outer html of this element
-    @property string outerHTML() { onlyValidElements(); return toString(); }
+    /// ditto, without copying
+    @property auto classesView()
+    {
+        import std.algorithm : splitter, filter;
 
-    /// Set the outer html of this element
+        onlyValid();
+        impl.ensureAttrs(raw);
+
+        auto cls = element.classAttr is null ? "" : attrValue(element.classAttr);
+        return cls.splitter!(c => c < 0x80 && isHtmlSpace(cast(char) c)).filter!(x => x.length > 0);
+    }
+
+    unittest
+    {
+        import std.array;
+
+        Document doc = Document(`<html><p class="hello world" id="world" style><a>`);
+        assert(doc.byId("world").attributes.array == [Attribute("class", "hello world"), Attribute("id", "world"), Attribute("style", "")]);
+        assert(doc.byId("world").attributesView.front == AttributeView("class", "hello world"));
+        assert(doc.byTagName("a").front.attributes.empty);
+
+        auto p = doc.byTagName("p").front;
+        auto a = doc.byTagName("a").front;
+
+        assert(p.hasAttribute("style"));
+        assert(p.hasAttribute("STYLE"));
+        assert(p.hasAttribute("href") == false);
+        assert(p.classes.array == ["hello", "world"]);
+        assert(p.classesView.array == ["hello", "world"]);
+
+        assert(p.id == "world");
+        assert(p.idView == "world");
+
+        a.setAttribute("href", "url");
+        a.id = "link";
+
+        assert(a.hasAttribute("href"));
+        assert(a.getAttribute("href") == "url");
+        assert(a.getAttributeView("href") == "url");
+        assert(a.getAttribute("title") is null);
+        assert(a.id == "link" && doc.byId("link") == a);
+        assert(p.getAttribute("style") !is null);
+        assert(p.getAttribute("style") == "");
+
+        p.removeAttribute("id");
+        p.removeAttribute("class");
+
+        assert(p.hasAttribute("style"));
+        assert(!p.hasAttribute("id"));
+        assert(!p.hasAttribute("class"));
+        assert(p.id.length == 0);
+        assert(p.classes.array.length == 0);
+    }
+
+    /// A deep copy of this element, not attached to the document
+    Element dup() { auto n = node.dup; return Element(n); }
+
+    /// A copy of this element alone: the tag and the attributes, without children
+    Element shallowDup() { auto n = node.shallowDup; return Element(n); }
+
+    ///
+    unittest
+    {
+        import std.array;
+        import std.algorithm : map;
+
+        Document doc = Document(`<html><p data-a="a" data-b="b"><i></i><b></b>`);
+        Element e = doc.byTagName("p").front;
+        Element f = e;
+        Element g = e.shallowDup;
+        Element h = g;
+
+        assert(e != g);
+        assert(f != g);
+        assert(g == h);
+
+        assert(g.localName == "p");
+        assert(g.attributes.array == [Attribute("data-a", "a"), Attribute("data-b", "b")]);
+        assert(g.descendants.map!(x => x.localName).array == []);
+
+        g = e.dup;
+        assert(g.localName == "p");
+        assert(g.attributes.array == [Attribute("data-a", "a"), Attribute("data-b", "b")]);
+        assert(g.descendants.map!(x => x.localName).array == ["i", "b"]);
+    }
+
+    /// Make this element a copy of another one: the tag, the attributes and the children
+    void copyFrom(Element e) { copyImpl(e, true); }
+
+    /// Make this element a copy of another one, without the children: the tag and the attributes
+    void shallowCopyFrom(Element e) { copyImpl(e, false); }
+
+    unittest
+    {
+        Document d = `<p id="hello"></p><a>`;
+
+        auto p = d.byId("hello");
+        auto a = d.byTagName("a").front;
+
+        p.copyFrom(a);
+
+        assert(p.attributes.empty);
+        assert(p.localName == "a");
+    }
+
+    unittest
+    {
+        Document doc = `<html><p class="p1"><b></b><p class="p2"><i>x</i><template>t</template>`;
+
+        Element p1 = doc.byClass("p1").frontOrThrow;
+        Element p1Copy = p1;
+        Element p2 = doc.byClass("p2").frontOrThrow;
+
+        p1.copyFrom(p2);
+        assert(p1.classes.frontOrThrow == "p2");
+        assert(p1Copy.classes.frontOrThrow == "p2");
+        assert(p1.innerHTML == "<i>x</i><template>t</template>");
+        assert(p1.descendants.frontOrThrow != p2.descendants.frontOrThrow);
+
+        p1.shallowCopyFrom(doc.createElement("b"));
+        assert(p1.localName == "b" && p1.attributes.empty && p1.innerHTML == "<i>x</i><template>t</template>");
+
+        // A template gets a content, and a copy of it
+        Element t = doc.byTagName("template").front;
+        p2.copyFrom(t);
+        assert(p2 == "<template>t</template>");
+        assert(p2.innerHTML == "t");
+    }
+
+    /// Set the html content of this element (for a `<template>`: its content)
+    @property void innerHTML(const(char)[] html)
+    {
+        onlyValid();
+        impl.finish();
+
+        auto frag = parseToFragment(impl.dom, element, html);
+
+        // The old children are detached (not destroyed): other `Node`s may still point to them.
+        auto target = element.templateContent !is null ? &element.templateContent.node : raw;
+        while (target.firstChild !is null) target.firstChild.remove();
+        frag.node.moveChildrenTo(target);
+    }
+
+    /// Get the html content of this element
+    @property string innerHTML()
+    {
+        import std.array : appender;
+
+        onlyValid();
+        impl.ensureClosed(raw);
+
+        auto app = appender!string;
+        serializeTo(Serialize.Children, raw, (const(char)[] s) { app.put(s); });
+        return app.data;
+    }
+
+    unittest
+    {
+        Document doc = "<template><b>x</b></template>";
+        Element t = doc.byTagName("template").front;
+        assert(t.innerHTML == "<b>x</b>");
+        t.innerHTML = "<i>y</i>";
+        assert(t.innerHTML == "<i>y</i>");
+        assert(!t.hasChildNodes);
+    }
+
+    /// The text of the element (the same as `textContent`: here nothing depends on the layout)
+    @property string innerText() { return node.textContent; }
+
+    /// Set the text of the element (the same as `textContent`)
+    @property void innerText(const(char)[] text) { node.textContent = text; }
+
+    /// The outer html of this element
+    @property string outerHTML() { return node.toString(); }
+
+    /// Replace this element with the html (parsed in the context of the parent)
     @property void outerHTML(const(char)[] html)
     {
-        onlyValidElements();
-        prependSibling(FragmentString(html.idup));
-        remove();
+        onlyValid();
+        impl.ensureStable(raw);
+        if (raw.parent is null || raw.parent.type == NodeType.Document)
+            throw new ParserinoException("Can't set outerHTML of an element without a parent element");
+
+        node.before(FragmentString(html.idup));
+        node.remove();
     }
 
     ///
@@ -1585,66 +2018,92 @@ struct Element
         auto p = d.byTagName("p").front;
         p.outerHTML = "<div><a>";
 
-        assert(p.name == "p");
-        assert(d.body.descendants.front.name == "a");
+        assert(p.localName == "p");
+        assert(d.body.descendants.front.localName == "a");
     }
 
-    /// Convert this element to a string
-    string toString(bool deep = true) const
+    /// The start tag of this element, with its attributes: `<a href="x">`
+    @property string startTag()
     {
         import std.array : appender;
+
+        onlyValid();
+        impl.ensureStable(raw);
+        impl.ensureAttrs(raw);
+
         auto app = appender!string;
-        toString((const(char)[] s) { app.put(s); }, deep);
+        serializeTo(Serialize.Node, raw, (const(char)[] s) { app.put(s); });
         return app.data;
     }
 
-    /// Write this element as html to a sink
-    void toString(scope void delegate(const(char)[]) sink, bool deep = true) const
+    unittest
     {
-        auto self = cast() this;
-        self.onlyValidElements();
-
-        if (deep)
-        {
-            self.impl.ensureClosed(self.node);
-            serializeTo(Serialize.Tree, self.node, sink);
-        }
-        else
-        {
-            self.impl.ensureStable(self.node);
-            self.impl.ensureAttrs(self.node);
-            serializeTo(Serialize.Node, self.node, sink);
-        }
+        Document d = `<p class=a>text<b>bold`;
+        assert(d.byTagName("p").front.startTag == `<p class="a">`);
     }
+
+    /// Does this element match a css selector?
+    bool matches(const(char)[] selector) { return matches(Selector(selector)); }
 
     /// ditto
-    void toString(W)(ref W writer, bool deep = true) const
-    if (isOutputRange!(W, const(char)[]) && !is(W : void delegate(const(char)[])))
+    bool matches(Selector selector)
     {
-        import std.range.primitives : put;
-        toString((const(char)[] s) { put(writer, s); }, deep);
+        onlyValid();
+        if (!selector.isValid) throw new ParserinoException("Invalid selector");
+
+        impl.ensureStable(raw);
+        if (selector.forward && raw.parent !is null) impl.ensureClosed(raw.parent);
+        return impl.matches(raw, selector.list, raw);
     }
 
-    /// Replace this element with the (single) element parsed from `html`
+    ///
+    unittest
+    {
+        Document doc = Document(
+        `<html><body>
+            <ul><li>one</li><li id="this">two</li></ul>
+            <h4>title</h4>
+            <ul><li>three</li><li>four</li><li>five</li></ul>
+        `);
+
+        import std.array;
+        import std.algorithm : map, canFind;
+        Element[] res = doc.bySelector("h4+ul li:nth-of-type(2), #this").array;
+
+        assert(res.length == 2);
+
+        auto elements = res.map!(x => x.textContent).array;
+        assert(elements.canFind("two"));
+        assert(elements.canFind("four"));
+
+        assert(doc.byId("this").matches("li:last-child"));
+        assert(!doc.byId("this").matches("li:first-child"));
+
+        // A compiled selector can be reused
+        auto sel = Selector("ul > li");
+        assert(doc.bySelector(sel).walkLength == 5);
+        assert(Document("<ul><li>").bySelector(sel).walkLength == 1);
+    }
+
+    /// Replace this element with the (single) element parsed from `html`: `el = "<b>x</b>";`
     ref Element opAssign(const(char)[] html) return
     {
         if (!isValid)
             throw new ParserinoException("Can't set html for a null element");
 
-        Element fragment = doc.fragment(html);
+        auto f = doc.fragment(html);
+        auto children = f.children!(Show.All);
+        Node first = children.frontOrInit();
 
-        auto cld = fragment.children;
-        Element first = cld.frontOrInit();
+        if (!first.isElement)
+            throw new ParserinoException("Can't assign: the html must be a single element");
 
-        if (first == null)
-            throw new ParserinoException("Can't assign: invalid fragment");
+        children.popFront();
 
-        cld.popFront();
-
-        if (!cld.empty)
+        if (!children.empty)
             throw new ParserinoException("Can't assign a fragment with more than one child");
 
-        copyFrom(first, true);
+        copyFrom(first.asElement);
         return this;
     }
 
@@ -1654,31 +2113,15 @@ struct Element
     ///
     ref Element opAssign(Element rhs) return
     {
-        doc = rhs.doc;
         node = rhs.node;
         return this;
     }
-
-    ///
-    string opCast(T : string)() const { return toString(); }
 
     unittest
     {
         import std.exception;
         Element e;
         assertThrown(e = `<a href="hmm.html>blah</a>`);
-    }
-
-    unittest
-    {
-        Document d = "<p>";
-        Element e = d.byTagName("p").front;
-
-        string se = cast(string)e;
-        string de = cast(string)d;
-
-        assert(se == "<p></p>");
-        assert(de == "<html><head></head><body><p></p></body></html>");
     }
 
     unittest
@@ -1703,87 +2146,77 @@ struct Element
 
     private:
 
-    Document doc;
-    DomNode* node;
+    this(ref Document doc, DomNode* raw) { node = Node(doc, raw); }
+    this(Node n) { node = n; }
 
-    this(ref Document doc, DomNode* node)
+    inout(DocImpl)* impl() inout { return node.doc.impl; }
+    DomNode* raw() { return node.raw; }
+    DomElement* element() { return node.raw.as!DomElement; }
+    ref Document doc() return { return node.doc; }
+
+    void onlyValid(string fname = __FUNCTION__) const { node.onlyValid(fname); }
+
+    void copyImpl(Element e, bool deep)
     {
-        if (node is null) return;
-        this.doc = doc;
-        this.node = node;
-    }
+        onlyValid();
+        e.onlyValid();
+        impl.finish();
 
-    inout(DocImpl)* impl() inout { return doc.impl; }
-    DomElement* element() { return cast(DomElement*) node; }
+        if (e.raw is raw) return;
 
-    void onlyValidElements(string fname = __FUNCTION__) const
-    {
-        if (node is null)
-            throw new ParserinoException("Can't call `" ~ fname ~ "` for an invalid/uninitialized node");
-    }
+        auto dom = impl.dom;
+        while (element.firstAttr !is null) element.removeAttribute(element.firstAttr);
 
-    void onlyRealElements(string fname = __FUNCTION__)
-    {
-        onlyValidElements(fname);
+        // The tag too (a template needs a content)
+        raw.name = e.raw.name;
+        raw.ns = e.raw.ns;
+        element.qualifiedName = e.element.qualifiedName;
 
-        if (node.type != NodeType.Element)
-            throw new ParserinoException("Can't call `" ~ fname ~ "` for a node with type " ~ name());
-    }
-
-    void onlyRealOrDocument(string fname = __FUNCTION__)
-    {
-        onlyValidElements(fname);
-        if (node.type != NodeType.Document) onlyRealElements(fname);
-    }
-
-    void removeChildren()
-    {
-        while (node.firstChild !is null)
-            (node.firstChild).remove();
-    }
-
-    // The nodes to insert for an Element, a text or a fragment.
-    DomNode*[] nodesToInsert(E)(auto ref E el)
-    {
-        static if (is(E == FragmentString))
+        if (e.element.templateContent is null) element.templateContent = null;
+        else if (element.templateContent is null)
         {
-            Element root = doc.fragment(el.fragment);
-            DomNode*[] nodes;
-            for (auto c = root.node.firstChild; c !is null; c = c.next) nodes ~= c;
-            foreach (n; nodes) (n).remove();
-            return nodes;
+            element.templateContent = dom.createFragment();
+            if (element.templateContent is null) throw new ParserinoException("Out of memory");
+            element.templateContent.host = element;
         }
-        else static if (isSomeString!E)
-        {
-            return [doc.createText(el).node];
-        }
-        else static if (is(E == Element))
-        {
-            el.onlyValidElements();
-            if (el.node.document !is node.document)
-                throw new ParserinoException("Can't insert an element from another document (use `dup` on a fragment of this document)");
 
-            for (auto p = node; p !is null; p = p.parent)
-                if (p is el.node) throw new ParserinoException("Can't insert an element inside itself");
-
-            if (el.node.parent !is null) (el.node).remove();
-            return [el.node];
+        for (auto a = e.element.firstAttr; a !is null; a = a.next)
+        {
+            auto na = dom.createAttribute(a.name, a.value, a.ns);
+            if (na is null) throw new ParserinoException("Out of memory");
+            na.qualifiedName = a.qualifiedName;
+            element.appendAttribute(na);
         }
-        else static assert(0, "Can't insert a " ~ E.stringof);
+
+        if (!deep) return;
+
+        node.removeChildren();
+
+        // The copy has the children and, for a template, a copy of the content
+        auto copy = dom.importNode(e.raw, true);
+        if (copy is null) throw new ParserinoException("Out of memory");
+        copy.moveChildrenTo(raw);
+        if (auto content = copy.as!DomElement.templateContent)
+        {
+            auto mine = &element.templateContent.node;
+            while (mine.firstChild !is null) mine.firstChild.remove();
+            content.node.moveChildrenTo(mine);
+        }
     }
 }
 
 
 /// A range of attributes. It keeps the document alive.
-struct AttributeRange
+struct AttributeRange(bool view)
 {
     ///
     @property bool empty() const @safe nothrow pure @nogc { return current is null; }
 
     ///
-    @property Element.Attribute front()
+    @property auto front()
     {
-        return Element.Attribute(current.fullName.idup, attrValue(current).idup);
+        static if (view) return Element.AttributeView(current.fullName, attrValue(current));
+        else return Element.Attribute(current.fullName.idup, attrValue(current).idup);
     }
 
     ///
@@ -1892,8 +2325,8 @@ template ctSelector(string css)
 unittest
 {
     Document doc = "<ul><li>a</li><li class=x>b</li></ul>";
-    assert(doc.bySelector!"li.x".front.innerText == "b");
-    assert(doc.bySelector(ctSelector!"ul > li:last-child").front.innerText == "b");
+    assert(doc.bySelector!"li.x".front.textContent == "b");
+    assert(doc.bySelector(ctSelector!"ul > li:last-child").front.textContent == "b");
     static assert(!__traits(compiles, ctSelector!"div >"));
 }
 
@@ -1967,13 +2400,14 @@ private const(SelectorList)* compileAtCt(string css) pure
 + tokenizing or building it again.
 + ---
 + auto page = ctDocument!(import("page.html"));   // needs -J with the path of page.html
-+ page.byId("title").innerText = "Hello";
++ page.byId("title").textContent = "Hello";
 + ---
-+ CTFE needs a lot of compiler memory: it's fine for templates of some tens of KB, not for big pages.
++ Only `options.scripting` matters here. CTFE needs a lot of compiler memory: it's fine for
++ templates of some tens of KB, not for big pages.
 +/
-template ctDocument(string html)
+template ctDocument(string html, ParseOptions options = ParseOptions.init)
 {
-    private static immutable Snapshot tree = parseToSnapshot(html);
+    private static immutable DomSnapshot tree = parseToSnapshot(html, options.scripting);
 
     Document ctDocument()
     {
@@ -1995,12 +2429,15 @@ unittest
     auto doc = ctDocument!html;
     assert(doc.toString == Document(html).toString);
     assert(doc.title == "Hi");
-    assert(doc.body.firstChild(true).innerText == "Hello world");
-    assert(doc.bySelector!"td".front.innerText == "x");
+    assert(doc.body.firstChild!(Show.All).textContent == "Hello world");
+    assert(doc.bySelector!"td".front.textContent == "x");
 
     // Each call returns a new document
     doc.body.innerHTML = "changed";
     assert(ctDocument!html.body.innerHTML != "changed");
+
+    enum ParseOptions scripting = { scripting: true };
+    assert(ctDocument!("<noscript><p>x</p></noscript>", scripting).byTagName("p").empty);
 }
 
 
@@ -2022,7 +2459,7 @@ if (isInputRange!T && is(El == ElementType!T))
     else return range.front;
 }
 
-/// Get the first element of a range or return Element.init
+/// Get the first element of a range, or its `init` (an invalid node for the ranges of nodes)
 auto frontOrInit(T)(T range)
 if (isInputRange!T)
 {
@@ -2039,13 +2476,13 @@ unittest
     Element div = doc.createElement("div");
     div.setAttribute("id", "test");
 
-    assert(doc.bySelector("p b").frontOrThrow.name == "b");
-    assert(doc.bySelector("p b").frontOrInit.name == "b");
+    assert(doc.bySelector("p b").frontOrThrow.localName == "b");
+    assert(doc.bySelector("p b").frontOrInit.localName == "b");
 
     assertThrown(doc.bySelector("p i").frontOrThrow);
     assert(doc.bySelector("p i").frontOrInit == Element());
     assert(doc.bySelector("p i").frontOrInit == null);
-    assert(doc.bySelector("p i").frontOr(div).name == "div");
+    assert(doc.bySelector("p i").frontOr(div).localName == "div");
     assert(doc.bySelector("p i").frontOr(div).id == "test");
 }
 
@@ -2072,21 +2509,49 @@ auto asFragment(string s)
 + It is returned by `descendants`, `children`, `byTagName`, `byClass`, `bySelector`, ...
 + It is a forward range: `save` gives an independent copy.
 +/
-struct NodeRange(Filter, VisitOrder order = VisitOrder.Normal)
+/++ A lazy range of nodes in tree order: `descendants`, `children`, `byTagName`, `byClass`,
++ `bySelector`, ... return it. It's a bidirectional range: `save` gives an independent copy,
++ `back`/`popBack` (and so `retro`) go in reverse document order. The elements are `Element`s
++ if `show` is `Show.Element`, else `Node`s.
++/
+struct NodeRange(Filter, Show show)
 {
     ///
     @property bool empty() { prime(); return current is null; }
 
     ///
-    @property Element front()
+    @property NodeOf!show front()
     {
         prime();
         if (current is null) throw new ParserinoException("Range is empty.");
-        return Element(doc, current);
+        return NodeOf!show(doc, current);
     }
 
     ///
-    void popFront() { prime(); current = seek(current); }
+    void popFront()
+    {
+        prime();
+        if (current is null) throw new ParserinoException("Range is empty.");
+        if (current is last) current = last = null;
+        else current = seek(current);
+    }
+
+    ///
+    @property NodeOf!show back()
+    {
+        primeBack();
+        if (last is null) throw new ParserinoException("Range is empty.");
+        return NodeOf!show(doc, last);
+    }
+
+    ///
+    void popBack()
+    {
+        primeBack();
+        if (last is null) throw new ParserinoException("Range is empty.");
+        if (current is last) current = last = null;
+        else last = seekBack(last);
+    }
 
     ///
     @property typeof(this) save() { return this; }
@@ -2095,18 +2560,18 @@ struct NodeRange(Filter, VisitOrder order = VisitOrder.Normal)
 
     Document doc;
     DomNode* root;
-    DomNode* current;
+    DomNode* current;       // the front (null: empty)
+    DomNode* last;          // the back, once known (null: not known yet, or empty)
     bool deep;
-    bool all;
     bool primed;
+    bool primedBack;
     Filter filter;
 
-    this(ref Document doc, DomNode* root, bool deep, bool all, Filter filter)
+    this(ref Document doc, DomNode* root, bool deep, Filter filter)
     {
         this.doc = doc;
         this.root = root;
         this.deep = deep;
-        this.all = all;
         this.filter = filter;
     }
 
@@ -2117,9 +2582,22 @@ struct NodeRange(Filter, VisitOrder order = VisitOrder.Normal)
     {
         if (primed) return;
         primed = true;
-
-        static if (order == VisitOrder.Reverse) doc.impl.ensureClosed(root);
         current = seek(root);
+    }
+
+    // The back needs the whole subtree: from then on the range knows both ends
+    void primeBack()
+    {
+        prime();
+        if (primedBack) return;
+        primedBack = true;
+        if (current is null) return;
+
+        doc.impl.ensureClosed(root);
+        last = seekBack(root);
+
+        // The front could be after the back only if the range is empty
+        if (last is null) current = null;
     }
 
     // The next node after `pos` accepted by the filter.
@@ -2129,21 +2607,32 @@ struct NodeRange(Filter, VisitOrder order = VisitOrder.Normal)
 
         while (true)
         {
-            static if (order == VisitOrder.Normal) auto next = stepForward(d, pos);
-            else auto next = stepBackward(pos);
+            auto next = stepForward(d, pos);
 
             if (next is waitSentinel) { d.advance(); continue; }
             if (next is null) return null;
 
-            static if (order == VisitOrder.Normal)
-                if (d.parsing && !passable(d, next)) { d.advance(); continue; }
+            if (d.parsing && !passable(d, next)) { d.advance(); continue; }
 
             pos = next;
-
-            if ((all || next.type == NodeType.Element) && filter.match(d, next))
-                return next;
+            if (accepted(d, next)) return next;
         }
     }
+
+    // The previous node before `pos` (in tree order) accepted by the filter; `root` means from the end.
+    DomNode* seekBack(DomNode* pos)
+    {
+        auto d = doc.impl;
+
+        while (true)
+        {
+            pos = pos is root ? lastInTree(root) : stepBackward(pos);
+            if (pos is null || pos is root) return null;
+            if (accepted(d, pos)) return pos;
+        }
+    }
+
+    bool accepted(DocImpl* d, DomNode* n) { return shown(show, n) && filter.match(d, n); }
 
     // The next node in tree order. It returns `waitSentinel` if the parser could still add it.
     DomNode* stepForward(DocImpl* d, DomNode* pos)
@@ -2167,18 +2656,27 @@ struct NodeRange(Filter, VisitOrder order = VisitOrder.Normal)
         }
     }
 
+    // The last node of the range in tree order (the deepest last descendant), or null
+    DomNode* lastInTree(DomNode* r)
+    {
+        auto n = r.lastChild;
+        if (n is null) return null;
+        if (deep) while (n.lastChild !is null) n = n.lastChild;
+        return n;
+    }
+
+    // The previous node in tree order; `root` (or null) at the beginning
     DomNode* stepBackward(DomNode* pos)
     {
-        if ((deep || pos is root) && pos.lastChild !is null) return pos.lastChild;
-        if (pos is root) return null;
-
-        while (true)
+        if (pos.prev !is null)
         {
-            if (pos.prev !is null) return pos.prev;
-
-            pos = pos.parent;
-            if (pos is null || pos is root || !deep) return null;
+            auto n = pos.prev;
+            if (deep) while (n.lastChild !is null) n = n.lastChild;
+            return n;
         }
+
+        if (!deep) return null;
+        return pos.parent;
     }
 
     // Can the walker go past this node, or could the parser still change it?
@@ -2195,6 +2693,16 @@ struct NodeRange(Filter, VisitOrder order = VisitOrder.Normal)
         return true;
     }
 }
+
+// The result of a navigation with this filter: `Element` only for elements
+template NodeOf(Show show)
+{
+    static if (show == Show.Element) alias NodeOf = Element;
+    else alias NodeOf = Node;
+}
+
+// Does the filter accept this node?
+bool shown(Show show, const(DomNode)* n) @safe nothrow pure @nogc { return ((1u << (n.type - 1)) & show) != 0; }
 
 
 private:
@@ -2219,6 +2727,8 @@ struct TagFilter
 
     bool match(DocImpl* d, DomNode* n)
     {
+        if (name == "*") return true;
+
         // Unknown tags get an id when the parser meets them: retry after each parsed chunk
         if (id == Tag.Undef && generation != d.generation)
         {
@@ -2239,7 +2749,7 @@ struct ClassFilter
 
     bool match(DocImpl*, DomNode* n)
     {
-        auto a = (cast(DomElement*) n).classAttr;
+        auto a = n.as!DomElement.classAttr;
         if (a is null || name.length == 0) return false;
 
         auto v = attrValue(a);
@@ -2261,11 +2771,11 @@ struct IdFilter
     enum attrSensitive = true;
     enum strict = false;
 
-    string id;
+    const(char)[] id;
 
     bool match(DocImpl*, DomNode* n)
     {
-        auto a = (cast(DomElement*) n).idAttr;
+        auto a = n.as!DomElement.idAttr;
         return a !is null && attrValue(a) == id;
     }
 }
@@ -2336,6 +2846,9 @@ struct DocImpl
     NodeList tables;        // open tables: foster parenting inserts before them
     NodeList formatting;    // open formatting elements: the adoption agency moves their descendants
 
+    // The snapshot this document was restored from: the document uses its strings
+    immutable(DomSnapshot)* snapshot;
+
     static DocImpl* create()
     {
         auto d = cast(DocImpl*) calloc(1, DocImpl.sizeof);
@@ -2361,7 +2874,20 @@ struct DocImpl
         free(d.dom);
         d.tables.dispose();
         d.formatting.dispose();
+        if (d.snapshot !is null)
+        {
+            import core.memory : GC;
+            GC.removeRoot(cast(void*) d.snapshot);
+        }
         free(d);
+    }
+
+    // Keep a snapshot alive (the GC doesn't see this malloc'd struct)
+    void keepSnapshot(immutable(DomSnapshot)* s)
+    {
+        import core.memory : GC;
+        GC.addRoot(cast(void*) s);
+        snapshot = s;
     }
 
     void parseAll(const(char)[] input)
@@ -2442,7 +2968,8 @@ struct DocImpl
 
         // In the "after head" insertion mode the parser puts <head> back on the stack
         // for <script>, <style>, <meta>, ...: it can get children until <body> exists.
-        if (n is cast(DomNode*) dom.head && dom.body is null) return true;
+        auto head = dom.head;
+        if (head !is null && n is &head.node && dom.body is null) return true;
 
         auto oe = tree.openElements[];
         foreach_reverse (e; oe)
@@ -2485,7 +3012,8 @@ struct DocImpl
 
         refreshVolatile();
 
-        auto body = cast(DomNode*) dom.body;
+        auto b = dom.body;
+        auto body = b is null ? null : &b.node;
         bool framesetOk = tree.framesetOk && body !is null;
 
         if (tables.length || formatting.length || framesetOk)
@@ -2725,4 +3253,16 @@ DomAttribute* attributeByName(DomElement* e, scope const(char)[] name) nothrow @
 void serializeTo(Serialize what, DomNode* node, scope void delegate(const(char)[]) sink)
 {
     parserino.html.serializer.serialize(node, sink, what);
+}
+
+/++ Parse `html` in the context of `context` (an element of `doc`) into a new document fragment.
+ + The context decides the parsing (see `Document.fragment`); the template contents too.
+ +/
+DomDocumentFragment* parseToFragment(DomDocument* doc, DomElement* context, const(char)[] html)
+{
+    auto root = parseFragment(doc, context, html);
+    auto f = root is null ? null : doc.createFragment();
+    if (f is null) throw new ParserinoException("Can't parse the fragment (out of memory)");
+    root.node.moveChildrenTo(&f.node);
+    return f;
 }

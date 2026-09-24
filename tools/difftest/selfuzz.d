@@ -47,15 +47,15 @@ enum string[] extra = [
     "p:has(+ p):has(~ p)", ":has(> :has(> p))", "li:has(+ li:last-child)", "div :first-child", "div :last-child",
 ];
 
-string ident(Element e)
+string ident(Node e)
 {
     size_t[] path;
     for (auto n = e; n.isValid; )
     {
         size_t i = 0;
-        for (auto p = n.prev(true); p.isValid; p = p.prev(true)) i++;
+        for (auto p = n.previousSibling!(Show.All); p.isValid; p = p.previousSibling!(Show.All)) i++;
         path ~= i;
-        auto par = n.parent;
+        auto par = n.parent!(Show.All);
         if (!par.isValid) break;
         n = par;
     }

@@ -1,71 +1,74 @@
 # Parserino: Fast HTML5 Parser and DOM Manipulation for D
 
-Parserino is a high-performance HTML5 parser and DOM manipulation library for the D programming language, written in pure D (no C dependencies; the tree construction is derived from Lexbor).
+Parserino is a high-performance HTML5 parser and DOM manipulation library for the D programming language, written in pure D (no C dependencies; the tree construction is derived from Lexbor). Names and behaviour follow the DOM, HTML and Selectors 4 standards; the parser passes the tree construction tests of the web-platform-tests.
+
+## Rules
+
+- **Nodes and elements**: `Node` is any node; `Element` is a node that is an element. An `Element` converts implicitly to `Node`; `node.asElement` gives an `Element` (invalid if the node isn't an element).
+- **Navigation filter**: navigation methods take the kinds of nodes to see as a template parameter `Show` (the bits of DOM `NodeFilter.whatToShow`, combine them with `|`). The default is `Show.Element`, and then the result is an `Element` or a range of `Element`s; with other filters the results are `Node`s.
+- **Errors**: searches and navigation give an invalid node (`== null`, `isValid == false`) or an empty range when nothing is found; nodes that can't have children (texts, comments) just have none. Calling a method on an invalid node or document, or an impossible mutation (a child of a text, a node inside itself, a node of another document, a sibling of a node without parent), throws `ParserinoException`.
+- **Views**: getters that copy a stored string have a `...View` variant returning a slice of the document memory (valid until the value changes or the document is destroyed): `localNameView`, `idView`, `getAttributeView`, `classesView`, `attributesView`, `dataView`. Computed values (`textContent` of an element, `innerHTML`, `title`) have none.
+- **Memory**: `Document` is reference counted; every `Node` keeps its document alive; removed nodes stay valid and can be inserted again.
 
 ## Core Types
 
 ### `Document`
-The root of the DOM tree. Created from an HTML string.
+The root of the DOM tree.
 
-- `this(string html, Parsing parsing = Parsing.eager, size_t chunkSize = 16 * 1024)`: Parses the document. With `Parsing.lazy_` it parses incrementally, only as far as queries and accessors need. Results are identical to a full parse. Mutations complete the parsing first.
-- `ctDocument!html`: A document parsed at compile time. Each call returns a new mutable document, rebuilt from the stored tree without parsing (e.g. `ctDocument!(import("page.html"))`).
-- `void finishParsing()`: Completes a lazy parsing.
-- `bool isParsing`: True while a lazy document is not fully parsed.
-- `size_t bytesParsed`: Input bytes given to the parser so far.
-- `bool isValid`: True if the document is successfully parsed.
-- `Element documentElement`: Returns the `<html>` element.
-- `string title`: Property to get or set the content of the `<title>` tag.
-- `Element head`: Returns the `<head>` element.
-- `Element body`: Returns the `<body>` element.
-- `Element createElement(string tagName)`: Creates a new element with the specified tag name.
-- `Element createText(string text)`: Creates a text node.
-- `Element createComment(string text)`: Creates a comment node (`<!-- text -->`).
-- `Element fragment(string html)`: Creates a document fragment from a string.
-- `string toString()`: Serializes the entire document back to HTML. `toString(sink)` writes to a delegate or an output range.
-- `byId(string id)`: Finds an element by its ID (returns an invalid element, `== null`, if not found).
-- `byClass(string name)`: Returns a lazy range of elements with the specified class.
-- `byTagName(string name)`: Returns a lazy range of elements with the specified tag name.
-- `bySelector(string selector)` / `bySelector(Selector)`: Returns a lazy range of elements matching a CSS selector (each element once).
-- `descendants(bool returnAllElements = false)`: All the nodes in tree order.
-- `byComment(string comment)`: Returns a lazy range of comment nodes matching the specified text.
+- `this(string html, Parsing parsing = Parsing.Eager, size_t chunkSize = DefaultChunkSize)`: Parses the document. With `Parsing.Lazy` it parses incrementally, only as far as queries and accessors need. Results are identical to a full parse. Mutations complete the parsing first.
+- `this(string html, ParseOptions options)`: `ParseOptions` has `parsing`, `chunkSize` and `scripting` (with `scripting: true` the content of `<noscript>` is text, as in a browser; by default it's parsed as html).
+- `ctDocument!(html, ParseOptions options = ParseOptions.init)`: A document parsed at compile time. Each call returns a new mutable document, rebuilt from the stored tree without parsing (e.g. `ctDocument!(import("page.html"))`).
+- `Snapshot snapshot`, `this(Snapshot)`: A compact copy of the tree; `Document(snap)` makes a new independent document from it much faster than parsing. Snapshots can be shared between threads.
+- `Document dup`: A deep copy.
+- `void finishParsing()`, `bool isParsing`, `size_t bytesParsed`: Lazy parsing.
+- `bool isValid`: True if the document is initialized.
+- `Element documentElement`, `Element head`, `Element body` (the first `<body>` or `<frameset>` child of `<html>`, as in the DOM), `Node node` (the document itself as a `Node`).
+- `string title` (get/set; the getter strips and collapses whitespace), `string rawTitle`.
+- `Element createElement(string tagName)`, `Node createText(string text)`, `Node createComment(string text)`.
+- `Node fragment(string html, string context = "body")`: Parses html in the context of an element (as the standard fragment parsing: `"tr"` makes `<td>` valid, `"textarea"` makes everything text, `"svg"`/`"math"` for foreign content) into a `DocumentFragment` node. Inserting the fragment moves its children.
+- `string toString()`, `toString(sink)` (a delegate or an output range).
+- `Element byId(id)`, `byClass(name)`, `byTagName(name)` (`"*"`: all), `bySelector(css)` / `bySelector(Selector)` / `bySelector!css`, `byComment(text)` (whitespace at the ends ignored), `byCommentExact(text)`, `children!show`, `descendants!show`.
 
-### `Element`
-Represents a node in the DOM.
+### `Node`
+- `bool isValid`, `NodeType nodeType`, `string nodeName` (`"DIV"`, `"#text"`, `"#comment"`, `"#document"`, ...), `bool isElement`, `bool isText`, `bool isComment`, `Element asElement`, `Document ownerDocument`.
+- `string textContent`: Get/set. Elements and fragments: the text of all the descendants (setting replaces the children with a text node); texts, comments, processing instructions: the data; document and doctype: `null`.
+- `const(char)[] dataView`: The data of a text/comment without copying (`null` for other nodes).
+- Navigation, each with a `Show` filter (default `Show.Element`):
+  - `parent!show`: the parent if it matches (`html.parent` is invalid, `html.parent!(Show.All)` is the document);
+  - `firstChild!show`, `lastChild!show`, `nextSibling!show`, `previousSibling!show`;
+  - `children!show`, `descendants!show`: lazy bidirectional ranges (`retro` = reverse document order).
+- `bool hasChildNodes()`, `bool contains(Node other)` (true also for the node itself, as in the DOM).
+- Search: `byId`, `byClass`, `byTagName`, `bySelector`, `byComment`, `byCommentExact` (inside this node).
+- Mutations (`what` can be a `Node`/`Element`, a `string` added as text, `"<b>x</b>".asFragment` parsed as html in the context of the parent, a `DocumentFragment` node):
+  - `append(what)`, `prepend(what)`: as last / first child;
+  - `before(what)`, `after(what)`: as siblings;
+  - `replaceWith(what)`;
+  - `appendChild(Node)`, `node ~= what`;
+  - `bool remove()`: detaches the node (it stays valid).
+- `Node dup()` (deep), `Node shallowDup()`, `string toString()` (the html of the node).
 
-- `bool isValid`: True if the element is not null.
-- `bool isElement`, `bool isText`, `bool isComment`: Node type.
-- `Document owner`: The document (each element keeps it alive).
-- `string name`: The tag name (e.g., "div", "p", "#text", "!--").
-- `string id`: The `id` attribute value.
-- `auto classes`: A range of classes (split by space).
-- `auto attributes`: A range of `Attribute` structs (containing `name` and `value`).
-- `bool hasAttribute(string attr)`: Checks for attribute existence.
-- `string getAttribute(string attr)`: Retrieves an attribute's value (`null` if missing, `""` if empty).
-- `const(char)[] getAttributeView(string attr)`: Same, without copying (valid while the attribute is unchanged).
-- `bool matches(string selector)`: Checks if the element matches a CSS selector.
-- `void setAttribute(string name, string value)`: Sets or updates an attribute.
-- `void removeAttribute(string attr)`: Removes an attribute.
-- `string innerHTML`: Get/set the HTML content inside the element.
-- `string innerText`: Get/set the text content (strips tags on get, escapes on set).
-- `string outerHTML`: Get/set the HTML including the element itself.
-- `void appendChild(T)(T el)`: Adds a child. `T` can be `Element`, `string` (added as text), or `FragmentString` (added as HTML).
-- `void prependChild(T)(T el)`: Adds a child at the beginning.
-- `void appendSibling(T)(T el)`: Adds a sibling after the current element.
-- `void prependSibling(T)(T el)`: Adds a sibling before the current element.
-- `bool remove()`: Detaches the element from its parent. The element stays valid and can be inserted again.
-- `void replaceWith(T)(T el)`: Replaces the element with another.
-- `void copyFrom(Element e, bool deep = true)`: Copies attributes and optionally children from another element.
-- `Element parent`, `Element next`, `Element prev`: Navigation.
-- `Element firstChild(bool includeAllElements = false)`: Returns the first child (optionally including text/comments).
-- `Element lastChild(bool includeAllElements = false)`: Returns the last child.
-- `auto children(VisitOrder order = VisitOrder.Normal)(bool returnAllElements = false)`: Immediate children range.
-- `auto descendants(VisitOrder order = VisitOrder.Normal)(bool returnAllElements = false)`: Recursive descendants range.
-- `bool contains(Element e, bool deep = true)`: Checks if the element contains another.
+### `Element` (a `Node` too)
+- `string localName` ("div", "foreignObject"), `string tagName` ("DIV" for html elements), `localNameView`.
+- `string id` (get/set), `idView`, `auto classes`, `classesView`.
+- `auto attributes` (a range of `Element.Attribute {name, value}`), `attributesView` (`Element.AttributeView`).
+- `string getAttribute(name)` (`null` if missing, `""` if empty), `getAttributeView(name)`, `setAttribute(name, value)`, `hasAttribute(name)`, `removeAttribute(name)`. Names are case-insensitive.
+- `string innerHTML` (get/set; for `<template>` the content), `string outerHTML` (get/set, parsed in the context of the parent), `string innerText` (the same as `textContent`), `string startTag` (`<a href="x">`).
+- `bool matches(css)`, `bool isEmpty` (as `:empty`: no element and no text children; comments don't count), `bool isBlank` (as `:blank`: whitespace text doesn't count either).
+- `copyFrom(Element e)` (tag, attributes and children), `shallowCopyFrom(Element e)` (tag and attributes).
+- `Element dup()`, `Element shallowDup()`.
+- `el = "<b>html</b>";`: replaces the element with the (single) element parsed from the string.
+
+### `Show` (Enum, flags)
+`Show.Element`, `Show.Text`, `Show.CDataSection`, `Show.ProcessingInstruction`, `Show.Comment`, `Show.Document`, `Show.DocumentType`, `Show.DocumentFragment`, `Show.All`.
+
+### `Parsing` (Enum)
+`Parsing.Eager`, `Parsing.Lazy`.
 
 ### `Selector`
 A compiled CSS selector, reusable with any document.
 - `this(string css)`: Compiles the selector (throws `ParserinoException` on invalid syntax).
 - `bool isValid`.
+- `ctSelector!css`: Compiled at compile time (syntax errors are compile errors).
 
 ```d
 auto sel = Selector("div > a[href]");
@@ -75,42 +78,37 @@ foreach (doc; docs)
 ```
 
 ### `ParserinoException`
-Thrown on invalid operations (invalid elements, wrong node type, invalid selectors, empty ranges in `frontOrThrow`).
-
-### `VisitOrder` (Enum)
-Used with `children` and `descendants` ranges.
-- `VisitOrder.Normal`: Forward traversal.
-- `VisitOrder.Reverse`: Backward traversal.
-
-### `Attribute` (Struct)
-- `string name`: Attribute name.
-- `string value`: Attribute value.
+Thrown on invalid operations (invalid nodes, impossible mutations, invalid selectors, empty ranges in `frontOrThrow`).
 
 ## Range Helpers
-Since most search methods return lazy ranges, these helpers facilitate common operations:
-
-- `frontOrThrow(range)`: Returns the first element or throws `Exception` if empty.
+- `frontOrThrow(range)`: Returns the first element or throws `ParserinoException` if empty.
 - `frontOr(range, fallback)`: Returns the first element or the `fallback` element.
-- `frontOrInit(range)`: Returns the first element or an uninitialized `Element` (`null`).
+- `frontOrInit(range)`: Returns the first element or an invalid node (`== null`).
 
-## Fragment Handling
-Use `.asFragment` on a string to indicate it should be parsed as HTML when using `appendChild`, `prependChild`, `appendSibling`, `prependSibling`, or `outerHTML`.
+## Examples
 
+### Navigation by node type
 ```d
-import parserino;
-auto doc = Document("<div></div>");
-doc.body.firstChild.appendChild("<b>Bold</b>".asFragment);
-// Result: <body><div><b>Bold</b></div></body>
-```
+import std, parserino;
+void main() {
+    Document doc = "<div><!-- note --><p>Hello <b>world</b></p>tail</div>";
+    auto div = doc.byTagName("div").front;
 
-## Practical Examples
+    assert(div.children.walkLength == 1);                         // elements
+    assert(div.children!(Show.All).walkLength == 3);              // comment, p, text
+    assert(doc.descendants!(Show.Comment).front.textContent == " note ");
+    assert(div.descendants!(Show.Text).map!(t => t.textContent).join == "Hello worldtail");
+    assert(div.lastChild!(Show.All).isText);
+    assert(div.descendants.retro.front.localName == "b");
+}
+```
 
 ### Wikipedia Scraper (Lazy Processing)
 ```d
 import std, parserino;
 void main() {
     auto data = "https://en.wikipedia.org/wiki/Special:Random".get.to!string;
-    Document doc = Document(data, Parsing.lazy_); // parse only what the queries need
+    Document doc = Document(data, Parsing.Lazy); // parse only what the queries need
 
     // Get the canonical URL from <head>
     auto canonicalUrl = doc.head.bySelector("link[rel=canonical]").frontOrThrow.getAttribute("href");
@@ -133,17 +131,35 @@ import std.stdio, parserino;
 void main() {
     Document doc = Document("<html><body><h1>Old Title</h1></body></html>");
     auto h1 = doc.byTagName("h1").frontOrThrow;
-    h1.innerText = "New Title";
+    h1.textContent = "New Title";
 
     auto p = doc.createElement("p");
-    p.innerText = "A new paragraph.";
+    p.textContent = "A new paragraph.";
     p.setAttribute("class", "description");
-    doc.body.appendChild(p);
+    h1.after(p);
+    doc.body.append("<footer>end</footer>".asFragment);
 
     writeln(doc.toString());
 }
 ```
 
+### Templates
+```d
+import parserino;
+Document page() {
+    auto snap = Document(`<ul><li class="item"></li></ul>`).snapshot;   // parse once
+    auto doc = Document(snap);                                         // fast copies
+    auto model = doc.byClass("item").front;
+    foreach (name; ["a", "b"]) {
+        auto row = model.dup;
+        row.textContent = name;     // escaped automatically
+        model.before(row);
+    }
+    model.remove();
+    return doc;
+}
+```
+
 ## Notes on Performance
 Parserino uses lazy ranges for traversal. This means searching through a large document often doesn't require visiting every node unless the entire range is consumed (e.g., using `.array`).
-With `Parsing.lazy_`, even the parsing stops as soon as the range has what it needs: `doc.byTagName("a").take(3)` on a 1 MB page parses a few KB. Content inside tables that are still open is returned only when the table is closed, so table-based layouts parse further.
+With `Parsing.Lazy`, even the parsing stops as soon as the range has what it needs: `doc.byTagName("a").take(3)` on a 1 MB page parses a few KB. Content inside tables that are still open is returned only when the table is closed, so table-based layouts parse further.

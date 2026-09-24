@@ -11,6 +11,6 @@ void main()
 	writeln("Document before edit: ", doc);
 
 	// Let's change the text inside the body tag.
-	doc.body.innerText = "Hello, Parserino!";
+	doc.body.textContent = "Hello, Parserino!";
 	writeln(" Document after edit: ", doc);
 }

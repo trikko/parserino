@@ -84,7 +84,7 @@ void respond(Document page, Request request, Output output)
     auto start = MonoTime.currTime;
     render(page, request.get.read("q").strip);
     polish(page, request.path);
-    page.byId("elapsed").innerText = (MonoTime.currTime - start).total!"usecs".to!string;
+    page.byId("elapsed").textContent = (MonoTime.currTime - start).total!"usecs".to!string;
     respond(page, output);
 }
 
@@ -101,8 +101,8 @@ void render(Document page, string query)
 
     // 1. Texts by id. The designer can move these elements or change their tags: it still works.
     page.title = "Parserino Books";
-    page.byId("shop-name").innerText = "Parserino Books";
-    page.byId("count").innerText = found.length.to!string;
+    page.byId("shop-name").textContent = "Parserino Books";
+    page.byId("count").textContent = found.length.to!string;
 
     // 2. Attributes: keep the search in the form and in the layout links
     page.byId("search").setAttribute("value", query);
@@ -111,7 +111,7 @@ void render(Document page, string query)
 
     // 3. Automatic escaping: this is what the user typed, and it's set as text.
     //    Search for <script>alert(1)</script>: it is shown, not executed. No escape function to remember.
-    page.byId("query").innerText = query;
+    page.byId("query").textContent = query;
 
     // 4. Remove what is not needed in this case
     if (query.length > 0) page.byId("offer").remove();          // the offer only on the home page
@@ -128,9 +128,9 @@ void render(Document page, string query)
     {
         auto row = model.dup;                   // a deep copy, not yet in the page
 
-        row.byClass("title").front.innerText = book.title;
-        row.byClass("author").front.innerText = book.author;
-        row.byClass("price").front.innerText = format("€ %.2f", book.price);
+        row.byClass("title").front.textContent = book.title;
+        row.byClass("author").front.textContent = book.author;
+        row.byClass("price").front.textContent = format("€ %.2f", book.price);
 
         // Data for the frontend: the template's javascript reads them (element.dataset) to sort the
         // books in the browser. Escaped automatically too: `&` and `<` in the titles are safe.
@@ -142,9 +142,9 @@ void render(Document page, string query)
         foreach (t; book.tags)
         {
             auto tag = tags[0].dup;
-            tag.innerText = t;
+            tag.textContent = t;
             tag.setAttribute("href", "?q=" ~ encodeComponent(t));
-            tags[0].prependSibling(tag);        // insert the copies where the examples are
+            tags[0].before(tag);        // insert the copies where the examples are
         }
         foreach (t; tags) t.remove();
 
@@ -157,7 +157,7 @@ void render(Document page, string query)
         }
         else row.byClass("details").front.remove();
 
-        model.prependSibling(row);              // the new rows go before the examples, in order
+        model.before(row);              // the new rows go before the examples, in order
     }
 
     foreach (e; examples) e.remove();

@@ -12,7 +12,7 @@ import parserino.arena;
 import parserino.dom;
 import parserino.names;
 
-struct Snapshot
+struct DomSnapshot
 {
     CompatMode compatMode;
     bool scripting;
@@ -117,9 +117,9 @@ struct SnapshotAttribute
 }
 
 /// A snapshot of `doc` (it uses the GC; it also works at compile time)
-Snapshot takeSnapshot(const(DomDocument)* doc) pure
+DomSnapshot takeSnapshot(const(DomDocument)* doc) pure
 {
-    Snapshot s;
+    DomSnapshot s;
     s.compatMode = doc.compatMode;
     s.scripting = doc.scripting;
 
@@ -229,12 +229,13 @@ Snapshot takeSnapshot(const(DomDocument)* doc) pure
 }
 
 /// Parse `html` and take its snapshot (for compile time: `static immutable s = parseToSnapshot(html);`)
-Snapshot parseToSnapshot(string html) pure
+DomSnapshot parseToSnapshot(string html, bool scripting = false) pure
 {
     import parserino.html.parser : parseDocument;
 
     DomDocument d;
     d.initialize();
+    d.scripting = scripting;
     parseDocument(&d, html);
     auto s = takeSnapshot(&d);
     if (!__ctfe) d.release();
@@ -279,7 +280,7 @@ unittest
     assert(b.compatMode == a.compatMode);
 
     // At compile time
-    static immutable Snapshot ct = parseToSnapshot(html);
+    static immutable DomSnapshot ct = parseToSnapshot(html);
     auto c = newDoc();
     scope(exit) { c.release(); pureFree(c); }
     assert(ct.restore(c));
@@ -293,7 +294,7 @@ unittest
     assert(ct.nodes.length == s.nodes.length);
 
     // A frameset replaces the body: the body of the document is the frameset (as in the standard)
-    static immutable Snapshot fs = parseToSnapshot("<span><frameset>");
+    static immutable DomSnapshot fs = parseToSnapshot("<span><frameset>");
     auto d = newDoc();
     scope(exit) { d.release(); pureFree(d); }
     assert(fs.restore(d));

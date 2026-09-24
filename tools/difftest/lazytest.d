@@ -30,19 +30,20 @@ enum string[] selectors = [
 
 // The identity of a node: its path from the document plus its shallow serialization,
 // taken when the range emits it.
-string ident(Element e)
+string ident(Node e)
 {
+    if (!e.isValid) return "null";
     size_t[] path;
     for (auto n = e; n.isValid; )
     {
         size_t i = 0;
-        for (auto p = n.prev(true); p.isValid; p = p.prev(true)) i++;
+        for (auto p = n.previousSibling!(Show.All); p.isValid; p = p.previousSibling!(Show.All)) i++;
         path ~= i;
-        auto par = n.parent;
+        auto par = n.parent!(Show.All);
         if (!par.isValid) break;
         n = par;
     }
-    return format("%(%s.%) %s", path.retro, e.toString(false));
+    return format("%(%s.%) %s", path.retro, e.isElement ? e.asElement.startTag : e.toString);
 }
 
 string[] run(R)(R r, size_t limit = size_t.max)
@@ -86,8 +87,10 @@ void main(string[] args)
         alias Query = string[] delegate(Document d);
         Query[string] queries;
 
-        queries["descendants"] = (Document d) => run(d.descendants(true));
-        foreach (t; ["a", "p", "td", "b", "div", "html", "body", "title", "!--", "#text", "tr", "table"])
+        queries["descendants"] = (Document d) => run(d.descendants!(Show.All));
+        queries["comments"] = (Document d) => run(d.descendants!(Show.Comment));
+        queries["texts"] = (Document d) => run(d.descendants!(Show.Text));
+        foreach (t; ["a", "p", "td", "b", "div", "html", "body", "title", "tr", "table", "*"])
             queries["tag:" ~ t] = ((t) => (Document d) => run(d.byTagName(t)))(t);
 
         string[] classes = eager.descendants.map!(e => e.classes.array).joiner.array.sort.uniq.take(quick ? 3 : 8).array;
@@ -102,7 +105,12 @@ void main(string[] args)
 
         // take(3) and element accessors in the middle of the parsing
         queries["take3+inner"] = (Document d) => d.byTagName("p").take(3).map!(e => ident(e) ~ " " ~ e.innerHTML).array;
-        queries["next"] = (Document d) => d.byTagName("td").take(5).map!(e => e.next(true).isValid ? ident(e.next(true)) : "null").array;
+        queries["next"] = (Document d) => d.byTagName("td").take(5)
+            .map!(e => e.nextSibling!(Show.All).isValid ? ident(e.nextSibling!(Show.All)) : "null").array;
+        queries["prev+last"] = (Document d) => d.byTagName("tr").take(5)
+            .map!(e => ident(e.previousSibling) ~ " " ~ ident(e.lastChild!(Show.All)) ~ " " ~ ident(e.parent)).array;
+        queries["retro"] = (Document d) => run(d.byTagName("div").take(2).map!(e => e.descendants!(Show.All).retro).joiner, 50);
+        queries["children"] = (Document d) => d.body.isValid ? run(d.body.children!(Show.All)) : ["nobody"];
         queries["body+title"] = (Document d) => [d.body.isValid ? ident(d.body) : "nobody", d.title];
 
         foreach (name, q; queries)
@@ -111,14 +119,14 @@ void main(string[] args)
             foreach (chunk; chunks)
             {
                 if (chunk == 1 && html.length > 20_000) continue;
-                auto d = Document(html, Parsing.lazy_, chunk);
+                auto d = Document(html, Parsing.Lazy, chunk);
                 auto got = q(d);
                 compare(fname, name, chunk, expected, got);
             }
         }
 
         // The whole lazy document, after a partial query, must serialize the same
-        auto d = Document(html, Parsing.lazy_, 7);
+        auto d = Document(html, Parsing.Lazy, 7);
         d.bySelector("p").take(2).walkLength;
         if (d.toString != eager.toString) { failures++; writeln("DIFF ", fname.baseName, " toString"); }
     }

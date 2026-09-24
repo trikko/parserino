@@ -1,14 +1,17 @@
 # Parserino: Fast HTML5 Parser and DOM Manipulation for D
 
-Parserino is a high-performance HTML5 parser and DOM manipulation library for the D programming language, written in pure D (no C dependencies; the tree construction is derived from Lexbor).
+Parserino is a high-performance HTML5 parser and DOM manipulation library for the D programming language, written in pure D (no C dependencies; the tree construction is derived from Lexbor). Names and behaviour follow the DOM, HTML and Selectors 4 standards.
 
 ## Core Concepts
 
 - **Document**: The main entry point for parsing and managing HTML content.
-- **Element**: Represents a single node in the DOM tree (tags, text, comments).
-- **Lazy Ranges**: Most search methods (`byTagName`, `bySelector`, etc.) return lazy struct ranges (forward ranges), allowing for efficient memory usage and partial document processing.
-- **Lazy Parsing**: `Document(html, Parsing.lazy_)` builds the tree only as far as the queries need (`doc.byClass("x").take(3)` stops early). Results are identical to a full parse.
-- **Memory**: `Document` is reference counted; each `Element` keeps its document alive. Removed elements stay valid. Getters return `string` copies.
+- **Node**: Any node of the tree (element, text, comment, doctype, document, fragment).
+- **Element**: A node that is an element; it adds attributes, `innerHTML`, `matches`, ... It converts implicitly to `Node`; `node.asElement` goes back (invalid if the node isn't an element).
+- **Show**: Navigation methods take a template filter of node kinds (as DOM `whatToShow`): `children!(Show.All)`, `descendants!(Show.Comment)`, `firstChild!(Show.Text)`. The default is `Show.Element`, and then the result is an `Element`.
+- **Lazy Ranges**: Search and navigation ranges (`byTagName`, `bySelector`, `children`, `descendants`, ...) are lazy bidirectional struct ranges (`retro` gives reverse document order).
+- **Lazy Parsing**: `Document(html, Parsing.Lazy)` builds the tree only as far as the queries need (`doc.byClass("x").take(3)` stops early). Results are identical to a full parse.
+- **Errors**: searches and navigation return an invalid node (`== null`) or an empty range when nothing is found; invalid operations throw `ParserinoException`.
+- **Memory**: `Document` is reference counted; each `Node` keeps its document alive. Removed nodes stay valid. Getters return `string` copies; `...View` variants return slices of the document memory.
 
 ## Installation & Basic Usage
 
@@ -18,54 +21,53 @@ Add `parserino` to your `dub.json` or `dub.sdl`.
 import parserino;
 void main() {
     auto doc = Document("<html><body><p>Hello World!</p></body></html>");
-    assert(doc.body.firstChild.innerText == "Hello World!");
+    assert(doc.body.firstChild.textContent == "Hello World!");
 }
 ```
 
 ## API Reference
 
 ### Document
-- `this(string html, Parsing parsing = Parsing.eager, size_t chunkSize = 16 KiB)`: Parses HTML string into a DOM tree; `Parsing.lazy_` parses incrementally, driven by the queries.
+- `this(string html, Parsing parsing = Parsing.Eager, size_t chunkSize = DefaultChunkSize)`, `this(string html, ParseOptions options)`: Parse; `ParseOptions` has `parsing`, `chunkSize`, `scripting`.
+- `this(Snapshot)`, `snapshot`: A compact copy of the tree; `Document(snap)` rebuilds a document without parsing.
 - `ctDocument!html`: Parsed at compile time; each call returns a new document rebuilt from the stored tree.
+- `dup`: A deep copy.
 - `finishParsing()`, `isParsing`, `bytesParsed`: Control and inspect lazy parsing.
-- `documentElement`: The `<html>` element.
+- `documentElement`, `head`, `body` (the `<frameset>` in frameset documents), `node` (the document as a `Node`).
 - `title`, `title(string)`: Get or set the document title.
-- `body`, `head`: Properties to access the `<body>` and `<head>` elements.
-- `createElement(string tag)`: Creates a new element.
-- `createText(string text)`: Creates a text node.
-- `createComment(string text)`: Creates a comment node.
-- `fragment(string html)`: Parses a string into an unattached DOM fragment.
+- `createElement(tag)` (an `Element`), `createText(text)`, `createComment(text)` (`Node`s).
+- `fragment(html, context = "body")`: Parses html in the context of an element into a `DocumentFragment` node; inserting it moves its children.
 - `toString()`: Serializes the entire document back to HTML.
-- **Search Methods**: `byId(id)` (returns a null `Element` if not found), `byClass(class)`, `byTagName(tag)`, `bySelector(css or Selector)`, `byComment(text)`, `descendants`.
+- **Search Methods**: `byId(id)` (an invalid `Element` if not found), `byClass`, `byTagName` (`"*"` for all), `bySelector(css or Selector)`, `byComment(text)`, `byCommentExact(text)`, `children!show`, `descendants!show`.
+
+### Node
+- `isValid`, `nodeType`, `nodeName`, `isElement`, `isText`, `isComment`, `asElement`, `ownerDocument`.
+- `textContent` (get/set), `dataView`.
+- Navigation (all with `!(Show...)`): `parent`, `firstChild`, `lastChild`, `nextSibling`, `previousSibling`, `children`, `descendants`; `hasChildNodes`, `contains(node)` (inclusive).
+- Search: `byId`, `byClass`, `byTagName`, `bySelector`, `byComment`, `byCommentExact`.
+- Mutations: `append`, `prepend`, `before`, `after`, `replaceWith` (accept a `Node`, a `string` as text, `"<b>x</b>".asFragment` as html, a fragment), `appendChild(node)`, `remove()`, `~=`.
+- `dup`, `shallowDup`, `toString`.
+
+### Element (also has all the `Node` members)
+- `localName` ("div", "foreignObject"), `tagName` ("DIV"), `id` (get/set), `classes`, `attributes`.
+- `getAttribute(name)` (`null` if missing), `setAttribute`, `hasAttribute`, `removeAttribute`.
+- Views: `localNameView`, `idView`, `getAttributeView`, `classesView`, `attributesView`.
+- `innerHTML`, `outerHTML` (get/set), `innerText` (same as `textContent`), `startTag`.
+- `matches(css)`, `isEmpty` (`:empty`), `isBlank` (`:blank`), `copyFrom(e)`, `shallowCopyFrom(e)`.
+- `el = "<b>html</b>";` replaces the element with the parsed one.
 
 ### Selector
-- `Selector(string css)`: A compiled css selector, reusable with any document (throws `ParserinoException` on invalid syntax).
-
-### Element
-- `name`: The tag name (e.g., "div", "p", "#text", "!--").
-- `id`, `classes`: Shortcuts for `id` and `class` attributes.
-- `attributes`: A range of `Attribute` (struct with `name` and `value`).
-- `getAttribute(name)` (returns `null` if missing), `getAttributeView(name)` (no copy), `setAttribute(name, value)`, `hasAttribute(name)`, `removeAttribute(name)`.
-- `matches(css)`: Checks if the element matches a selector.
-- `isElement`, `isText`, `isComment`: Node type checks.
-- `innerHTML`, `innerText`, `outerHTML`: Get or set content. Setting `innerHTML` parses the string as HTML.
-- `appendChild(node)`, `prependChild(node)`: Add children nodes. Accepts `Element`, `string` (as text), or `FragmentString`.
-- `appendSibling(node)`, `prependSibling(node)`: Add siblings.
-- `remove()`: Removes the element from its parent.
-- `replaceWith(node)`: Replaces the current element with another.
-- `parent`, `next`, `prev`, `firstChild`, `lastChild`: Navigation properties.
-- `children(VisitOrder)`, `descendants(VisitOrder)`: Ranges for traversing children (immediate) or descendants (recursive).
+- `Selector(string css)`: A compiled css selector, reusable with any document (throws `ParserinoException` on invalid syntax). `ctSelector!css` and `bySelector!css` compile it at compile time.
 
 ### Range Helpers
-Since many operations return ranges, Parserino provides convenient helpers:
-- `frontOrThrow(range)`: Returns the first element of the range. Throws a `ParserinoException` if the range is empty.
-- `frontOr(range, fallback)`: Returns the first element or a provided `fallback` element if empty.
-- `frontOrInit(range)`: Returns the first element or `Element.init` (an invalid element) if empty.
+- `frontOrThrow(range)`: The first element; throws `ParserinoException` if the range is empty.
+- `frontOr(range, fallback)`: The first element or `fallback`.
+- `frontOrInit(range)`: The first element or an invalid node.
 
 ### Fragment Handling
 To insert raw HTML strings as DOM nodes (instead of plain text), use `.asFragment`:
 ```d
-doc.body.appendChild("<p>New Paragraph</p>".asFragment);
+doc.body.append("<p>New Paragraph</p>".asFragment);
 ```
 
 ## Examples

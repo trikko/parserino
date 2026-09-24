@@ -62310,7 +62310,7 @@ el head  inner 4285733579 text 0 empty false fc noscript lc noscript nx body
 el noscript  inner 226404271 text 0 empty true fc - lc !-- nx -
 node !-- 4138058784
 el body  inner 0 text 0 empty true fc - lc - nx -
-fragment 1193772986
+fragment 2568051167
 innerhtml 3263273852
 titleset 875921653
 rmattr 3935548323
@@ -102262,10 +102262,10 @@ el frame  inner 0 text 0 empty true fc - lc - nx -
 fragment 4032003468
 innerhtml 3049515530
 mutate 3103274772
-outer 1155224145
-copy 3876586414
-titleset 2614983370
-rmattr 2614983370
+outer 2192691973
+copy 2192691973
+titleset 671250350
+rmattr 671250350
 === h5_template_0040.html
 doc 60 549903945
 <html><head><template></template></head><body></body></html>
@@ -106460,7 +106460,7 @@ el html a=b inner 2183129984 text 0 empty false fc head lc body nx -
 el head  inner 679972824 text 0 empty false fc template lc template nx body
 el template  inner 2317689925 text 0 empty true fc - lc - nx -
 el body  inner 0 text 0 empty true fc - lc - nx -
-fragment 3510617849
+fragment 218589493
 innerhtml 1265854388
 titleset 546778588
 rmattr 546778588
@@ -106590,7 +106590,7 @@ el html a=b inner 2908710105 text 0 empty false fc head lc body nx -
 el head  inner 3414866573 text 0 empty false fc template lc template nx body
 el template  inner 385757767 text 0 empty true fc - lc - nx -
 el body  inner 0 text 0 empty true fc - lc - nx -
-fragment 313501633
+fragment 751034153
 innerhtml 3934042479
 titleset 2557011879
 rmattr 2557011879
@@ -106720,7 +106720,7 @@ el html a=b inner 630637929 text 0 empty false fc head lc body nx -
 el head  inner 3726490539 text 0 empty false fc template lc template nx body
 el template  inner 0 text 0 empty true fc - lc - nx -
 el body  inner 0 text 0 empty true fc - lc - nx -
-fragment 2747206447
+fragment 4032003468
 innerhtml 3049515530
 titleset 4152132642
 rmattr 4152132642
@@ -123473,7 +123473,7 @@ el html abc:def=gh inner 447691147 text 0 empty false fc head lc body nx -
 el head  inner 0 text 0 empty true fc - lc - nx body
 el body  inner 2323972829 text 0 empty false fc xyz:abc lc xyz:abc nx -
 el xyz:abc  inner 0 text 0 empty true fc - lc - nx -
-fragment 242283242
+fragment 2859931970
 innerhtml 581808272
 mutate 1098014190
 outer 1825967985
@@ -123605,7 +123605,7 @@ node !doctype 0
 el html xml:lang=bar inner 1270728282 text 0 empty false fc head lc body nx -
 el head  inner 0 text 0 empty true fc - lc - nx body
 el body  inner 0 text 0 empty true fc - lc - nx -
-fragment 3394563849
+fragment 81181246
 innerhtml 2236312738
 titleset 1207871172
 rmattr 1207871172
@@ -123734,7 +123734,7 @@ node !doctype 0
 el html 123=456 inner 1270728282 text 0 empty false fc head lc body nx -
 el head  inner 0 text 0 empty true fc - lc - nx body
 el body  inner 0 text 0 empty true fc - lc - nx -
-fragment 533261068
+fragment 81181246
 innerhtml 2236312738
 titleset 2004066112
 rmattr 2004066112
@@ -123863,7 +123863,7 @@ node !doctype 0
 el html 123=456 789=012 inner 1270728282 text 0 empty false fc head lc body nx -
 el head  inner 0 text 0 empty true fc - lc - nx body
 el body  inner 0 text 0 empty true fc - lc - nx -
-fragment 349712813
+fragment 81181246
 innerhtml 2236312738
 titleset 2807967523
 rmattr 2807967523
@@ -125793,10 +125793,10 @@ node #text 1428030105
 fragment 970460940
 innerhtml 1937230683
 mutate 525219461
-outer 738582963
-copy 231833622
-titleset 2244466899
-rmattr 2244466899
+outer 3075256138
+copy 3405415855
+titleset 1314596631
+rmattr 1314596631
 === h5_tests15_0013.html
 doc 71 2090792631
 <!DOCTYPE html><html><head></head><body><object></object></body></html>
@@ -163752,7 +163752,7 @@ node !doctype 0
 el html c=d a=b inner 1270728282 text 0 empty false fc head lc body nx -
 el head  inner 0 text 0 empty true fc - lc - nx body
 el body  inner 0 text 0 empty true fc - lc - nx -
-fragment 3045167857
+fragment 81181246
 innerhtml 2236312738
 titleset 2220843640
 rmattr 2220843640
@@ -163881,7 +163881,7 @@ node !doctype 0
 el html c=d a=b inner 3186477802 text 0 empty false fc head lc frameset nx -
 el head  inner 0 text 0 empty true fc - lc - nx frameset
 el frameset  inner 0 text 0 empty true fc - lc - nx -
-fragment 3045167857
+fragment 81181246
 innerhtml 2236312738
 titleset 4011896559
 rmattr 4011896559
@@ -164919,10 +164919,10 @@ el frame  inner 0 text 0 empty true fc - lc - nx -
 fragment 3119555465
 innerhtml 3447575920
 mutate 676781582
-outer 2933903608
-copy 3371149392
-titleset 436232727
-rmattr 436232727
+outer 2453848117
+copy 2453848117
+titleset 1046368192
+rmattr 1046368192
 === h5_tests19_0046.html
 doc 62 33408724
 <!DOCTYPE html><html><head></head><body><p>a</p></body></html>
@@ -165188,10 +165188,10 @@ el frame  inner 0 text 0 empty true fc - lc - nx -
 fragment 1997700347
 innerhtml 2205097060
 mutate 676781582
-outer 2933903608
-copy 3371149392
-titleset 436232727
-rmattr 436232727
+outer 2453848117
+copy 2453848117
+titleset 1046368192
+rmattr 1046368192
 === h5_tests19_0048.html
 doc 65 1564458111
 <!DOCTYPE html><html><head></head><body><pre></pre></body></html>
@@ -168532,10 +168532,10 @@ el frame  inner 0 text 0 empty true fc - lc - nx -
 fragment 1483580136
 innerhtml 2957200451
 mutate 676781582
-outer 2933903608
-copy 3371149392
-titleset 436232727
-rmattr 436232727
+outer 2453848117
+copy 2453848117
+titleset 1046368192
+rmattr 1046368192
 === h5_tests19_0073.html
 doc 69 1404394564
 <!DOCTYPE html><html><head></head><frameset><frame></frameset></html>
@@ -168666,10 +168666,10 @@ el frame  inner 0 text 0 empty true fc - lc - nx -
 fragment 2242754294
 innerhtml 3041211618
 mutate 676781582
-outer 2933903608
-copy 3371149392
-titleset 436232727
-rmattr 436232727
+outer 2453848117
+copy 2453848117
+titleset 1046368192
+rmattr 1046368192
 === h5_tests19_0074.html
 doc 69 1404394564
 <!DOCTYPE html><html><head></head><frameset><frame></frameset></html>
@@ -168800,10 +168800,10 @@ el frame  inner 0 text 0 empty true fc - lc - nx -
 fragment 3508578303
 innerhtml 2656900604
 mutate 676781582
-outer 2933903608
-copy 3371149392
-titleset 436232727
-rmattr 436232727
+outer 2453848117
+copy 2453848117
+titleset 1046368192
+rmattr 1046368192
 === h5_tests19_0075.html
 doc 66 358295735
 <!DOCTYPE html><html><head></head><body><svg>a</svg></body></html>
@@ -169069,10 +169069,10 @@ el frame  inner 0 text 0 empty true fc - lc - nx -
 fragment 1358331106
 innerhtml 2419955430
 mutate 676781582
-outer 2933903608
-copy 3371149392
-titleset 436232727
-rmattr 436232727
+outer 2453848117
+copy 2453848117
+titleset 1046368192
+rmattr 1046368192
 === h5_tests19_0077.html
 doc 42 2980704146
 <html><head></head><body>aaa</body></html>
@@ -170527,7 +170527,7 @@ node !doctype 0
 el html a=b c=d inner 1270728282 text 0 empty false fc head lc body nx -
 el head  inner 0 text 0 empty true fc - lc - nx body
 el body  inner 0 text 0 empty true fc - lc - nx -
-fragment 3488012032
+fragment 81181246
 innerhtml 2236312738
 titleset 1793830427
 rmattr 1793830427
@@ -187086,10 +187086,10 @@ el noframes  inner 0 text 0 empty true fc - lc - nx -
 fragment 3315782853
 innerhtml 2289670878
 mutate 1036995906
-outer 738582963
-copy 231833622
-titleset 2244466899
-rmattr 2244466899
+outer 3075256138
+copy 3405415855
+titleset 1314596631
+rmattr 1314596631
 === h5_tests1_0105.html
 doc 114 860831440
 <html><head></head><body><h1><table><tbody><tr><td><h3></h3></td></tr></tbody></table></h1><h3></h3></body></html>
@@ -216125,7 +216125,7 @@ node !doctype 0
 el html id=x inner 1270728282 text 0 empty false fc head lc body nx -
 el head  inner 0 text 0 empty true fc - lc - nx body
 el body  inner 0 text 0 empty true fc - lc - nx -
-fragment 768502211
+fragment 81181246
 innerhtml 2236312738
 titleset 1812102881
 rmattr 1812102881
@@ -216256,7 +216256,7 @@ el html id=x inner 1788323075 text 672454412 empty false fc head lc body nx -
 el head  inner 0 text 0 empty true fc - lc - nx body
 el body  inner 672454412 text 672454412 empty false fc - lc #text nx -
 node #text 672454412
-fragment 3042618941
+fragment 638789290
 innerhtml 3451788937
 titleset 2077478264
 rmattr 2077478264
@@ -216386,7 +216386,7 @@ node !doctype 0
 el html id=x inner 1270728282 text 0 empty false fc head lc body nx -
 el head  inner 0 text 0 empty true fc - lc - nx body
 el body  inner 0 text 0 empty true fc - lc - nx -
-fragment 768502211
+fragment 81181246
 innerhtml 2236312738
 titleset 1812102881
 rmattr 1812102881
@@ -245173,10 +245173,10 @@ node !-- 670727360
 fragment 137191007
 innerhtml 1860454638
 mutate 3899565290
-outer 1888409995
-copy 2383896749
-titleset 2007876351
-rmattr 2007876351
+outer 2356256074
+copy 2356256074
+titleset 126835123
+rmattr 126835123
 === h5_webkit01_0031.html
 doc 233 3088668598
 <html><head></head><body><select><option>A</option></select><option>B<select><option>C</option></select></option><option>D<select><option>E</option></select></option><option>F<select><option>G</option></select></option></body></html>
@@ -254610,7 +254610,7 @@ node #text 2454642859
 node #text 2454642859
 el body id=Home class=doc inner 3257281539 text 99592748 empty false fc script lc #text nx -
 node #text 2454642859
-fragment 2756822654
+fragment 828310020
 innerhtml 2998913610
 mutate 2680790783
 outer 822816593
@@ -254819,7 +254819,7 @@ node #text 2454642859
 el meta property=og:image:height content=910 inner 0 text 0 empty true fc - lc - nx meta
 node #text 2454642859
 el meta name=viewport content=width=1120 inner 0 text 0 empty true fc - lc - nx meta
-fragment 3278343236
+fragment 3486542135
 innerhtml 1683121190
 mutate 3386481621
 outer 2550874708
@@ -255028,7 +255028,7 @@ node #text 2454642859
 el meta property=og:image:height content=1200 inner 0 text 0 empty true fc - lc - nx meta
 node #text 2454642859
 el meta name=viewport content=width=1120 inner 0 text 0 empty true fc - lc - nx meta
-fragment 158608342
+fragment 106140785
 innerhtml 727856888
 mutate 900030008
 outer 93840948
@@ -255237,7 +255237,7 @@ node #text 2516551244
 el style type=text/css inner 816755610 text 816755610 empty false fc - lc #text nx link
 node #text 816755610
 node #text 840113818
-fragment 3507179285
+fragment 2741976881
 innerhtml 3711763938
 mutate 2004221664
 outer 1785034126
@@ -255446,7 +255446,7 @@ node #text 520893471
 el nav  inner 1071045970 text 2558856281 empty false fc a lc a nx ol
 el a href=syntax.html inner 2676178657 text 2676178657 empty false fc - lc #text nx a
 node #text 2676178657
-fragment 1953884131
+fragment 3152394576
 innerhtml 2735421780
 mutate 732865875
 outer 1428816205
@@ -255655,7 +255655,7 @@ node #text 1497027039
 node #text 4232100626
 el a href=show inner 570652574 text 570652574 empty false fc - lc #text nx a
 node #text 570652574
-fragment 3457220369
+fragment 53348566
 innerhtml 1577652733
 mutate 745090680
 outer 4291291710
@@ -255864,7 +255864,7 @@ el meta property=al:android:url content=bbcx://news data-next-head= inner 0 text
 el meta property=al:android:app_name content=BBC: World News & Stories data-next-head= inner 0 text 0 empty true fc - lc - nx meta
 el meta property=al:android:package content=bbc.mobile.news.ww data-next-head= inner 0 text 0 empty true fc - lc - nx meta
 el meta property=al:web:url content=https://bbc.com/news data-next-head= inner 0 text 0 empty true fc - lc - nx meta
-fragment 2184635769
+fragment 1085319920
 innerhtml 4202242907
 mutate 1904362562
 outer 2014412233
@@ -256075,7 +256075,7 @@ el link href=//cdn.iubenda.com rel=preconnect inner 0 text 0 empty true fc - lc 
 node #text 2454642859
 el link href=//securepubads.g.doubleclick.net rel=preconnect inner 0 text 0 empty true fc - lc - nx script
 node #text 2454642859
-fragment 4114022442
+fragment 3257885442
 innerhtml 3635633675
 mutate 4170354584
 outer 442533623
@@ -256284,7 +256284,7 @@ el style  inner 746202181 text 746202181 empty false fc - lc #text nx style
 node #text 746202181
 node #text 2454642859
 el style  inner 1344873046 text 1344873046 empty false fc - lc #text nx style
-fragment 1995822718
+fragment 2237704007
 innerhtml 2525682231
 mutate 1994669777
 outer 2978439814

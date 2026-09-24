@@ -7,13 +7,13 @@ void main()
 
 	// Parse a fragment of HTML and add it to the document
 	// If you don't use asFragment, the string will be added as a text node
-	doc.body.appendChild("<p>How are you?</p>".asFragment);
+	doc.body.append("<p>How are you?</p>".asFragment);
 
 	// Create another new element and add it to the document
 	Element p = doc.createElement("p");
-	p.innerText = "I'm fine, thanks!";
+	p.textContent = "I'm fine, thanks!";
 
-	doc.body.appendChild(p);
+	doc.body.append(p);
 
 	// Print the document
 	writeln(doc);

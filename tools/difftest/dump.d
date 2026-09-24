@@ -35,19 +35,32 @@ enum string[] selectors = [
     "[title~=\"\"]", "[x=\"a\\\"b\"]", "\\64 iv", "#\\31 23", ".\\.x",
 ];
 
-string ident(Element e)
+// The name printed by the old API: lowercase tag, "#text", "!--", "!doctype", PI target
+string oldName(Node n)
+{
+    import std.uni : toLower;
+    switch (n.nodeType)
+    {
+        case NodeType.Element: return n.asElement.localName.toLower;
+        case NodeType.Comment: return "!--";
+        case NodeType.DocumentType: return "!doctype";
+        default: return n.nodeName;
+    }
+}
+
+string ident(Node e)
 {
     size_t[] path;
     for (auto n = e; n.isValid; )
     {
         size_t i = 0;
-        for (auto p = n.prev(true); p.isValid; p = p.prev(true)) i++;
+        for (auto p = n.previousSibling!(Show.All); p.isValid; p = p.previousSibling!(Show.All)) i++;
         path ~= i;
-        auto par = n.parent;
+        auto par = n.parent!(Show.All);
         if (!par.isValid) break;
         n = par;
     }
-    return format("%(%s.%) %s", path.retro, e.toString(false));
+    return format("%(%s.%) %s", path.retro, e.isElement ? e.asElement.startTag : e.toString);
 }
 
 string summary(string[] items)
@@ -73,14 +86,19 @@ void main(string[] args)
         writeln("doc ", full.length, " ", hashOf(full));
         if (full.length < 3000) writeln(full);
         writeln("title [", doc.title, "] raw [", doc.rawTitle, "]");
-        writeln("body ", tryIt(doc.body.isValid ? hashOf(doc.body.innerText).to!string ~ " " ~ hashOf(doc.body.innerHTML).to!string : "none"));
+        writeln("body ", tryIt(doc.body.isValid ? hashOf(doc.body.textContent).to!string ~ " " ~ hashOf(doc.body.innerHTML).to!string : "none"));
         writeln("head ", tryIt(doc.head.isValid ? hashOf(doc.head.outerHTML).to!string : "none"));
 
-        auto all = doc.descendants(true).map!ident.array;
+        auto all = doc.descendants!(Show.All).map!ident.array;
         writeln("all ", summary(all));
 
         foreach (t; ["a", "p", "td", "b", "div", "html", "body", "title", "!--", "#text", "svg", "select", "template", "X-Y"])
-            writeln("tag ", t, " ", summary(doc.byTagName(t).map!ident.array));
+        {
+            string[] found = t == "!--" ? doc.descendants!(Show.Comment).map!ident.array
+                : t == "#text" ? doc.descendants!(Show.Text).map!ident.array
+                : doc.byTagName(t).map!(e => ident(e)).array;
+            writeln("tag ", t, " ", summary(found));
+        }
 
         auto classes = doc.descendants.map!(e => e.classes.array).joiner.array.sort.uniq.take(10).array;
         foreach (c; classes)
@@ -88,10 +106,10 @@ void main(string[] args)
 
         auto ids = doc.descendants.map!(e => e.id).filter!(x => x.length).take(5).array;
         foreach (i; ids)
-            writeln("id ", i, " ", tryIt(ident(doc.byId(i))));
+            writeln("id ", i, " ", tryIt(ident(doc.byId(i).node)));
 
         foreach (s; selectors)
-            writeln("sel ", s, " ", tryIt(summary(doc.bySelector(s).map!ident.array)));
+            writeln("sel ", s, " ", tryIt(summary(doc.bySelector(s).map!(e => ident(e)).array)));
 
         // matches() on the first elements
         foreach (e; doc.descendants.take(30))
@@ -102,19 +120,23 @@ void main(string[] args)
         }
 
         // attributes, texts, outerHTML of the first elements
-        foreach (e; doc.descendants(true).take(40))
+        foreach (n; doc.descendants!(Show.All).take(40))
         {
-            if (e.isElement)
-                writeln("el ", e.name, " ", e.attributes.map!(a => a.name ~ "=" ~ a.value).join(" ").take(200),
-                    " inner ", hashOf(e.innerHTML), " text ", hashOf(e.innerText), " empty ", e.isEmpty,
-                    " fc ", e.firstChild.isValid ? e.firstChild.name : "-", " lc ", e.lastChild(true).isValid ? e.lastChild(true).name : "-",
-                    " nx ", e.next.isValid ? e.next.name : "-");
+            if (n.isElement)
+            {
+                auto e = n.asElement;
+                writeln("el ", oldName(e), " ", e.attributes.map!(a => a.name ~ "=" ~ a.value).join(" ").take(200),
+                    " inner ", hashOf(e.innerHTML), " text ", hashOf(e.textContent), " empty ", e.isBlank,
+                    " fc ", e.firstChild.isValid ? oldName(e.firstChild) : "-",
+                    " lc ", e.lastChild!(Show.All).isValid ? oldName(e.lastChild!(Show.All)) : "-",
+                    " nx ", e.nextSibling.isValid ? oldName(e.nextSibling) : "-");
+            }
             else
-                writeln("node ", e.name, " ", hashOf(e.innerText));
+                writeln("node ", oldName(n), " ", hashOf(n.textContent));
         }
 
         // fragment parsing, innerHTML
-        writeln("fragment ", tryIt(hashOf(doc.fragment(html).toString).to!string));
+        writeln("fragment ", tryIt(hashOf("<html>" ~ doc.fragment(html, "div").toString ~ "</html>").to!string));
         {
             auto d2 = Document("<html><body>");
             d2.body.innerHTML = html;
@@ -125,16 +147,16 @@ void main(string[] args)
         {
             auto d = Document(html);
             auto first = d.body.isValid ? d.body.firstChild : Element.init;
-            if (first.isValid && first.name != "template")
+            if (first.isValid && first.localName != "template")
             {
                 auto c = first.dup;
                 c.setAttribute("data-t", "v");
-                first.appendSibling(c);
-                c.innerText = "<x>";
-                first.prependSibling("text&");
-                first.appendChild("<i>frag</i>".asFragment);
-                auto shallow = first.dup(false);
-                d.body.prependChild(shallow);
+                first.after(c);
+                c.textContent = "<x>";
+                first.before("text&");
+                first.append(d.fragment("<i>frag</i>", "div"));
+                auto shallow = first.shallowDup;
+                d.body.prepend(shallow);
                 first.remove();
                 writeln("mutate ", hashOf(d.toString));
                 if (d.body.lastChild.isValid) { d.body.lastChild.outerHTML = "<p>o</p><p>p</p>"; writeln("outer ", hashOf(d.toString)); }
