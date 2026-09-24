@@ -56,6 +56,10 @@ void main() {
 - `matches(css)`, `isEmpty` (`:empty`), `isBlank` (`:blank`), `copyFrom(e)`, `shallowCopyFrom(e)`.
 - `el = "<b>html</b>";` replaces the element with the parsed one.
 
+### Parse errors and encodings
+- `ParseOptions.collectErrors` and `doc.parseErrors`: a list of `ParseError` (`code`, `line`, `column`, `name` as in the HTML standard, e.g. "unexpected-null-character"). With `ctDocument!(html, options)` the errors are compile errors.
+- The input is UTF-8 (BOM removed, invalid bytes become U+FFFD). `parserino.encoding.toUtf8(bytes)` detects the encoding (BOM, `<meta charset>`) and converts UTF-16, windows-1252, ISO-8859-2, windows-1250/1251.
+
 ### Selector
 - `Selector(string css)`: A compiled css selector, reusable with any document (throws `ParserinoException` on invalid syntax). `ctSelector!css` and `bySelector!css` compile it at compile time.
 

@@ -104,6 +104,28 @@ auto snap = doc.snapshot;                       // parse once...
 auto fast = Document(snap);                     // ...and make many documents quickly
 ```
 
+# parse errors and encodings
+
+The parser recovers from any html, as browsers do. To know what was wrong, collect the errors
+(the codes of the HTML standard, with line and column):
+
+```d
+ParseOptions options = { collectErrors: true };
+auto doc = Document(html, options);
+foreach (e; doc.parseErrors) writeln(e);        // 3:12: duplicate-attribute, ...
+
+enum ParseOptions strict = { collectErrors: true };
+auto page = ctDocument!(import("page.html"), strict);   // invalid html doesn't compile
+```
+
+The input is UTF-8 (a BOM is removed, invalid bytes become U+FFFD). For other encodings,
+`parserino.encoding` finds the encoding as browsers do (BOM, `<meta charset>`) and converts:
+
+```d
+import parserino.encoding;
+auto doc = Document(toUtf8(cast(const(ubyte)[]) read("old-page.html")));
+```
+
 # lazy parsing
 
 `Document(html, Parsing.Lazy)` builds the tree chunk by chunk, only as far as your queries need.

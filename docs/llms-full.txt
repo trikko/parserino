@@ -58,6 +58,16 @@ The root of the DOM tree.
 - `Element dup()`, `Element shallowDup()`.
 - `el = "<b>html</b>";`: replaces the element with the (single) element parsed from the string.
 
+### Parse errors
+- `ParseOptions.collectErrors` (off by default, no cost): `doc.parseErrors` returns `ParseError[]` sorted by position; `ParseError` has `code` (`ParseErrorCode`), `line`, `column` (1-based), `name` (the code of the HTML standard, such as `"eof-in-tag"`; tree construction errors, not named by the standard, are `missing-doctype`, `unexpected-start-tag`, `unexpected-end-tag`, `misnested-tag`, ...) and `toString` (`"3:12: duplicate-attribute"`).
+- `ctDocument!(html, options)` with `collectErrors: true` makes any parse error a compile error listing them.
+
+### Encodings (`parserino.encoding`)
+- The input of `Document` is UTF-8: a leading BOM is removed, invalid bytes become U+FFFD.
+- `string toUtf8(const(ubyte)[] bytes, string encoding = null, string transportCharset = null)`: converts to UTF-8; without `encoding` it uses `sniffEncoding`.
+- `string sniffEncoding(const(ubyte)[] bytes, string transportCharset = null)`: BOM, then the HTTP charset, then `<meta charset>` in the first 1024 bytes, else UTF-8 if valid, else windows-1252.
+- Supported: UTF-8, UTF-16LE/BE, windows-1252 (labels latin1, iso-8859-1, us-ascii, ...), ISO-8859-2, windows-1250, windows-1251.
+
 ### `Show` (Enum, flags)
 `Show.Element`, `Show.Text`, `Show.CDataSection`, `Show.ProcessingInstruction`, `Show.Comment`, `Show.Document`, `Show.DocumentType`, `Show.DocumentFragment`, `Show.All`.
 
