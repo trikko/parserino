@@ -3038,14 +3038,8 @@ struct ClassFilter
         if (a is null || name.length == 0) return false;
 
         auto v = attrValue(a);
-        size_t i = 0;
-        while (i < v.length)
-        {
-            while (i < v.length && isHtmlSpace(v[i])) i++;
-            size_t s = i;
-            while (i < v.length && !isHtmlSpace(v[i])) i++;
-            if (v[s .. i] == name) return true;
-        }
+        for (size_t i = 0; i < v.length; )
+            if (nextWord(v, i) == name) return true;
 
         return false;
     }
@@ -3194,14 +3188,8 @@ struct SelectorFilter
         if (classes && e.classAttr !is null)
         {
             auto v = attrValue(e.classAttr);
-            size_t i = 0;
-            while (i < v.length)
-            {
-                while (i < v.length && isHtmlSpace(v[i])) i++;
-                size_t start = i;
-                while (i < v.length && !isHtmlSpace(v[i])) i++;
-                if (i > start) b.add(Bloom.key('.', v[start .. i]));
-            }
+            for (size_t i = 0; i < v.length; )
+                if (auto w = nextWord(v, i)) b.add(Bloom.key('.', w));
         }
     }
 
@@ -3699,6 +3687,15 @@ bool isRootElement(const(DomNode)* n) nothrow @nogc
 }
 
 bool isHtmlSpace(char c) nothrow @nogc pure { return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f'; }
+
+// The next word of a space separated list (a class attribute) from `i`; empty at the end
+const(char)[] nextWord(return scope const(char)[] v, ref size_t i) nothrow @nogc pure
+{
+    while (i < v.length && isHtmlSpace(v[i])) i++;
+    size_t start = i;
+    while (i < v.length && !isHtmlSpace(v[i])) i++;
+    return v[start .. i];
+}
 
 /+ The end offset of the last <html ...> or <body ...> start tag in the input (0 if none).
  + These tags can add attributes to the existing <html>/<body> elements at any time.
