@@ -577,7 +577,7 @@ struct Document
     @property void title(const(char)[] s)
     {
         onlyValid();
-        impl.finish();
+        impl.mutate();
 
         auto dom = impl.dom;
         if (dom.head is null) return;
@@ -987,7 +987,7 @@ struct Node
     @property void textContent(const(char)[] text)
     {
         onlyValid();
-        impl.finish();
+        impl.mutate();
 
         if (auto cd = raw.asCharacterData)
         {
@@ -1255,6 +1255,14 @@ struct Node
     Element byId(const(char)[] id)
     {
         onlyValid();
+
+        // On a whole parsed document, from the second search on: an index (until a mutation)
+        if (raw is &impl.dom.node && !impl.parsing && impl.idSearches++ > 0)
+        {
+            auto e = impl.elementById(id);
+            return Element(doc, e is null ? null : &e.node);
+        }
+
         return NodeRange!(IdFilter, Show.Element)(doc, raw, true, IdFilter(id)).frontOrInit;
     }
 
@@ -1325,6 +1333,27 @@ struct Node
 
     unittest
     {
+        // The index of the ids follows the changes of the document
+        Document doc = `<p id=a>1</p><p id=b>2</p><p id=a>3</p>`;
+        assert(doc.byId("a").textContent == "1");
+        assert(doc.byId("zz") == null);
+
+        doc.byId("a").remove();
+        assert(doc.byId("a").textContent == "3");
+        doc.byId("b").id = "c";
+        assert(doc.byId("b") == null && doc.byId("c").textContent == "2");
+        doc.body.prepend(doc.createElement("i"));
+        doc.body.firstChild.id = "b";
+        assert(doc.byId("b").localName == "i");
+        doc.body.innerHTML = "<b id=a>new</b>";
+        assert(doc.byId("a").textContent == "new" && doc.byId("c") == null);
+
+        // A subtree is searched directly
+        assert(doc.body.byId("a").textContent == "new");
+    }
+
+    unittest
+    {
         Document doc = Document(`<html><body><p id="test"/><p id="another" class="hello world">this is a text`);
 
         {
@@ -1363,7 +1392,7 @@ struct Node
     void append(E)(auto ref E what)
     {
         onlyParent();
-        impl.finish();
+        impl.mutate();
 
         foreach (n; nodesToInsert(what, raw, raw))
             raw.appendChild(n);
@@ -1373,7 +1402,7 @@ struct Node
     void prepend(E)(auto ref E what)
     {
         onlyParent();
-        impl.finish();
+        impl.mutate();
 
         auto first = raw.firstChild;
         foreach (n; nodesToInsert(what, raw, raw))
@@ -1387,7 +1416,7 @@ struct Node
     void before(E)(auto ref E what)
     {
         onlySibling();
-        impl.finish();
+        impl.mutate();
 
         foreach (n; nodesToInsert(what, raw.parent, raw))
             raw.insertBefore(n);
@@ -1397,7 +1426,7 @@ struct Node
     void after(E)(auto ref E what)
     {
         onlySibling();
-        impl.finish();
+        impl.mutate();
 
         DomNode* last = raw;
         foreach (n; nodesToInsert(what, raw.parent, raw))
@@ -1433,7 +1462,7 @@ struct Node
     bool remove()
     {
         onlyValid();
-        impl.finish();
+        impl.mutate();
 
         if (raw.parent is null) return false;
         raw.remove();
@@ -1851,7 +1880,7 @@ struct Element
     void removeAttribute(const(char)[] attr)
     {
         onlyValid();
-        impl.finish();
+        impl.mutate();
         if (auto a = attributeByName(element, attr)) element.removeAttribute(a);
     }
 
@@ -1859,7 +1888,7 @@ struct Element
     void setAttribute(const(char)[] name, const(char)[] value)
     {
         onlyValid();
-        impl.finish();
+        impl.mutate();
         auto dom = impl.dom;
         if (auto a = attributeByName(element, name))
         {
@@ -2046,7 +2075,7 @@ struct Element
     @property void innerHTML(const(char)[] html)
     {
         onlyValid();
-        impl.finish();
+        impl.mutate();
 
         auto frag = parseToFragment(impl.dom, element, html);
 
@@ -2251,7 +2280,7 @@ struct Element
     {
         onlyValid();
         e.onlyValid();
-        impl.finish();
+        impl.mutate();
 
         if (e.raw is raw) return;
 
@@ -3052,6 +3081,11 @@ struct DocImpl
     bool collectErrors;
     Buffer!RawParseError errors;
 
+    // byId: an index of the ids, valid while `mutations` doesn't change
+    size_t mutations;
+    size_t idSearches;
+    IdIndex ids;
+
     static DocImpl* create()
     {
         auto d = cast(DocImpl*) calloc(1, DocImpl.sizeof);
@@ -3079,6 +3113,7 @@ struct DocImpl
         d.formatting.dispose();
         d.selects.dispose();
         destroy(d.errors);
+        d.ids.dispose();
         if (d.snapshot !is null)
         {
             import core.memory : GC;
@@ -3129,6 +3164,31 @@ struct DocImpl
         sourceLength = input.length;
         chunkSize = chunk;
         parsing = true;
+    }
+
+    // Before a change of the tree: the parsing ends, the index of the ids is no longer valid
+    void mutate()
+    {
+        finish();
+        mutations++;
+    }
+
+    // The first element with this id, in tree order (the document must be parsed)
+    DomElement* elementById(scope const(char)[] id)
+    {
+        if (!ids.built || ids.version_ != mutations)
+        {
+            ids.clear();
+            for (auto n = dom.node.firstChild; n !is null; n = n.nextInTree(&dom.node))
+            {
+                if (n.type != NodeType.Element) continue;
+                auto a = n.as!DomElement.idAttr;
+                if (a !is null) ids.add(attrValue(a), n.as!DomElement);
+            }
+            ids.built = true;
+            ids.version_ = mutations;
+        }
+        return ids.find(id);
     }
 
     // Parse one more chunk. It returns false if the parsing is already complete.
@@ -3285,6 +3345,67 @@ struct DocImpl
     {
         return parserino.css.matcher.matches(list, n, scope_);
     }
+}
+
+// The ids of a document: open addressing, the first element for each id (malloc'd)
+struct IdIndex
+{
+    static struct Entry { const(char)[] id; DomElement* element; }
+
+    Entry* slots;
+    size_t capacity;        // a power of 2
+    size_t count;
+    bool built;
+    size_t version_;
+
+    static size_t hash(scope const(char)[] s) nothrow @nogc
+    {
+        size_t h = 14695981039346656037UL;
+        foreach (c; s) { h ^= c; h *= 1099511628211UL; }
+        return h;
+    }
+
+    void add(const(char)[] id, DomElement* e)
+    {
+        if ((count + 1) * 2 > capacity) grow();
+        auto mask = capacity - 1;
+        for (auto i = hash(id) & mask; ; i = (i + 1) & mask)
+        {
+            if (slots[i].element is null) { slots[i] = Entry(id, e); count++; return; }
+            if (slots[i].id == id) return;      // the first one in tree order stays
+        }
+    }
+
+    DomElement* find(scope const(char)[] id) nothrow @nogc
+    {
+        if (capacity == 0) return null;
+        auto mask = capacity - 1;
+        for (auto i = hash(id) & mask; slots[i].element !is null; i = (i + 1) & mask)
+            if (slots[i].id == id) return slots[i].element;
+        return null;
+    }
+
+    void grow()
+    {
+        auto old = slots[0 .. capacity];
+        auto n = capacity == 0 ? 64 : capacity * 2;
+        auto p = cast(Entry*) calloc(n, Entry.sizeof);
+        if (p is null) throw new ParserinoException("Out of memory");
+        slots = p;
+        capacity = n;
+        count = 0;
+        foreach (ref e; old) if (e.element !is null) add(e.id, e.element);
+        free(old.ptr);
+    }
+
+    void clear() nothrow @nogc
+    {
+        if (slots !is null) foreach (ref e; slots[0 .. capacity]) e = Entry.init;
+        count = 0;
+        built = false;
+    }
+
+    void dispose() nothrow @nogc { free(slots); slots = null; capacity = count = 0; built = false; }
 }
 
 // A small malloc'd list of nodes
