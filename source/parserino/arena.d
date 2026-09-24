@@ -6,13 +6,14 @@
 +/
 module parserino.arena;
 
-import core.stdc.stdlib : malloc, free;
+import core.memory : pureMalloc, pureFree;
 import core.stdc.string : memcpy, memset;
 
 /// Allocate `n` zeroed `T`s with the GC. Only for CTFE.
 private T[] gcNew(T)(size_t n) nothrow pure { return new T[n]; }
+private T* gcNewOne(T)() nothrow pure { return new T; }
 
-@nogc nothrow:
+@nogc nothrow pure:
 
 /// Call `gcNew` from @nogc code: it is used only in `if (__ctfe)` branches.
 package T[] ctfeNew(T)(size_t n) @trusted
@@ -23,7 +24,7 @@ package T[] ctfeNew(T)(size_t n) @trusted
 
 struct Arena
 {
-@nogc nothrow:
+@nogc nothrow pure:
     @disable this(this);
 
     /// Allocate `n` zeroed `T`s. It returns `null` if out of memory.
@@ -42,6 +43,13 @@ struct Arena
     /// Allocate a single zeroed `T`.
     T* make(T)() @trusted
     {
+        if (__ctfe)
+        {
+            // A single object (not an array element) can initialize static data
+            alias F = T* function() @nogc nothrow pure;
+            return (cast(F) &gcNewOne!T)();
+        }
+
         auto a = alloc!T(1);
         return a is null ? null : &a[0];
     }
@@ -65,7 +73,7 @@ struct Arena
         while (head !is null)
         {
             auto next = head.next;
-            free(head);
+            pureFree(head);
             head = next;
         }
     }
@@ -99,7 +107,7 @@ struct Arena
 
         auto header = (Block.sizeof + 15) & ~15;
         auto size = header + bytes > blockSize ? header + bytes : blockSize;
-        auto b = cast(Block*) malloc(size);
+        auto b = cast(Block*) pureMalloc(size);
         if (b is null) return null;
 
         b.size = size;
@@ -113,7 +121,7 @@ struct Arena
 /// A growable array for temporary data (malloc'd, GC in CTFE).
 struct Buffer(T)
 {
-@nogc nothrow:
+@nogc nothrow pure:
     @disable this(this);
 
     void put(T x) @trusted
@@ -127,7 +135,7 @@ struct Buffer(T)
     @property bool empty() const { return length == 0; }
     void clear() { length = 0; }
 
-    ~this() @trusted { if (!__ctfe && data.ptr !is null) free(data.ptr); }
+    ~this() @trusted { if (!__ctfe && data.ptr !is null) pureFree(data.ptr); }
 
     size_t length;
 
@@ -141,13 +149,13 @@ struct Buffer(T)
         if (__ctfe) nd = ctfeNew!T(n);
         else
         {
-            auto p = cast(T*) malloc(n * T.sizeof);
+            auto p = cast(T*) pureMalloc(n * T.sizeof);
             if (p is null) assert(0, "Out of memory");
             nd = p[0 .. n];
         }
 
         foreach (i; 0 .. length) nd[i] = data[i];
-        if (!__ctfe && data.ptr !is null) free(data.ptr);
+        if (!__ctfe && data.ptr !is null) pureFree(data.ptr);
         data = nd;
     }
 }

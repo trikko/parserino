@@ -95,4 +95,13 @@ doc.finishParsing();
 * `getAttribute` returns `null` for missing attributes.
 * Ranges are structs (forward ranges); `bySelector` returns each element once.
 * Elements can't be moved between documents.
+* CSS selectors follow the standard (Selectors 4 and HTML) for a static document:
+  * `:hover`, `:focus`, `:active`, `:visited`, `:target`, ... are valid but never match
+    (before they matched elements with a `hover`/`focus`/`active` attribute);
+  * pseudo-elements (`::before`) are valid but never match;
+  * `:lang()`, `:scope` and namespace prefixes (`svg|rect`, `[xlink|href]`, `*|*`) are supported;
+  * `:disabled`, `:enabled`, `:checked`, `:read-write`, `:placeholder-shown`, `:link` follow the HTML spec;
+  * `:is()`/`:where()` are forgiving, `:has()` is not (and can't be nested), extra tokens after `An+B` are an error;
+  * `:first-child`, `:nth-child()`, ... count elements only.
+* Selectors can be parsed at compile time: `doc.bySelector!"div > a"` or `ctSelector!"div > a"`.
 

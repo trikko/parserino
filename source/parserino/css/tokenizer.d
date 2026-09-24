@@ -6,7 +6,7 @@ module parserino.css.tokenizer;
 
 import parserino.arena;
 
-@nogc nothrow:
+@nogc nothrow pure:
 
 enum TokenType : ubyte
 {
@@ -47,7 +47,7 @@ struct Token
 
 struct Tokenizer
 {
-@nogc nothrow:
+@nogc nothrow pure:
     @disable this(this);
 
     this(const(char)[] input, Arena* arena)

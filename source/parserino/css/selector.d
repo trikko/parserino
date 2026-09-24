@@ -1,15 +1,18 @@
 /++
  CSS selectors: syntax tree and parser.
 
- The parser follows the grammar accepted by lexbor, so results are the same as
- the previous versions of parserino. It works at runtime and at compile time.
+ The parser follows Selectors Level 4, for a static document: user-action and
+ time pseudo-classes (`:hover`, `:visited`, ...) and pseudo-elements (`::before`)
+ are valid but never match. It works at runtime and at compile time.
+
+ Namespace prefixes are predefined: `html`, `svg`, `math`, `xlink`, `xml`, `xmlns`.
 +/
 module parserino.css.selector;
 
 import parserino.arena;
 import parserino.css.tokenizer;
 
-@nogc nothrow:
+@nogc nothrow pure:
 
 /// How a compound selector is related to the previous one
 enum Combinator : ubyte
@@ -29,13 +32,28 @@ enum SimpleKind : ubyte
     attribute,      /// `[x]`, `[x=y]`, ...
     pseudoClass,    /// `:first-child`, ...
     not,            /// `:not(list)`
-    is_,            /// `:is(list)`, `:where(list)`, `:current(list)`
+    is_,            /// `:is(list)`, `:where(list)`
     has,            /// `:has(relative list)`
     nthChild,       /// `:nth-child(an+b [of list])`
     nthLastChild,
     nthOfType,
     nthLastOfType,
     contains,       /// `:lexbor-contains(text [i])`
+    lang,           /// `:lang(en, "fr-CH")`
+    never,          /// states of a live document (`:hover`), pseudo-elements (`::before`)
+}
+
+/// Namespace of a type or attribute selector (`svg|rect`, `[xlink|href]`)
+enum NsMatch : ubyte
+{
+    any,    /// `*|x`, or no prefix for type selectors
+    none,   /// `|x`, or no prefix for attribute selectors
+    html,
+    svg,
+    math,
+    xlink,
+    xml,
+    xmlns,
 }
 
 enum AttrMatch : ubyte
@@ -58,9 +76,9 @@ enum AttrCase : ubyte
 
 enum PseudoClass : ubyte
 {
-    active, anyLink, blank, checked, disabled, empty, enabled, firstChild, firstOfType, focus,
-    hover, lastChild, lastOfType, link, onlyChild, onlyOfType, optional, placeholderShown,
-    readOnly, readWrite, required, root,
+    anyLink, blank, checked, disabled, empty, enabled, firstChild, firstOfType,
+    lastChild, lastOfType, link, onlyChild, onlyOfType, optional, placeholderShown,
+    readOnly, readWrite, required, root, scope_,
 }
 
 /// A simple selector
@@ -71,10 +89,12 @@ struct Simple
     AttrCase attrCase;
     PseudoClass pseudo;
     bool insensitive;               /// `:lexbor-contains(x i)`
+    NsMatch ns;                     /// type, universal and attribute selectors
     const(char)[] name;             /// type (lowercase), id, class, attribute (lowercase) or contains text
     const(char)[] value;            /// attribute value
     long a, b;                      /// an+b
     const(SelectorList)* list;      /// argument of :not, :is, :has, :nth-*(... of list)
+    const(const(char)[])[] ranges;  /// language ranges of :lang()
 }
 
 /// A sequence of simple selectors (`div.a[x]`)
@@ -97,7 +117,7 @@ struct SelectorList
 
     /// Does any selector need the following siblings or the children of the element?
     /// (`:last-child`, `:has()`, `:empty`, ...)
-    bool looksForward() const @nogc nothrow
+    bool looksForward() const @nogc nothrow pure
     {
         foreach (ref c; items)
             foreach (ref comp; c.compounds)
@@ -111,7 +131,7 @@ struct SelectorList
                         case SimpleKind.pseudoClass:
                             with (PseudoClass) switch (s.pseudo)
                             {
-                                case blank, empty, lastChild, lastOfType, onlyChild, onlyOfType: return true;
+                                case blank, empty, lastChild, lastOfType, onlyChild, onlyOfType, checked, placeholderShown: return true;
                                 default: break;
                             }
                             break;
@@ -150,8 +170,15 @@ unittest
     assert(l.items[0].compounds[1].simples[1].name == "a");
 
     assert(parseSelector("div >", a) is null);
-    assert(parseSelector("::before", a) is null);
     assert(parseSelector("", a) is null);
+    assert(parseSelector("p::before", a) !is null);     // valid, never matches
+    assert(parseSelector("p::nope", a) is null);
+    assert(parseSelector(":is()", a) !is null);         // forgiving
+    assert(parseSelector(":has()", a) is null);
+    assert(parseSelector(":has(:has(p))", a) is null);  // :has can't be nested
+    assert(parseSelector(":nth-child(2 x)", a) is null);
+    assert(parseSelector("foo|p", a) is null);          // unknown namespace prefix
+    assert(parseSelector("svg|rect, [xlink|href], *|*, |p", a) !is null);
 }
 
 // The parser works at compile time too
@@ -173,7 +200,7 @@ enum ListKind { complex, relative }
 
 struct Parser
 {
-@nogc nothrow:
+@nogc nothrow pure:
     @disable this(this);
 
     this(const(char)[] input, Arena* arena)
@@ -229,7 +256,8 @@ struct Parser
             break;
         }
 
-        if (items.empty) return null;
+        // A forgiving list can be empty: it matches nothing
+        if (items.empty && !forgiving) return null;
 
         auto list = arena.make!SelectorList;
         if (list is null) return null;
@@ -346,7 +374,11 @@ struct Parser
             else if (t == TokenType.colon)
             {
                 next();
-                if (!parsePseudo(s)) return false;
+                bool element;
+                if (!parsePseudo(s, element)) return false;
+
+                // A pseudo-element ends the compound
+                if (element) { simples.put(s); break; }
             }
             else break;
 
@@ -358,37 +390,43 @@ struct Parser
         return comp.simples !is null;
     }
 
-    // `name`, `*`, `ns|name`, `ns|*`, `*|name`, `|name`: the namespace is ignored
+    // `name`, `*`, `ns|name`, `ns|*`, `*|name`, `|name`
     bool parseType(ref Simple s)
     {
+        s.ns = NsMatch.any;
+
         if (tok.type == TokenType.ident)
         {
+            auto name = tok.text;
+            next();
+
+            if (isDelim('|'))
+            {
+                if (!nsByPrefix(name, s.ns)) return false;
+                next();
+                return parseTypeName(s);
+            }
+
             s.kind = SimpleKind.type;
-            s.name = lower(tok.text);
-            next();
+            s.name = lower(name);
+            return true;
         }
-        else if (isDelim('*'))
+
+        if (isDelim('*'))
         {
+            next();
+            if (isDelim('|')) { next(); return parseTypeName(s); }
             s.kind = SimpleKind.universal;
-            next();
-        }
-        else
-        {
-            // `|name`
-            next();
-            return parseTypeAfterNs(s);
+            return true;
         }
 
-        if (isDelim('|'))
-        {
-            next();
-            return parseTypeAfterNs(s);
-        }
-
-        return true;
+        // `|name`: no namespace
+        next();
+        s.ns = NsMatch.none;
+        return parseTypeName(s);
     }
 
-    bool parseTypeAfterNs(ref Simple s)
+    bool parseTypeName(ref Simple s)
     {
         if (tok.type == TokenType.ident)
         {
@@ -401,7 +439,6 @@ struct Parser
         if (isDelim('*'))
         {
             s.kind = SimpleKind.universal;
-            s.name = null;
             next();
             return true;
         }
@@ -415,10 +452,19 @@ struct Parser
         s.kind = SimpleKind.attribute;
         s.match = AttrMatch.exists;
 
+        s.ns = NsMatch.none;
         skipSpace();
 
-        if (isDelim('|'))
+        if (isDelim('|') || isDelim('*'))
         {
+            // `[|x]`, `[*|x]`
+            if (isDelim('*'))
+            {
+                next();
+                if (!isDelim('|')) return false;
+                s.ns = NsMatch.any;
+            }
+
             next();
             if (tok.type != TokenType.ident) return false;
             s.name = lower(tok.text);
@@ -427,7 +473,7 @@ struct Parser
         }
         else if (tok.type == TokenType.ident)
         {
-            s.name = lower(tok.text);
+            auto name = tok.text;
             next();
 
             if (isDelim('|'))
@@ -436,16 +482,19 @@ struct Parser
                 if (tok.type != TokenType.ident)
                 {
                     // `[x|=y]`
+                    s.name = lower(name);
                     s.match = AttrMatch.dash;
                     return parseAttributeValue(s);
                 }
 
                 // `[ns|x]`
+                if (!nsByPrefix(name, s.ns)) return false;
                 s.name = lower(tok.text);
                 next();
-                skipSpace();
             }
-            else skipSpace();
+            else s.name = lower(name);
+
+            skipSpace();
         }
         else return false;
 
@@ -507,15 +556,37 @@ struct Parser
         return tok.type == TokenType.eof;
     }
 
-    // After ':'. Pseudo-elements and unsupported pseudo-classes are errors.
-    bool parsePseudo(ref Simple s)
+    // After ':'. `element` is set for pseudo-elements.
+    bool parsePseudo(ref Simple s, out bool element)
     {
+        // `::name`
+        if (tok.type == TokenType.colon)
+        {
+            next();
+            if (tok.type != TokenType.ident || !isPseudoElement(tok.text)) return false;
+            next();
+            s.kind = SimpleKind.never;
+            element = true;
+            return true;
+        }
+
         if (tok.type == TokenType.ident)
         {
-            if (!pseudoClassByName(tok.text, s.pseudo)) return false;
-            s.kind = SimpleKind.pseudoClass;
+            auto name = tok.text;
             next();
-            return true;
+
+            if (pseudoClassByName(name, s.pseudo)) { s.kind = SimpleKind.pseudoClass; return true; }
+            if (isStatePseudoClass(name)) { s.kind = SimpleKind.never; return true; }
+
+            // Legacy pseudo-elements with a single colon
+            if (eq(name, "before") || eq(name, "after") || eq(name, "first-line") || eq(name, "first-letter"))
+            {
+                s.kind = SimpleKind.never;
+                element = true;
+                return true;
+            }
+
+            return false;
         }
 
         if (tok.type != TokenType.function_) return false;
@@ -529,17 +600,55 @@ struct Parser
         bool ok;
         if (eq(name, "not")) { s.kind = SimpleKind.not; ok = parseArgList(s, ListKind.complex, false); }
         else if (eq(name, "is") || eq(name, "where")) { s.kind = SimpleKind.is_; ok = parseArgList(s, ListKind.complex, true); }
-        else if (eq(name, "current")) { s.kind = SimpleKind.is_; ok = parseArgList(s, ListKind.complex, false); }
-        else if (eq(name, "has")) { s.kind = SimpleKind.has; ok = parseArgList(s, ListKind.relative, true); }
+        else if (eq(name, "current"))
+        {
+            // Time-dimensional: nothing is "current" in a parsed document
+            ok = parseArgList(s, ListKind.complex, true);
+            s.kind = SimpleKind.never;
+            s.list = null;
+        }
+        else if (eq(name, "has"))
+        {
+            // :has() can't be nested
+            if (inHas) return false;
+            inHas = true;
+            scope(exit) inHas = false;
+            s.kind = SimpleKind.has;
+            ok = parseArgList(s, ListKind.relative, false);
+        }
         else if (eq(name, "nth-child")) { s.kind = SimpleKind.nthChild; ok = parseNth(s, true); }
         else if (eq(name, "nth-last-child")) { s.kind = SimpleKind.nthLastChild; ok = parseNth(s, true); }
         else if (eq(name, "nth-of-type")) { s.kind = SimpleKind.nthOfType; ok = parseNth(s, false); }
         else if (eq(name, "nth-last-of-type")) { s.kind = SimpleKind.nthLastOfType; ok = parseNth(s, false); }
         else if (eq(name, "lexbor-contains")) { s.kind = SimpleKind.contains; ok = parseContains(s); }
+        else if (eq(name, "lang")) { s.kind = SimpleKind.lang; ok = parseLang(s); }
         else return false;
 
         if (!ok) return false;
         return closeFunction();
+    }
+
+    bool inHas;
+
+    // :lang(): comma separated idents or strings
+    bool parseLang(ref Simple s)
+    {
+        Buffer!(const(char)[]) ranges;
+
+        while (true)
+        {
+            skipSpace();
+            if (tok.type != TokenType.ident && tok.type != TokenType.string_) return false;
+            ranges.put(tok.text.length ? tok.text : "");
+            next();
+            skipSpace();
+
+            if (tok.type != TokenType.comma) break;
+            next();
+        }
+
+        s.ranges = arena.dup(ranges[]);
+        return s.ranges !is null;
     }
 
     // At the end of the arguments: ')' or EOF
@@ -548,20 +657,6 @@ struct Parser
         skipSpace();
         if (tok.type == TokenType.rightParen) { next(); return true; }
         return tok.type == TokenType.eof;
-    }
-
-    // Skip the remaining arguments, up to the ')' (not consumed)
-    void skipArguments()
-    {
-        int nested = 0;
-        while (tok.type != TokenType.eof)
-        {
-            auto t = tok.type;
-            if (nested == 0 && t == TokenType.rightParen) return;
-            if (t == TokenType.function_ || t == TokenType.leftParen || t == TokenType.leftSquare || t == TokenType.leftCurly) nested++;
-            else if (t == TokenType.rightParen || t == TokenType.rightSquare || t == TokenType.rightCurly) nested--;
-            next();
-        }
     }
 
     bool parseArgList(ref Simple s, ListKind kind, bool forgiving)
@@ -583,9 +678,7 @@ struct Parser
             return s.list !is null;
         }
 
-        // Anything else after an+b is ignored
-        skipArguments();
-        return true;
+        return isEnd();
     }
 
     bool parseContains(ref Simple s)
@@ -740,22 +833,58 @@ bool eq(const(char)[] a, string lowerB)
     return true;
 }
 
+bool nsByPrefix(const(char)[] prefix, ref NsMatch ns)
+{
+    if (eq(prefix, "html")) ns = NsMatch.html;
+    else if (eq(prefix, "svg")) ns = NsMatch.svg;
+    else if (eq(prefix, "math") || eq(prefix, "mathml")) ns = NsMatch.math;
+    else if (eq(prefix, "xlink")) ns = NsMatch.xlink;
+    else if (eq(prefix, "xml")) ns = NsMatch.xml;
+    else if (eq(prefix, "xmlns")) ns = NsMatch.xmlns;
+    else return false;
+    return true;
+}
+
+bool isPseudoElement(const(char)[] name)
+{
+    static immutable string[] names = [
+        "after", "backdrop", "before", "cue", "file-selector-button", "first-letter", "first-line",
+        "grammar-error", "marker", "placeholder", "selection", "spelling-error", "target-text",
+    ];
+
+    foreach (n; names) if (eq(name, n)) return true;
+    return false;
+}
+
+// Pseudo-classes about the state of a live document: they never match a parsed document
+bool isStatePseudoClass(const(char)[] name)
+{
+    static immutable string[] names = [
+        "active", "autofill", "current", "focus", "focus-visible", "focus-within", "fullscreen", "future",
+        "hover", "local-link", "modal", "past", "paused", "picture-in-picture", "playing", "popover-open",
+        "target", "target-within", "user-invalid", "user-valid", "visited",
+    ];
+
+    foreach (n; names) if (eq(name, n)) return true;
+    return false;
+}
+
 bool pseudoClassByName(const(char)[] name, ref PseudoClass p)
 {
     static struct Entry { string name; PseudoClass id; }
 
     static immutable Entry[] entries = [
-        Entry("active", PseudoClass.active), Entry("any-link", PseudoClass.anyLink),
+        Entry("any-link", PseudoClass.anyLink),
         Entry("blank", PseudoClass.blank), Entry("checked", PseudoClass.checked),
         Entry("disabled", PseudoClass.disabled), Entry("empty", PseudoClass.empty),
         Entry("enabled", PseudoClass.enabled), Entry("first-child", PseudoClass.firstChild),
-        Entry("first-of-type", PseudoClass.firstOfType), Entry("focus", PseudoClass.focus),
-        Entry("hover", PseudoClass.hover), Entry("last-child", PseudoClass.lastChild),
+        Entry("first-of-type", PseudoClass.firstOfType), Entry("last-child", PseudoClass.lastChild),
         Entry("last-of-type", PseudoClass.lastOfType), Entry("link", PseudoClass.link),
         Entry("only-child", PseudoClass.onlyChild), Entry("only-of-type", PseudoClass.onlyOfType),
         Entry("optional", PseudoClass.optional), Entry("placeholder-shown", PseudoClass.placeholderShown),
         Entry("read-only", PseudoClass.readOnly), Entry("read-write", PseudoClass.readWrite),
         Entry("required", PseudoClass.required), Entry("root", PseudoClass.root),
+        Entry("scope", PseudoClass.scope_),
     ];
 
     foreach (ref e; entries)

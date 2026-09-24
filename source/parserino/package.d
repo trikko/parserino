@@ -440,6 +440,9 @@ struct Document
     /// ditto
     auto bySelector(Selector selector) { auto root = rootElement; return root.bySelector(selector); }
 
+    /// ditto, parsed at compile time
+    auto bySelector(string css)() { auto root = rootElement; return root.bySelector(ctSelector!css); }
+
     /// All the nodes of the document, in tree order
     auto descendants(VisitOrder order = VisitOrder.Normal)(bool returnAllElements = false) { auto root = rootElement; return root.descendants!order(returnAllElements); }
 
@@ -1189,8 +1192,11 @@ struct Element
     {
         onlyRealOrDocument();
         if (!selector.isValid) throw new ParserinoException("Invalid selector");
-        return NodeRange!SelectorFilter(doc, node, true, false, SelectorFilter(selector));
+        return NodeRange!SelectorFilter(doc, node, true, false, SelectorFilter(selector, node));
     }
+
+    /// ditto, parsed at compile time
+    auto bySelector(string css)() { return bySelector(ctSelector!css); }
 
     /// Does this element match a css selector?
     bool matches(const(char)[] selector) { return matches(Selector(selector)); }
@@ -1203,8 +1209,8 @@ struct Element
         if (node.type != LXB_DOM_NODE_TYPE_ELEMENT) return false;
 
         impl.ensureStable(node);
-        if (selector.impl.forward && node.parent !is null) impl.ensureClosed(node.parent);
-        return impl.matches(node, selector.impl.list);
+        if (selector.forward && node.parent !is null) impl.ensureClosed(node.parent);
+        return impl.matches(node, selector.list, node);
     }
 
     ///
@@ -1770,45 +1776,46 @@ struct Selector
     /// Compile a selector. It throws on invalid syntax.
     this(const(char)[] selector)
     {
-        impl = cast(SelImpl*) calloc(1, SelImpl.sizeof);
-        if (impl is null) throw new ParserinoException("Out of memory");
+        owner = cast(SelImpl*) calloc(1, SelImpl.sizeof);
+        if (owner is null) throw new ParserinoException("Out of memory");
 
-        impl.list = parseSelector(selector, impl.arena);
-        if (impl.list is null)
+        list = parseSelector(selector, owner.arena);
+        if (list is null)
         {
-            impl.arena.release();
-            free(impl);
-            impl = null;
+            owner.arena.release();
+            free(owner);
+            owner = null;
             throw new ParserinoException("Invalid selector: `" ~ selector.idup ~ "`");
         }
 
-        impl.refs = 1;
-        impl.forward = impl.list.looksForward;
+        owner.refs = 1;
+        forward = list.looksForward;
     }
 
-    this(this) { if (impl !is null) atomicOp!"+="(impl.refs, 1); }
+    this(this) { if (owner !is null) atomicOp!"+="(owner.refs, 1); }
 
     ~this()
     {
-        if (impl !is null && atomicOp!"-="(impl.refs, 1) == 0)
+        if (owner !is null && atomicOp!"-="(owner.refs, 1) == 0)
         {
-            impl.arena.release();
-            free(impl);
+            owner.arena.release();
+            free(owner);
         }
-        impl = null;
+        owner = null;
     }
 
     ///
     ref Selector opAssign(Selector rhs) return
     {
-        auto tmp = impl;
-        impl = rhs.impl;
-        rhs.impl = tmp;
+        import std.algorithm.mutation : swap;
+        swap(owner, rhs.owner);
+        list = rhs.list;
+        forward = rhs.forward;
         return this;
     }
 
     /// Is this a valid (compiled) selector?
-    @property bool isValid() const @safe nothrow pure @nogc { return impl !is null; }
+    @property bool isValid() const @safe nothrow pure @nogc { return list !is null; }
 
     unittest
     {
@@ -1821,7 +1828,103 @@ struct Selector
     }
 
     private:
-    SelImpl* impl;
+    SelImpl* owner;                 // null for selectors compiled at compile time
+    const(SelectorList)* list;
+    bool forward;                   // does it look at following siblings or at children? (:last-child, :has, ...)
+}
+
+/++ A selector parsed at compile time: syntax errors are compile errors.
++ ---
++ auto links = doc.bySelector(ctSelector!"nav > a[href]");
++ auto same = doc.bySelector!"nav > a[href]";
++ ---
++/
+template ctSelector(string css)
+{
+    static assert(isValidSelector(css), "Invalid css selector: `" ~ css ~ "`");
+
+    private static immutable SelectorList* list = compileAtCt(css);
+
+    Selector ctSelector()
+    {
+        Selector s;
+        s.list = list;
+        s.forward = list.looksForward;
+        return s;
+    }
+}
+
+///
+unittest
+{
+    Document doc = "<ul><li>a</li><li class=x>b</li></ul>";
+    assert(doc.bySelector!"li.x".front.innerText == "b");
+    assert(doc.bySelector(ctSelector!"ul > li:last-child").front.innerText == "b");
+    static assert(!__traits(compiles, ctSelector!"div >"));
+}
+
+// Selectors follow the standard (Selectors 4 + HTML) for a static document
+unittest
+{
+    import std.algorithm : map;
+    import std.array : array;
+
+    string[] ids(Document d, string sel) { return d.bySelector(sel).map!(e => e.id).array; }
+
+    // Form states
+    Document f = `<form>
+        <input id=a disabled><input id=b>
+        <fieldset id=fs disabled><legend id=lg><input id=c></legend><input id=d></fieldset>
+        <select id=s><optgroup id=og disabled><option id=o1></option></optgroup><option id=o2></option></select>
+        <select id=m multiple><option id=o3></option></select>
+        <input id=cb type=checkbox checked><input id=r type=radio>
+        <input id=ro readonly><input id=chk type=checkbox><textarea id=ta></textarea>
+        <div id=ce contenteditable><span id=sp></span></div><div id=nce></div>
+        <input id=ph placeholder=x><input id=ph2 placeholder=x value=v>
+        </form>`;
+
+    assert(ids(f, ":disabled") == ["a", "fs", "d", "og", "o1"]);
+    assert(ids(f, "input:enabled") == ["b", "c", "cb", "r", "ro", "chk", "ph", "ph2"]);
+    assert(ids(f, "div:enabled").length == 0);
+    assert(ids(f, ":checked") == ["o2", "cb"]);        // o2: first enabled option of a single select
+    assert(ids(f, ":read-write") == ["b", "c", "ta", "ce", "sp", "ph", "ph2"]);
+    assert(ids(f, ":placeholder-shown") == ["ph"]);
+
+    // :lang(), :scope, namespaces, pseudo-elements, states
+    Document d = `<html lang=en-US><body><p id=p1>x</p><div lang=fr><p id=p2>y</p></div>
+        <svg><a id=sa xlink:href=z></a><rect id="r1"/></svg><a id=ha href=h>h</a></body></html>`;
+
+    assert(ids(d, "p:lang(en)") == ["p1"]);
+    assert(ids(d, "p:lang(fr, de)") == ["p2"]);
+    assert(ids(d, "p:lang('*')") == ["p1", "p2"]);
+    assert(ids(d, "svg|rect") == ["r1"]);
+    assert(ids(d, "html|a") == ["ha"]);
+    assert(ids(d, "[xlink|href]") == ["sa"]);
+    assert(ids(d, "[href]") == ["ha"]);
+    assert(ids(d, "[*|href]") == ["sa", "ha"]);
+    assert(ids(d, "p::before").length == 0);
+    assert(ids(d, "a:hover, a:visited, :focus").length == 0);
+    assert(ids(d, "a:link") == ["ha"]);
+    assert(d.byTagName("div").front.bySelector(":scope > p").map!(e => e.id).array == ["p2"]);
+    assert(d.byId("p1").matches(":scope"));
+    assert(ids(d, ":is()").length == 0);
+
+    // :first-child counts elements only (the doctype is not an element)
+    Document dt = "<!doctype html><html><body>";
+    assert(dt.bySelector("html:first-child").walkLength == 1);
+}
+
+/// Is this a valid css selector? It works at compile time too.
+bool isValidSelector(const(char)[] css) @nogc nothrow
+{
+    Arena a;
+    return parseSelector(css, a) !is null;
+}
+
+private const(SelectorList)* compileAtCt(string css) pure
+{
+    Arena a;
+    return parseSelector(css, a);
 }
 
 import std.range.primitives : walkLength;
@@ -2123,9 +2226,11 @@ struct SelectorFilter
 
     Selector selector;
 
-    @property bool strict() const { return selector.impl.forward; }
+    @property bool strict() const { return selector.forward; }
 
-    bool match(DocImpl* d, lxb_dom_node_t* n) { return d.matches(n, selector.impl.list); }
+    lxb_dom_node_t* scope_;     // the root of the query, for :scope
+
+    bool match(DocImpl* d, lxb_dom_node_t* n) { return d.matches(n, selector.list, scope_); }
 }
 
 
@@ -2333,9 +2438,9 @@ struct DocImpl
     void ensureClosed(lxb_dom_node_t* n) { while (parsing && (isOpen(n) || !isStable(n))) advance(); }
     void ensureAttrs(lxb_dom_node_t* n) { if (isRootElement(n)) while (parsing && !rootAttrsFinal()) advance(); }
 
-    bool matches(lxb_dom_node_t* n, const(SelectorList)* list)
+    bool matches(lxb_dom_node_t* n, const(SelectorList)* list, lxb_dom_node_t* scope_)
     {
-        return parserino.css.matcher.matches(list, n);
+        return parserino.css.matcher.matches(list, n, scope_);
     }
 }
 
@@ -2505,8 +2610,6 @@ struct SelImpl
 {
     shared size_t refs;
     Arena arena;
-    const(SelectorList)* list;
-    bool forward;   // does it look at following siblings or at children? (:last-child, :has, ...)
 }
 
 
