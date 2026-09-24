@@ -16,22 +16,14 @@
  views/table.html and views/cards.html have completely different markup (a table, a grid of
  divs) but the same ids and classes: the same `render` function fills both.
 
- Run with `dub` and open http://localhost:8080 and http://localhost:8080/cards
+ Run with `dub` and open http://localhost:8080
  Run with `dub -c live` to reload the templates from disk at each request (edit, then refresh).
 +/
 module app;
 
+import std;
 import serverino;
 import parserino;
-
-import std.algorithm : canFind, filter;
-import std.array : array;
-import std.conv : to;
-import std.datetime.stopwatch : AutoStart, StopWatch;
-import std.format : format;
-import std.string : strip;
-import std.uni : toLower;
-import std.uri : encodeComponent;
 
 mixin ServerinoMain;
 
@@ -59,34 +51,32 @@ immutable Book[] catalogue = [
     return ServerinoConfig.create().addListener("0.0.0.0", 8080).setWorkers(2);
 }
 
+// The home page: two links to the same data with two different templates
 @endpoint @route!"/"
-void tableLayout(Request request, Output output) { respond(template_!"table.html", request, output); }
+void home(Request request, Output output) { respond(load!"index.html", output); }
+
+@endpoint @route!"/table"
+void table(Request request, Output output) { respond(load!"table.html", request, output); }
 
 @endpoint @route!"/cards"
-void cardsLayout(Request request, Output output) { respond(template_!"cards.html", request, output); }
+void cards(Request request, Output output) { respond(load!"cards.html", request, output); }
 
-/++ A new copy of a template.
- + By default the template is parsed at compile time (`ctDocument`): each request gets its own
- + document, rebuilt from the stored tree without parsing. With `dub -c live` it is read from
- + disk every time, so the changes are visible without recompiling.
- +/
-Document template_(string file)()
-{
-    version (LiveTemplates)
-    {
-        import std.file : readText;
-        return Document(readText("views/" ~ file));
-    }
-    else return ctDocument!(import(file));
-}
+// A new copy of a template, parsed at compile time: no parsing at runtime.
+// With `dub -c live` it's read from disk at each request: edit the html and refresh.
+version (LiveTemplates) Document load(string file)() { return Document(readText("views/" ~ file)); }
+else Document load(string file)() { return ctDocument!(import(file)); }
 
+// Fill a bookshop template and send it
 void respond(Document page, Request request, Output output)
 {
-    auto sw = StopWatch(AutoStart.yes);
-
+    auto start = MonoTime.currTime;
     render(page, request.get.read("q").strip);
-    page.byId("elapsed").innerText = sw.peek.total!"usecs".to!string;
+    page.byId("elapsed").innerText = (MonoTime.currTime - start).total!"usecs".to!string;
+    respond(page, output);
+}
 
+void respond(Document page, Output output)
+{
     output.addHeader("content-type", "text/html; charset=utf-8");
     output ~= page.toString;
 }
@@ -103,7 +93,7 @@ void render(Document page, string query)
 
     // 2. Attributes: keep the search in the form and in the layout links
     page.byId("search").setAttribute("value", query);
-    page.byId("layout-table").setAttribute("href", "/?q=" ~ encodeComponent(query));
+    page.byId("layout-table").setAttribute("href", "/table?q=" ~ encodeComponent(query));
     page.byId("layout-cards").setAttribute("href", "/cards?q=" ~ encodeComponent(query));
 
     // 3. Automatic escaping: this is what the user typed, and it's set as text.

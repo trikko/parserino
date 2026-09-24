@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Parserino as a template engine</title>
+    <style>
+        body { font-family: system-ui, sans-serif; margin: 3rem auto; max-width: 44rem; padding: 0 1rem; color: #222; line-height: 1.5; }
+        h1 { margin-bottom: .2rem; }
+        .lead { font-size: 1.2rem; color: #555; margin-top: 0; }
+        .buttons { display: flex; gap: 1rem; margin: 2rem 0; }
+        .buttons a { flex: 1; text-align: center; padding: 1.2rem; border-radius: .6rem; text-decoration: none; font-size: 1.2rem; color: white; }
+        .buttons a small { display: block; font-size: .85rem; opacity: .85; }
+        .table { background: #3b5bdb; }
+        .cards { background: #2d2a26; }
+        code { background: #f3f3f3; padding: 0 .3rem; border-radius: .2rem; }
+        li { margin-bottom: .4rem; }
+    </style>
+</head>
+<body>
+    <h1>One engine, two templates</h1>
+    <p class="lead">Both pages below are made by the <b>same D code</b>, with the same data.
+        The only thing that changes is the html template.</p>
+
+    <div class="buttons">
+        <a class="table" href="/table">Table<small>views/table.html</small></a>
+        <a class="cards" href="/cards">Cards<small>views/cards.html</small></a>
+    </div>
+
+    <p>The templates are <b>plain html</b>: no <code>{{ }}</code>, no <code>{% for %}</code>, no code inside.
+        Open them in a browser or in any html editor: they show example content and they are valid html.</p>
+
+    <ul>
+        <li>The code looks for <b>ids and classes</b>. The designer can move an element, change its tag or
+            restyle the whole page: as long as the id stays, it works. One template uses a table, the other
+            a grid of <code>div</code>s.</li>
+        <li><b>Lists</b>: the first example row in the template is cloned for each book, the example rows are removed.</li>
+        <li><b>Optional parts</b> are removed when they are not needed: the offer banner after a search,
+            the results when there are none, "Details" or "Sold out" on each book.</li>
+        <li><b>Escaping is automatic</b>: texts are set as texts, never read as html.
+            Try searching for <code>&lt;script&gt;alert(1)&lt;/script&gt;</code>.</li>
+        <li>The templates are <b>parsed at compile time</b>: each request just gets a fresh copy of the tree.</li>
+    </ul>
+</body>
+</html>
