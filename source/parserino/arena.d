@@ -100,7 +100,7 @@ struct Arena
 
     private:
 
-    enum blockSize = 4096;
+    enum BlockSize = 4096;
 
     static struct Block
     {
@@ -124,7 +124,7 @@ struct Arena
         }
 
         auto header = (Block.sizeof + 15) & ~15;
-        auto size = header + bytes > blockSize ? header + bytes : blockSize;
+        auto size = header + bytes > BlockSize ? header + bytes : BlockSize;
         auto b = cast(Block*) pureMalloc(size);
         if (b is null) return null;
 

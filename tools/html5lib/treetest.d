@@ -78,9 +78,9 @@ Test[] readTests(string path)
 }
 
 // The html5lib tree format
-void dumpTree(const(Node)* n, size_t depth, ref Appender!string o)
+void dumpTree(const(DomNode)* n, size_t depth, ref Appender!string o)
 {
-    for (const(Node)* c = n.firstChild; c !is null; c = c.next)
+    for (const(DomNode)* c = n.firstChild; c !is null; c = c.next)
         dumpNode(c, depth, o);
 }
 
@@ -92,25 +92,25 @@ void line(ref Appender!string o, size_t depth, const(char)[] s)
     o.put(s);
 }
 
-void dumpNode(const(Node)* c, size_t depth, ref Appender!string o)
+void dumpNode(const(DomNode)* c, size_t depth, ref Appender!string o)
 {
     final switch (c.type)
     {
-        case NodeType.element:
+        case NodeType.Element:
         {
-            auto e = cast(const(Element)*) c;
-            string prefix = c.ns == Ns.svg ? "svg " : c.ns == Ns.math ? "math " : "";
+            auto e = cast(const(DomElement)*) c;
+            string prefix = c.ns == Ns.Svg ? "svg " : c.ns == Ns.Math ? "math " : "";
             line(o, depth, "<" ~ prefix ~ e.fullName.idup ~ ">");
 
             string[] attrs;
-            for (const(Attribute)* a = e.firstAttr; a !is null; a = a.next)
+            for (const(DomAttribute)* a = e.firstAttr; a !is null; a = a.next)
             {
                 auto full = a.fullName.idup;
                 string name = full;
-                if (a.ns == Ns.xlink || a.ns == Ns.xml || a.ns == Ns.xmlns)
+                if (a.ns == Ns.Xlink || a.ns == Ns.Xml || a.ns == Ns.Xmlns)
                 {
                     auto local = full.canFind(':') ? full[full.indexOf(':') + 1 .. $] : full;
-                    name = (a.ns == Ns.xlink ? "xlink " : a.ns == Ns.xml ? "xml " : "xmlns ") ~ local;
+                    name = (a.ns == Ns.Xlink ? "xlink " : a.ns == Ns.Xml ? "xml " : "xmlns ") ~ local;
                 }
                 attrs ~= name ~ "=\"" ~ (a.value is null ? "" : a.value.idup) ~ "\"";
             }
@@ -124,42 +124,42 @@ void dumpNode(const(Node)* c, size_t depth, ref Appender!string o)
             dumpTree(c, depth + 1, o);
             break;
         }
-        case NodeType.text, NodeType.cdataSection:
-            line(o, depth, "\"" ~ (cast(const(CharacterData)*) c).data.idup ~ "\"");
+        case NodeType.Text, NodeType.CDataSection:
+            line(o, depth, "\"" ~ (cast(const(DomCharacterData)*) c).data.idup ~ "\"");
             break;
-        case NodeType.comment:
-            line(o, depth, "<!-- " ~ (cast(const(CharacterData)*) c).data.idup ~ " -->");
+        case NodeType.Comment:
+            line(o, depth, "<!-- " ~ (cast(const(DomCharacterData)*) c).data.idup ~ " -->");
             break;
-        case NodeType.processingInstruction:
+        case NodeType.ProcessingInstruction:
         {
-            auto pi = cast(const(CharacterData)*) c;
+            auto pi = cast(const(DomCharacterData)*) c;
             line(o, depth, "<?" ~ pi.target.idup ~ " " ~ pi.data.idup ~ "?>");
             break;
         }
-        case NodeType.documentType:
+        case NodeType.DocumentType:
         {
-            auto d = cast(const(DocumentType)*) c;
+            auto d = cast(const(DomDocumentType)*) c;
             string s = "<!DOCTYPE " ~ d.name.idup;
             if (d.publicId.length || d.systemId.length)
                 s ~= " \"" ~ d.publicId.idup ~ "\" \"" ~ d.systemId.idup ~ "\"";
             line(o, depth, s ~ ">");
             break;
         }
-        case NodeType.document, NodeType.documentFragment:
+        case NodeType.Document, NodeType.DocumentFragment:
             dumpTree(c, depth, o);
             break;
     }
 }
 
-Document* newDoc(bool scripting)
+DomDocument* newDoc(bool scripting)
 {
-    auto d = cast(Document*) calloc(1, Document.sizeof);
+    auto d = cast(DomDocument*) calloc(1, DomDocument.sizeof);
     d.initialize();
     d.scripting = scripting;
     return d;
 }
 
-void freeDoc(Document* d) { d.release(); free(d); }
+void freeDoc(DomDocument* d) { d.release(); free(d); }
 
 // Parse and dump; chunk = 0 parses in one piece
 string run(ref const Test t, bool scripting, size_t chunk)
@@ -171,9 +171,9 @@ string run(ref const Test t, bool scripting, size_t chunk)
     if (t.fragment.length)
     {
         auto parts = t.fragment.split(" ");
-        Ns ns = Ns.html;
+        Ns ns = Ns.Html;
         string name = parts[$ - 1];
-        if (parts.length == 2) ns = parts[0] == "svg" ? Ns.svg : Ns.math;
+        if (parts.length == 2) ns = parts[0] == "svg" ? Ns.Svg : Ns.Math;
         auto ctx = doc.createElement(doc.tagId(name.toLower), ns);
         auto root = parseFragment(doc, ctx, t.data);
         if (root is null) return "PARSE FAILED";

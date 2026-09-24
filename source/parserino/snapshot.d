@@ -23,26 +23,26 @@ struct Snapshot
      + The document uses the strings of the snapshot without copying them: the snapshot must
      + outlive it (a static one always does).
      +/
-    bool restore(Document* doc) const @nogc nothrow pure @trusted
+    bool restore(DomDocument* doc) const @nogc nothrow pure @trusted
     {
         doc.compatMode = compatMode;
         doc.scripting = scripting;
 
         // parents[d] is the parent of the nodes at depth d
-        Buffer!(Node*) parents;
+        Buffer!(DomNode*) parents;
         parents.put(&doc.node);
         size_t nextAttr = 0;
 
         foreach (ref r; nodes)
         {
             parents.length = r.depth + 1;
-            Node* parent = parents[r.depth];
-            if (r.inTemplate) parent = &parent.as!Element.templateContent.node;
+            DomNode* parent = parents[r.depth];
+            if (r.inTemplate) parent = &parent.as!DomElement.templateContent.node;
 
-            Node* n;
+            DomNode* n;
             final switch (r.type)
             {
-                case NodeType.element:
+                case NodeType.Element:
                     auto e = doc.createElement(r.name != 0 ? r.name : doc.tagId(r.text), r.ns);
                     if (e is null) return false;
                     e.qualifiedName = r.qualifiedName;
@@ -62,7 +62,7 @@ struct Snapshot
                     n = &e.node;
                     break;
 
-                case NodeType.text, NodeType.comment, NodeType.cdataSection, NodeType.processingInstruction:
+                case NodeType.Text, NodeType.Comment, NodeType.CDataSection, NodeType.ProcessingInstruction:
                     auto cd = doc.createText(null);
                     if (cd is null) return false;
                     cd.node.type = r.type;
@@ -72,7 +72,7 @@ struct Snapshot
                     n = &cd.node;
                     break;
 
-                case NodeType.documentType:
+                case NodeType.DocumentType:
                     auto d = doc.createDocumentType(null, null, null);
                     if (d is null) return false;
                     d.name = r.text;
@@ -82,7 +82,7 @@ struct Snapshot
                     n = &d.node;
                     break;
 
-                case NodeType.document, NodeType.documentFragment:
+                case NodeType.Document, NodeType.DocumentFragment:
                     assert(0, "Not a child node");
             }
 
@@ -120,13 +120,13 @@ struct SnapshotAttribute
 }
 
 /// A snapshot of `doc` (it uses the GC; it also works at compile time)
-Snapshot takeSnapshot(const(Document)* doc) pure
+Snapshot takeSnapshot(const(DomDocument)* doc) pure
 {
     Snapshot s;
     s.compatMode = doc.compatMode;
     s.scripting = doc.scripting;
 
-    void add(const(Node)* n, uint depth, bool inTemplate, bool detached = false)
+    void add(const(DomNode)* n, uint depth, bool inTemplate, bool detached = false)
     {
         SnapshotNode r;
         r.type = n.type;
@@ -137,18 +137,18 @@ Snapshot takeSnapshot(const(Document)* doc) pure
 
         switch (n.type)
         {
-            case NodeType.element:
-                auto e = n.as!Element;
-                if (n.name < Tag._last) r.name = n.name;
+            case NodeType.Element:
+                auto e = n.as!DomElement;
+                if (n.name < Tag.Last) r.name = n.name;
                 else r.text = doc.tagName(n.name).idup;
                 r.qualifiedName = e.qualifiedName.idup;
                 r.isHead = e is doc.head;
                 r.isBody = e is doc.body;
 
-                for (const(Attribute)* a = e.firstAttr; a !is null; a = a.next)
+                for (const(DomAttribute)* a = e.firstAttr; a !is null; a = a.next)
                 {
                     SnapshotAttribute sa;
-                    if (a.name < AttrName._last) sa.name = a.name;
+                    if (a.name < AttrName.Last) sa.name = a.name;
                     else sa.localName = doc.attrName(a.name).idup;
                     sa.ns = a.ns;
                     sa.qualifiedName = a.qualifiedName.idup;
@@ -158,15 +158,15 @@ Snapshot takeSnapshot(const(Document)* doc) pure
                 }
                 break;
 
-            case NodeType.documentType:
-                auto d = n.as!DocumentType;
+            case NodeType.DocumentType:
+                auto d = n.as!DomDocumentType;
                 r.text = d.name.idup;
                 r.qualifiedName = d.publicId.idup;
                 r.systemId = d.systemId.idup;
                 break;
 
             default:
-                auto cd = n.as!CharacterData;
+                auto cd = n.as!DomCharacterData;
                 r.name = n.name;
                 r.text = cd.data.idup;
                 r.qualifiedName = cd.target.idup;
@@ -177,14 +177,14 @@ Snapshot takeSnapshot(const(Document)* doc) pure
 
         if (auto e = n.asElement)
             if (e.templateContent !is null)
-                for (const(Node)* c = e.templateContent.node.firstChild; c !is null; c = c.next)
+                for (const(DomNode)* c = e.templateContent.node.firstChild; c !is null; c = c.next)
                     add(c, depth + 1, true);
 
-        for (const(Node)* c = n.firstChild; c !is null; c = c.next)
+        for (const(DomNode)* c = n.firstChild; c !is null; c = c.next)
             add(c, depth + 1, false);
     }
 
-    for (const(Node)* c = doc.node.firstChild; c !is null; c = c.next)
+    for (const(DomNode)* c = doc.node.firstChild; c !is null; c = c.next)
         add(c, 0, false);
 
     // A frameset removes the body from the tree, but the document still points to it
@@ -199,7 +199,7 @@ Snapshot parseToSnapshot(string html) pure
 {
     import parserino.html.parser : parseDocument;
 
-    Document d;
+    DomDocument d;
     d.initialize();
     parseDocument(&d, html);
     auto s = takeSnapshot(&d);
@@ -213,17 +213,17 @@ unittest
     import parserino.html.parser;
     import parserino.html.serializer;
 
-    static string toHtml(Document* d)
+    static string toHtml(DomDocument* d)
     {
         struct Sink { string s; void put(scope const(char)[] x) { s ~= x; } }
         Sink sink;
-        serialize(&d.node, sink, Serialize.tree);
+        serialize(&d.node, sink, Serialize.Tree);
         return sink.s;
     }
 
-    static Document* newDoc()
+    static DomDocument* newDoc()
     {
-        auto d = cast(Document*) pureCalloc(1, Document.sizeof);
+        auto d = cast(DomDocument*) pureCalloc(1, DomDocument.sizeof);
         d.initialize();
         return d;
     }
@@ -252,7 +252,7 @@ unittest
     assert(toHtml(a) == toHtml(c));
 
     // Changing a restored text doesn't touch the snapshot
-    auto text = c.body.node.firstChild.firstChild.as!CharacterData;
+    auto text = c.body.node.firstChild.firstChild.as!DomCharacterData;
     assert(text.data == "Hi");
     assert(text.appendData("!"));
     assert(text.data == "Hi!");
@@ -264,5 +264,5 @@ unittest
     scope(exit) { d.release(); pureFree(d); }
     assert(fs.restore(d));
     assert(toHtml(d) == `<html><head></head><frameset></frameset></html>`);
-    assert(d.body !is null && d.body.node.parent is null && d.body.node.firstChild.isHtml(Tag.span));
+    assert(d.body !is null && d.body.node.parent is null && d.body.node.firstChild.isHtml(Tag.Span));
 }

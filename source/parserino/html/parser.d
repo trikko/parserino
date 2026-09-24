@@ -22,7 +22,7 @@ struct Parser
     Tokenizer tokenizer;
 
     /// Start parsing `doc` (an empty document)
-    void begin(Document* doc)
+    void begin(DomDocument* doc)
     {
         tokenizer = Tokenizer(doc, tree.sink());
         tree.beginDocument(doc, &tokenizer);
@@ -44,7 +44,7 @@ struct Parser
 }
 
 /// Parse a whole document into `doc` (an empty document)
-bool parseDocument(Document* doc, scope const(char)[] html)
+bool parseDocument(DomDocument* doc, scope const(char)[] html)
 {
     import core.memory : pureCalloc, pureFree;
 
@@ -59,7 +59,7 @@ bool parseDocument(Document* doc, scope const(char)[] html)
 /++ Parse a fragment in the context of `context` (an element of `doc`).
  + It returns a detached `<html>` element whose children are the result, or null if out of memory.
  +/
-Element* parseFragment(Document* doc, Element* context, scope const(char)[] html)
+DomElement* parseFragment(DomDocument* doc, DomElement* context, scope const(char)[] html)
 {
     import core.memory : pureCalloc, pureFree;
 
@@ -101,7 +101,7 @@ unittest
     import core.memory : pureCalloc, pureFree;
     import parserino.html.serializer;
 
-    auto doc = cast(Document*) pureCalloc(1, Document.sizeof);
+    auto doc = cast(DomDocument*) pureCalloc(1, DomDocument.sizeof);
     scope(exit) { doc.release(); pureFree(doc); }
     doc.initialize();
 
@@ -110,9 +110,9 @@ unittest
     Buffer!char out_;
     struct Sink { Buffer!char* b; void put(scope const(char)[] s) @nogc nothrow { foreach (c; s) b.put(c); } }
     auto sink = Sink(&out_);
-    serialize(&doc.node, sink, Serialize.tree);
+    serialize(&doc.node, sink, Serialize.Tree);
     assert(out_[] == `<!DOCTYPE html><html><head></head><body><p class="a">Hello <b>world</b></p><b>!</b></body></html>`);
-    assert(doc.compatMode == CompatMode.noQuirks);
+    assert(doc.compatMode == CompatMode.NoQuirks);
     assert(doc.body !is null && doc.head !is null);
 }
 

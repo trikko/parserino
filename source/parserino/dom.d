@@ -17,18 +17,18 @@ version (D_BetterC)
 {
     // No AAs without druntime (and no parsing at compile time, see `parserino.arena`)
     private alias CtfeTable = void*;
-    private void* ctfeLookup(const(Node)* n) nothrow pure { assert(0, "CTFE parsing needs druntime"); }
+    private void* ctfeLookup(const(DomNode)* n) nothrow pure { assert(0, "CTFE parsing needs druntime"); }
     private void ctfeStore(T)(T* x) nothrow pure { assert(0, "CTFE parsing needs druntime"); }
 }
 else
 {
-    private alias CtfeTable = void*[const(Node)*];
-    private void* ctfeLookup(const(Node)* n) nothrow pure @trusted { return cast(void*) n.document.ctfeContainers[n]; }
+    private alias CtfeTable = void*[const(DomNode)*];
+    private void* ctfeLookup(const(DomNode)* n) nothrow pure @trusted { return cast(void*) n.document.ctfeContainers[n]; }
     private void ctfeStore(T)(T* x) nothrow pure @trusted { x.node.document.ctfeContainers[&x.node] = cast(void*) x; }
 }
 
 /// The text of a node and its descendants (DOM `textContent`) written to `sink`
-void textContent(Sink)(const(Node)* node, ref Sink sink)
+void textContent(Sink)(const(DomNode)* node, ref Sink sink)
 {
     import std.range.primitives : put;
 
@@ -38,46 +38,46 @@ void textContent(Sink)(const(Node)* node, ref Sink sink)
         return;
     }
 
-    for (const(Node)* n = node.firstChild; n !is null; n = n.nextInTree(node))
-        if (n.type == NodeType.text || n.type == NodeType.cdataSection)
-            put(sink, n.as!CharacterData.data);
+    for (const(DomNode)* n = node.firstChild; n !is null; n = n.nextInTree(node))
+        if (n.type == NodeType.Text || n.type == NodeType.CDataSection)
+            put(sink, n.as!DomCharacterData.data);
 }
 
 @nogc nothrow:
 
 enum NodeType : ubyte
 {
-    element = 1,
-    text = 3,
-    cdataSection = 4,
-    processingInstruction = 7,
-    comment = 8,
-    document = 9,
-    documentType = 10,
-    documentFragment = 11,
+    Element = 1,
+    Text = 3,
+    CDataSection = 4,
+    ProcessingInstruction = 7,
+    Comment = 8,
+    Document = 9,
+    DocumentType = 10,
+    DocumentFragment = 11,
 }
 
-enum CompatMode : ubyte { noQuirks, limitedQuirks, quirks }
+enum CompatMode : ubyte { NoQuirks, LimitedQuirks, Quirks }
 
 /// The common part of all the nodes
-struct Node
+struct DomNode
 {
 @nogc nothrow:
 
     NodeType type;
     Ns ns;
-    /// Tag of elements (a `Tag` or an id from the document names). Other nodes: `Tag._text`, `Tag._comment`, ...
+    /// Tag of elements (a `Tag` or an id from the document names). Other nodes: `Tag.TextNode`, `Tag.CommentNode`, ...
     uint name;
 
-    Node* parent;
-    Node* firstChild;
-    Node* lastChild;
-    Node* prev;
-    Node* next;
-    Document* document;
+    DomNode* parent;
+    DomNode* firstChild;
+    DomNode* lastChild;
+    DomNode* prev;
+    DomNode* next;
+    DomDocument* document;
 
     /// Is this an element in the html namespace with this tag?
-    bool isHtml(uint tag) const pure { return type == NodeType.element && name == tag && ns == Ns.html; }
+    bool isHtml(uint tag) const pure { return type == NodeType.Element && name == tag && ns == Ns.Html; }
 
     /++ The struct that contains this node: `Element`, `CharacterData`, `DocumentType`, `DocumentFragment` or `Document`.
      + Unchecked: `type` must match.
@@ -97,25 +97,25 @@ struct Node
     }
 
     /// The element / character data, or null if the node is something else
-    Element* asElement() pure return { return type == NodeType.element ? as!Element : null; }
-    const(Element)* asElement() const pure return { return type == NodeType.element ? as!Element : null; }
+    DomElement* asElement() pure return { return type == NodeType.Element ? as!DomElement : null; }
+    const(DomElement)* asElement() const pure return { return type == NodeType.Element ? as!DomElement : null; }
 
     /// ditto
-    CharacterData* asCharacterData() pure return { return isCharacterData ? as!CharacterData : null; }
-    const(CharacterData)* asCharacterData() const pure return { return isCharacterData ? as!CharacterData : null; }
+    DomCharacterData* asCharacterData() pure return { return isCharacterData ? as!DomCharacterData : null; }
+    const(DomCharacterData)* asCharacterData() const pure return { return isCharacterData ? as!DomCharacterData : null; }
 
     bool isCharacterData() const pure
     {
-        return type == NodeType.text || type == NodeType.comment || type == NodeType.processingInstruction || type == NodeType.cdataSection;
+        return type == NodeType.Text || type == NodeType.Comment || type == NodeType.ProcessingInstruction || type == NodeType.CDataSection;
     }
 
     /// Previous/next sibling that is an element
     // These are templates on the constness of `this` (not `inout`: CTFE can't convert inout pointers)
-    auto prevElement(this This)() pure { This* n = prev; while (n !is null && n.type != NodeType.element) n = n.prev; return n; }
-    auto nextElement(this This)() pure { This* n = next; while (n !is null && n.type != NodeType.element) n = n.next; return n; }
+    auto prevElement(this This)() pure { This* n = prev; while (n !is null && n.type != NodeType.Element) n = n.prev; return n; }
+    auto nextElement(this This)() pure { This* n = next; while (n !is null && n.type != NodeType.Element) n = n.next; return n; }
 
     /// Append `child` as the last child (`child` must be detached)
-    void appendChild(Node* child) pure
+    void appendChild(DomNode* child) pure
     {
         child.parent = &this;
         child.prev = lastChild;
@@ -125,7 +125,7 @@ struct Node
     }
 
     /// Insert `node` (detached) before this node
-    void insertBefore(Node* node) pure
+    void insertBefore(DomNode* node) pure
     {
         node.parent = parent;
         node.next = &this;
@@ -135,7 +135,7 @@ struct Node
     }
 
     /// Insert `node` (detached) after this node
-    void insertAfter(Node* node) pure
+    void insertAfter(DomNode* node) pure
     {
         node.parent = parent;
         node.prev = &this;
@@ -159,7 +159,7 @@ struct Node
     }
 
     /// Move all the children of this node at the end of `to`
-    void moveChildrenTo(Node* to) pure
+    void moveChildrenTo(DomNode* to) pure
     {
         while (firstChild !is null)
         {
@@ -170,7 +170,7 @@ struct Node
     }
 
     /// Is `other` this node or one of its descendants?
-    bool contains(const(Node)* other) const pure
+    bool contains(const(DomNode)* other) const pure
     {
         for (auto n = other; n !is null; n = n.parent)
             if (n is &this) return true;
@@ -178,14 +178,14 @@ struct Node
     }
 
     /// Next node in tree order inside `root` (excluded), or null
-    auto nextInTree(this This)(const(Node)* root) pure
+    auto nextInTree(this This)(const(DomNode)* root) pure
     {
         This* n = firstChild;
         return n !is null ? n : nextSkippingChildren(root);
     }
 
     /// Next node in tree order after this subtree, inside `root`, or null
-    auto nextSkippingChildren(this This)(const(Node)* root) pure
+    auto nextSkippingChildren(this This)(const(DomNode)* root) pure
     {
         This* n = &this;
         while (n !is root && n.next is null) n = n.parent;
@@ -196,18 +196,18 @@ struct Node
     /// Local name ("div", "#text", "!--", ...; the target for processing instructions)
     const(char)[] localName() const pure
     {
-        if (type == NodeType.processingInstruction) return as!CharacterData.target;
+        if (type == NodeType.ProcessingInstruction) return as!DomCharacterData.target;
         return document.tagName(name);
     }
 
     /// Does this subtree contain only whitespace text and comments?
     bool isBlank() const pure
     {
-        for (const(Node)* n = firstChild; n !is null; n = n.nextInTree(&this))
+        for (const(DomNode)* n = firstChild; n !is null; n = n.nextInTree(&this))
         {
-            if (n.type == NodeType.comment) continue;
-            if (n.type != NodeType.text) return false;
-            foreach (c; n.as!CharacterData.data)
+            if (n.type == NodeType.Comment) continue;
+            if (n.type != NodeType.Text) return false;
+            foreach (c; n.as!DomCharacterData.data)
                 if (c != ' ' && c != '\t' && c != '\n' && c != '\f' && c != '\r') return false;
         }
         return true;
@@ -215,7 +215,7 @@ struct Node
 }
 
 /// An attribute
-struct Attribute
+struct DomAttribute
 {
 @nogc nothrow:
 
@@ -226,9 +226,9 @@ struct Attribute
     const(char)[] qualifiedName;
     const(char)[] value;
 
-    Element* owner;
-    Attribute* prev;
-    Attribute* next;
+    DomElement* owner;
+    DomAttribute* prev;
+    DomAttribute* next;
 
     /// The local name
     const(char)[] localName() const pure { return owner.node.document.attrName(name); }
@@ -238,23 +238,23 @@ struct Attribute
 }
 
 /// An element
-struct Element
+struct DomElement
 {
 @nogc nothrow:
 
-    Node node;
+    DomNode node;
     alias node this;
 
     /// The name to serialize, when it differs from the local name (`foreignObject`), else null
     const(char)[] qualifiedName;
 
-    Attribute* firstAttr;
-    Attribute* lastAttr;
-    Attribute* idAttr;
-    Attribute* classAttr;
+    DomAttribute* firstAttr;
+    DomAttribute* lastAttr;
+    DomAttribute* idAttr;
+    DomAttribute* classAttr;
 
     /// The content of a `<template>`
-    DocumentFragment* templateContent;
+    DomDocumentFragment* templateContent;
 
     /// State used by the parser (option selectedness, ...)
     ubyte flags;
@@ -263,7 +263,7 @@ struct Element
     const(char)[] fullName() const pure { return qualifiedName !is null ? qualifiedName : node.localName; }
 
     /// First attribute with this (lowercase) name id, any namespace
-    CopyConstness!(This, Attribute)* attribute(this This)(uint id) pure
+    CopyConstness!(This, DomAttribute)* attribute(this This)(uint id) pure
     {
         for (typeof(return) a = firstAttr; a !is null; a = a.next)
             if (a.name == id) return a;
@@ -271,14 +271,14 @@ struct Element
     }
 
     /// First attribute with this name (case-insensitive for html elements)
-    CopyConstness!(This, Attribute)* attribute(this This)(scope const(char)[] name) pure
+    CopyConstness!(This, DomAttribute)* attribute(this This)(scope const(char)[] name) pure
     {
         auto id = node.document.findAttrName(name);
         return id == 0 ? null : this.attribute(id);
     }
 
     /// Append an attribute (no duplicate check)
-    void appendAttribute(Attribute* a) pure
+    void appendAttribute(DomAttribute* a) pure
     {
         a.owner = &this;
         a.prev = lastAttr;
@@ -289,7 +289,7 @@ struct Element
     }
 
     /// Remove an attribute of this element
-    void removeAttribute(Attribute* a) pure
+    void removeAttribute(DomAttribute* a) pure
     {
         if (a.prev !is null) a.prev.next = a.next; else firstAttr = a.next;
         if (a.next !is null) a.next.prev = a.prev; else lastAttr = a.prev;
@@ -299,20 +299,20 @@ struct Element
     }
 
     /// Keep `idAttr` and `classAttr` up to date
-    void track(Attribute* a) pure
+    void track(DomAttribute* a) pure
     {
-        if (a.ns != Ns.none && a.ns != Ns.html) return;
-        if (a.name == AttrName.id && idAttr is null) idAttr = a;
-        else if (a.name == AttrName.class_ && classAttr is null) classAttr = a;
+        if (a.ns != Ns.None && a.ns != Ns.Html) return;
+        if (a.name == AttrName.Id && idAttr is null) idAttr = a;
+        else if (a.name == AttrName.Class && classAttr is null) classAttr = a;
     }
 }
 
 /// Text, comments, processing instructions, CDATA sections
-struct CharacterData
+struct DomCharacterData
 {
 @nogc nothrow:
 
-    Node node;
+    DomNode node;
     alias node this;
 
     /// The target of a processing instruction
@@ -363,9 +363,9 @@ struct CharacterData
     }
 }
 
-struct DocumentType
+struct DomDocumentType
 {
-    Node node;
+    DomNode node;
     alias node this;
 
     const(char)[] name;
@@ -373,18 +373,18 @@ struct DocumentType
     const(char)[] systemId;
 }
 
-struct DocumentFragment
+struct DomDocumentFragment
 {
-    Node node;
+    DomNode node;
     alias node this;
 }
 
 /// The document: it owns the memory of all its nodes
 // CTFE helpers for `Node.as`: they use the GC (an AA), so they are called as @nogc
 
-private void* ctfeContainer(const(Node)* n) @nogc nothrow pure @trusted
+private void* ctfeContainer(const(DomNode)* n) @nogc nothrow pure @trusted
 {
-    alias F = void* function(const(Node)*) @nogc nothrow pure;
+    alias F = void* function(const(DomNode)*) @nogc nothrow pure;
     return (cast(F) &ctfeLookup)(n);
 }
 
@@ -394,11 +394,11 @@ private void ctfeRegister(T)(T* x) @nogc nothrow pure @trusted
     (cast(F) &ctfeStore!T)(x);
 }
 
-struct Document
+struct DomDocument
 {
 @nogc nothrow:
 
-    Node node;
+    DomNode node;
     alias node this;
 
     @disable this(this);
@@ -407,31 +407,31 @@ struct Document
     CompatMode compatMode;
     bool scripting;
 
-    DocumentType* doctype;
-    Element* head;
-    Element* body;
+    DomDocumentType* doctype;
+    DomElement* head;
+    DomElement* body;
 
     /// The root element (`<html>`)
-    Element* documentElement() pure
+    DomElement* documentElement() pure
     {
-        for (Node* n = node.firstChild; n !is null; n = n.next)
-            if (n.type == NodeType.element) return n.as!Element;
+        for (DomNode* n = node.firstChild; n !is null; n = n.next)
+            if (n.type == NodeType.Element) return n.as!DomElement;
         return null;
     }
 
     /// ditto
-    const(Element)* documentElement() const pure
+    const(DomElement)* documentElement() const pure
     {
-        for (const(Node)* n = node.firstChild; n !is null; n = n.next)
-            if (n.type == NodeType.element) return n.as!Element;
+        for (const(DomNode)* n = node.firstChild; n !is null; n = n.next)
+            if (n.type == NodeType.Element) return n.as!DomElement;
         return null;
     }
 
     /// Initialize a document allocated by the caller (zeroed memory)
     void initialize() pure
     {
-        node.type = NodeType.document;
-        node.name = Tag._document;
+        node.type = NodeType.Document;
+        node.name = Tag.DocumentNode;
         node.document = &this;
         if (__ctfe) ctfeRegister(&this);
     }
@@ -450,8 +450,8 @@ struct Document
     uint tagId(scope const(char)[] lowerName) pure
     {
         auto t = knownTag(lowerName);
-        if (t != Tag._undef) return t;
-        return tags.intern(lowerName, arena, Tag._last);
+        if (t != Tag.Undef) return t;
+        return tags.intern(lowerName, arena, Tag.Last);
     }
 
     /// Tag id of a name (any case), 0 if the document never saw it
@@ -461,21 +461,21 @@ struct Document
         auto lower = toLower(name, buf);
         if (lower is null) return 0;
         auto t = knownTag(lower);
-        if (t != Tag._undef) return t;
-        return tags.find(lower, Tag._last);
+        if (t != Tag.Undef) return t;
+        return tags.find(lower, Tag.Last);
     }
 
     const(char)[] tagName(uint id) const pure
     {
-        return id < Tag._last ? tagNames[id] : tags.name(id, Tag._last);
+        return id < Tag.Last ? tagNames[id] : tags.name(id, Tag.Last);
     }
 
     /// Attribute id of a lowercase name, adding it if unknown. 0 if out of memory.
     uint attrId(scope const(char)[] lowerName) pure
     {
         auto a = knownAttr(lowerName);
-        if (a != AttrName._undef) return a;
-        return attrs.intern(lowerName, arena, AttrName._last);
+        if (a != AttrName.Undef) return a;
+        return attrs.intern(lowerName, arena, AttrName.Last);
     }
 
     /// Attribute id of a name (any case), 0 if the document never saw it
@@ -485,28 +485,28 @@ struct Document
         auto lower = toLower(name, buf);
         if (lower is null) return 0;
         auto a = knownAttr(lower);
-        if (a != AttrName._undef) return a;
-        return attrs.find(lower, AttrName._last);
+        if (a != AttrName.Undef) return a;
+        return attrs.find(lower, AttrName.Last);
     }
 
     const(char)[] attrName(uint id) const pure
     {
-        return id < AttrName._last ? attrNames[id] : attrs.name(id, AttrName._last);
+        return id < AttrName.Last ? attrNames[id] : attrs.name(id, AttrName.Last);
     }
 
     // ------------------------------------------------------------ creation
 
-    Element* createElement(uint tag, Ns ns) pure
+    DomElement* createElement(uint tag, Ns ns) pure
     {
-        auto e = arena.make!Element;
+        auto e = arena.make!DomElement;
         if (e is null) return null;
-        e.node.type = NodeType.element;
+        e.node.type = NodeType.Element;
         e.node.name = tag;
         e.node.ns = ns;
         e.node.document = &this;
         if (__ctfe) ctfeRegister(e);
 
-        if (tag == Tag.template_ && ns == Ns.html)
+        if (tag == Tag.Template && ns == Ns.Html)
         {
             e.templateContent = createFragment();
             if (e.templateContent is null) return null;
@@ -515,23 +515,23 @@ struct Document
         return e;
     }
 
-    CharacterData* createText(scope const(char)[] data) pure { return createCharacterData(NodeType.text, Tag._text, data); }
-    CharacterData* createComment(scope const(char)[] data) pure { return createCharacterData(NodeType.comment, Tag._comment, data); }
+    DomCharacterData* createText(scope const(char)[] data) pure { return createCharacterData(NodeType.Text, Tag.TextNode, data); }
+    DomCharacterData* createComment(scope const(char)[] data) pure { return createCharacterData(NodeType.Comment, Tag.CommentNode, data); }
 
-    CharacterData* createProcessingInstruction(scope const(char)[] target, scope const(char)[] data) pure
+    DomCharacterData* createProcessingInstruction(scope const(char)[] target, scope const(char)[] data) pure
     {
-        auto pi = createCharacterData(NodeType.processingInstruction, Tag._processingInstruction, data);
+        auto pi = createCharacterData(NodeType.ProcessingInstruction, Tag.ProcessingInstructionNode, data);
         if (pi is null) return null;
         pi.target = copy(target);
         return pi;
     }
 
-    DocumentType* createDocumentType(scope const(char)[] name, scope const(char)[] publicId, scope const(char)[] systemId) pure
+    DomDocumentType* createDocumentType(scope const(char)[] name, scope const(char)[] publicId, scope const(char)[] systemId) pure
     {
-        auto d = arena.make!DocumentType;
+        auto d = arena.make!DomDocumentType;
         if (d is null) return null;
-        d.node.type = NodeType.documentType;
-        d.node.name = Tag._doctype;
+        d.node.type = NodeType.DocumentType;
+        d.node.name = Tag.DoctypeNode;
         d.node.document = &this;
         if (__ctfe) ctfeRegister(d);
         d.name = copy(name);
@@ -540,19 +540,19 @@ struct Document
         return d;
     }
 
-    DocumentFragment* createFragment() pure
+    DomDocumentFragment* createFragment() pure
     {
-        auto f = arena.make!DocumentFragment;
+        auto f = arena.make!DomDocumentFragment;
         if (f is null) return null;
-        f.node.type = NodeType.documentFragment;
-        f.node.name = Tag._document;
+        f.node.type = NodeType.DocumentFragment;
+        f.node.name = Tag.DocumentNode;
         f.node.document = &this;
         if (__ctfe) ctfeRegister(f);
         return f;
     }
 
     /// A new attribute (not attached). The name must be lowercase.
-    Attribute* createAttribute(scope const(char)[] lowerName, scope const(char)[] value, Ns ns = Ns.none) pure
+    DomAttribute* createAttribute(scope const(char)[] lowerName, scope const(char)[] value, Ns ns = Ns.None) pure
     {
         auto id = attrId(lowerName);
         if (id == 0) return null;
@@ -560,9 +560,9 @@ struct Document
     }
 
     /// ditto
-    Attribute* createAttribute(uint id, scope const(char)[] value, Ns ns = Ns.none) pure
+    DomAttribute* createAttribute(uint id, scope const(char)[] value, Ns ns = Ns.None) pure
     {
-        auto a = arena.make!Attribute;
+        auto a = arena.make!DomAttribute;
         if (a is null) return null;
         a.name = id;
         a.ns = ns;
@@ -571,7 +571,7 @@ struct Document
     }
 
     /// Set (or add) an attribute. The name is lowercased. It returns null if out of memory.
-    Attribute* setAttribute(Element* e, scope const(char)[] name, scope const(char)[] value) pure
+    DomAttribute* setAttribute(DomElement* e, scope const(char)[] name, scope const(char)[] value) pure
     {
         char[64] buf = void;
         const(char)[] lower = toLower(name, buf);
@@ -598,12 +598,12 @@ struct Document
     }
 
     /// A copy of `src` owned by this document (deep: with all the descendants)
-    Node* importNode(const(Node)* src, bool deep) pure
+    DomNode* importNode(const(DomNode)* src, bool deep) pure
     {
         auto copy = cloneNode(src);
         if (copy is null || !deep) return copy;
 
-        for (const(Node)* c = src.firstChild; c !is null; c = c.next)
+        for (const(DomNode)* c = src.firstChild; c !is null; c = c.next)
         {
             auto cc = importNode(c, true);
             if (cc is null) return null;
@@ -630,9 +630,9 @@ struct Document
     CtfeTable ctfeContainers;
 
 
-    CharacterData* createCharacterData(NodeType type, uint name, scope const(char)[] data) pure
+    DomCharacterData* createCharacterData(NodeType type, uint name, scope const(char)[] data) pure
     {
-        auto t = arena.make!CharacterData;
+        auto t = arena.make!DomCharacterData;
         if (t is null) return null;
         t.node.type = type;
         t.node.name = name;
@@ -642,18 +642,18 @@ struct Document
         return t;
     }
 
-    Node* cloneNode(const(Node)* src) pure
+    DomNode* cloneNode(const(DomNode)* src) pure
     {
         final switch (src.type)
         {
-            case NodeType.element:
-                auto se = src.as!Element;
+            case NodeType.Element:
+                auto se = src.as!DomElement;
                 auto name = src.document is &this ? src.name : tagId(src.document.tagName(src.name));
                 auto e = createElement(name, src.ns);
                 if (e is null) return null;
                 e.qualifiedName = copy(se.qualifiedName);
 
-                for (const(Attribute)* a = se.firstAttr; a !is null; a = a.next)
+                for (const(DomAttribute)* a = se.firstAttr; a !is null; a = a.next)
                 {
                     auto an = src.document is &this ? a.name : attrId(src.document.attrName(a.name));
                     auto na = createAttribute(an, a.value, a.ns);
@@ -664,7 +664,7 @@ struct Document
 
                 if (se.templateContent !is null)
                 {
-                    for (const(Node)* c = se.templateContent.node.firstChild; c !is null; c = c.next)
+                    for (const(DomNode)* c = se.templateContent.node.firstChild; c !is null; c = c.next)
                     {
                         auto cc = importNode(c, true);
                         if (cc is null) return null;
@@ -673,19 +673,19 @@ struct Document
                 }
                 return &e.node;
 
-            case NodeType.text, NodeType.comment, NodeType.cdataSection, NodeType.processingInstruction:
-                auto scd = src.as!CharacterData;
+            case NodeType.Text, NodeType.Comment, NodeType.CDataSection, NodeType.ProcessingInstruction:
+                auto scd = src.as!DomCharacterData;
                 auto cd = createCharacterData(src.type, src.name, scd.data);
                 if (cd is null) return null;
                 cd.target = copy(scd.target);
                 return &cd.node;
 
-            case NodeType.documentType:
-                auto sd = src.as!DocumentType;
+            case NodeType.DocumentType:
+                auto sd = src.as!DomDocumentType;
                 auto d = createDocumentType(sd.name, sd.publicId, sd.systemId);
                 return d is null ? null : &d.node;
 
-            case NodeType.documentFragment, NodeType.document:
+            case NodeType.DocumentFragment, NodeType.Document:
                 auto f = createFragment();
                 return f is null ? null : &f.node;
         }
@@ -708,14 +708,14 @@ unittest
 {
     import core.memory : pureCalloc, pureFree;
 
-    auto doc = cast(Document*) pureCalloc(1, Document.sizeof);
+    auto doc = cast(DomDocument*) pureCalloc(1, DomDocument.sizeof);
     scope(exit) { doc.release(); pureFree(doc); }
     doc.initialize();
 
-    auto html = doc.createElement(Tag.html, Ns.html);
+    auto html = doc.createElement(Tag.Html, Ns.Html);
     doc.node.appendChild(&html.node);
-    auto p = doc.createElement(doc.tagId("p"), Ns.html);
-    auto x = doc.createElement(doc.tagId("x-custom"), Ns.html);
+    auto p = doc.createElement(doc.tagId("p"), Ns.Html);
+    auto x = doc.createElement(doc.tagId("x-custom"), Ns.Html);
     html.appendChild(&p.node);
     html.appendChild(&x.node);
 
@@ -733,7 +733,7 @@ unittest
     assert(p.attribute("class").value == "a b");
 
     auto c = doc.importNode(&p.node, true);
-    assert(c.firstChild !is null && c.firstChild.as!CharacterData.data == t.data);
+    assert(c.firstChild !is null && c.firstChild.as!DomCharacterData.data == t.data);
 
     p.remove();
     assert(html.firstChild is &x.node && x.prev is null);

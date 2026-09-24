@@ -11,30 +11,30 @@ import parserino.names;
 
 enum Serialize
 {
-    node,       /// only the node: the start tag for elements, the text for texts, ...
-    tree,       /// the node and its descendants (for a document: its children)
-    children,   /// only the descendants (innerHTML)
+    Node,       /// only the node: the start tag for elements, the text for texts, ...
+    Tree,       /// the node and its descendants (for a document: its children)
+    Children,   /// only the descendants (innerHTML)
 }
 
 /// Serialize `node` to `sink` (an output range of `const(char)[]`)
-void serialize(Sink)(const(Node)* node, ref Sink sink, Serialize what)
+void serialize(Sink)(const(DomNode)* node, ref Sink sink, Serialize what)
 {
     auto out_ = Buffered!Sink(&sink);
 
     final switch (what)
     {
-        case Serialize.node:
-            if (node.type == NodeType.document) out_.put("<#document>");
-            else if (node.type == NodeType.element) startTag(node.as!Element, out_);
+        case Serialize.Node:
+            if (node.type == NodeType.Document) out_.put("<#document>");
+            else if (node.type == NodeType.Element) startTag(node.as!DomElement, out_);
             else leaf(node, out_);
             break;
 
-        case Serialize.tree:
-            if (node.type == NodeType.document || node.type == NodeType.documentFragment) children(node, out_);
+        case Serialize.Tree:
+            if (node.type == NodeType.Document || node.type == NodeType.DocumentFragment) children(node, out_);
             else subtree(node, out_);
             break;
 
-        case Serialize.children:
+        case Serialize.Children:
             children(node, out_);
             break;
     }
@@ -82,29 +82,29 @@ struct Buffered(Sink)
     }
 }
 
-void children(O)(const(Node)* parent, ref O out_)
+void children(O)(const(DomNode)* parent, ref O out_)
 {
-    for (const(Node)* c = parent.firstChild; c !is null; c = c.next)
+    for (const(DomNode)* c = parent.firstChild; c !is null; c = c.next)
         subtree(c, out_);
 }
 
 // Iterative preorder, so deep trees don't overflow the stack
-void subtree(O)(const(Node)* root, ref O out_)
+void subtree(O)(const(DomNode)* root, ref O out_)
 {
-    const(Node)* node = root;
+    const(DomNode)* node = root;
 
     while (true)
     {
-        bool isElement = node.type == NodeType.element;
+        bool isElement = node.type == NodeType.Element;
 
         if (isElement)
         {
-            auto e = node.as!Element;
+            auto e = node.as!DomElement;
             startTag(e, out_);
 
             // The children of a <template> live in its content fragment
             if (e.templateContent !is null)
-                for (const(Node)* c = e.templateContent.node.firstChild; c !is null; c = c.next)
+                for (const(DomNode)* c = e.templateContent.node.firstChild; c !is null; c = c.next)
                     subtree(c, out_);
         }
         else leaf(node, out_);
@@ -118,7 +118,7 @@ void subtree(O)(const(Node)* root, ref O out_)
         // Close the elements we are leaving
         while (true)
         {
-            if (node.type == NodeType.element && !isVoid(node)) endTag(node.as!Element, out_);
+            if (node.type == NodeType.Element && !isVoid(node)) endTag(node.as!DomElement, out_);
             if (node is root) return;
             if (node.next !is null) { node = node.next; break; }
             node = node.parent;
@@ -126,12 +126,12 @@ void subtree(O)(const(Node)* root, ref O out_)
     }
 }
 
-void startTag(O)(const(Element)* e, ref O out_)
+void startTag(O)(const(DomElement)* e, ref O out_)
 {
     out_.put("<");
     out_.put(e.fullName);
 
-    for (const(Attribute)* a = e.firstAttr; a !is null; a = a.next)
+    for (const(DomAttribute)* a = e.firstAttr; a !is null; a = a.next)
     {
         out_.put(" ");
         attribute(a, out_);
@@ -140,22 +140,22 @@ void startTag(O)(const(Element)* e, ref O out_)
     out_.put(">");
 }
 
-void endTag(O)(const(Element)* e, ref O out_)
+void endTag(O)(const(DomElement)* e, ref O out_)
 {
     out_.put("</");
     out_.put(e.fullName);
     out_.put(">");
 }
 
-void attribute(O)(const(Attribute)* a, ref O out_)
+void attribute(O)(const(DomAttribute)* a, ref O out_)
 {
     auto local = a.localName;
 
     switch (a.ns)
     {
-        case Ns.xml: out_.put("xml:"); out_.put(local); break;
-        case Ns.xlink: out_.put("xlink:"); out_.put(local); break;
-        case Ns.xmlns:
+        case Ns.Xml: out_.put("xml:"); out_.put(local); break;
+        case Ns.Xlink: out_.put("xlink:"); out_.put(local); break;
+        case Ns.Xmlns:
             if (local == "xmlns") out_.put("xmlns");
             else { out_.put("xmlns:"); out_.put(local); }
             break;
@@ -170,24 +170,24 @@ void attribute(O)(const(Attribute)* a, ref O out_)
 }
 
 // Texts, comments, doctypes and processing instructions
-void leaf(O)(const(Node)* node, ref O out_)
+void leaf(O)(const(DomNode)* node, ref O out_)
 {
     switch (node.type)
     {
-        case NodeType.text:
-            auto data = node.as!CharacterData.data;
+        case NodeType.Text:
+            auto data = node.as!DomCharacterData.data;
             if (isRawTextParent(node)) out_.put(data);
             else escape!false(data, out_);
             break;
 
-        case NodeType.comment:
+        case NodeType.Comment:
             out_.put("<!--");
-            out_.put(node.as!CharacterData.data);
+            out_.put(node.as!DomCharacterData.data);
             out_.put("-->");
             break;
 
-        case NodeType.processingInstruction:
-            auto pi = node.as!CharacterData;
+        case NodeType.ProcessingInstruction:
+            auto pi = node.as!DomCharacterData;
             out_.put("<?");
             out_.put(pi.target);
             out_.put(" ");
@@ -195,9 +195,9 @@ void leaf(O)(const(Node)* node, ref O out_)
             out_.put("?>");
             break;
 
-        case NodeType.documentType:
+        case NodeType.DocumentType:
             out_.put("<!DOCTYPE ");
-            out_.put(node.as!DocumentType.name);
+            out_.put(node.as!DomDocumentType.name);
             out_.put(">");
             break;
 
@@ -207,30 +207,30 @@ void leaf(O)(const(Node)* node, ref O out_)
 }
 
 // The text of these elements is not escaped
-bool isRawTextParent(const(Node)* text) @nogc nothrow pure
+bool isRawTextParent(const(DomNode)* text) @nogc nothrow pure
 {
     auto p = text.parent;
-    if (p is null || p.ns != Ns.html || p.type != NodeType.element) return false;
+    if (p is null || p.ns != Ns.Html || p.type != NodeType.Element) return false;
 
     switch (p.name)
     {
-        case Tag.style, Tag.script, Tag.xmp, Tag.iframe, Tag.noembed, Tag.noframes, Tag.plaintext:
+        case Tag.Style, Tag.Script, Tag.Xmp, Tag.Iframe, Tag.Noembed, Tag.Noframes, Tag.Plaintext:
             return true;
-        case Tag.noscript:
+        case Tag.Noscript:
             return p.document.scripting;
         default:
             return false;
     }
 }
 
-bool isVoid(const(Node)* n) @nogc nothrow pure
+bool isVoid(const(DomNode)* n) @nogc nothrow pure
 {
-    if (n.ns != Ns.html) return false;
+    if (n.ns != Ns.Html) return false;
 
     switch (n.name)
     {
-        case Tag.area, Tag.base, Tag.basefont, Tag.bgsound, Tag.br, Tag.col, Tag.embed, Tag.frame, Tag.hr, Tag.img,
-             Tag.input, Tag.keygen, Tag.link, Tag.meta, Tag.param, Tag.source, Tag.track, Tag.wbr:
+        case Tag.Area, Tag.Base, Tag.Basefont, Tag.Bgsound, Tag.Br, Tag.Col, Tag.Embed, Tag.Frame, Tag.Hr, Tag.Img,
+             Tag.Input, Tag.Keygen, Tag.Link, Tag.Meta, Tag.Param, Tag.Source, Tag.Track, Tag.Wbr:
             return true;
         default:
             return false;

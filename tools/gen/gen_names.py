@@ -14,14 +14,13 @@ for line in open(names_file):
     if section == 'TAGS': tags.append((parts[1], [int(x) for x in parts[2].split(',') if x]))
     else: attrs.append(parts[1])
 
-special = {'#undef': '_undef', '#end-of-file': '_endOfFile', '#text': '_text', '#document': '_document',
-           '!--': '_comment', '!doctype': '_doctype', '?ProcessingInstruction': '_processingInstruction'}
-keywords = {'template', 'switch', 'scope', 'for', 'is', 'class', 'default', 'public', 'in', 'out', 'version', 'align'}
+special = {'#undef': 'Undef', '#end-of-file': 'EndOfFile', '#text': 'TextNode', '#document': 'DocumentNode',
+           '!--': 'CommentNode', '!doctype': 'DoctypeNode', '?ProcessingInstruction': 'ProcessingInstructionNode'}
 
 def ident(n):
+    """The enum member of a name, in PascalCase: `annotation-xml` -> `AnnotationXml`"""
     if n in special: return special[n]
-    s = n.replace('-', '_')
-    return s + '_' if s in keywords else s
+    return ''.join(p[0].upper() + p[1:] for p in n.replace('_', '-').split('-') if p)
 
 def dstr(s):
     return '"' + s.replace('\\', '\\\\').replace('"', '\\"') + '"'
@@ -43,62 +42,62 @@ import parserino.arena;
 /// Namespaces
 enum Ns : ubyte
 {
-    none, any, html, math, svg, xlink, xml, xmlns,
+    None, Any, Html, Math, Svg, Xlink, Xml, Xmlns,
 }
 
-/// Known tags. Unknown tag names get ids from `Tag._last` on.
+/// Known tags. Unknown tag names get ids from `Tag.Last` on.
 enum Tag : uint
 {
 ''')
 for i, (n, _) in enumerate(tags):
     o.append('    %s = %d,\n' % (ident(n), i))
-o.append('    _last = %d,\n}\n\n' % len(tags))
+o.append('    Last = %d,\n}\n\n' % len(tags))
 
-o.append('/// Names of the known tags (lowercase)\nimmutable string[Tag._last] tagNames = [\n')
+o.append('/// Names of the known tags (lowercase)\nimmutable string[Tag.Last] tagNames = [\n')
 for n, _ in tags: o.append('    %s,\n' % dstr(n))
 o.append('];\n\n')
 
 o.append('''/// Categories of the tags in the tree construction ("special", "formatting", scopes, ...)
 enum Category : ubyte
 {
-    ordinary = 0x01,
-    special = 0x02,
-    formatting = 0x04,
-    scope_ = 0x08,
-    scopeListItem = 0x10,
-    scopeButton = 0x20,
-    scopeTable = 0x40,
+    Ordinary = 0x01,
+    Special = 0x02,
+    Formatting = 0x04,
+    Scope = 0x08,
+    ScopeListItem = 0x10,
+    ScopeButton = 0x20,
+    ScopeTable = 0x40,
 }
 
 /// Categories of each tag, for each namespace
-immutable ubyte[Ns.max + 1][Tag._last] tagCategories = [
+immutable ubyte[Ns.max + 1][Tag.Last] tagCategories = [
 ''')
 for n, c in tags: o.append('    [%s],\n' % ', '.join(str(x) for x in c))
 o.append('];\n\n')
 
-o.append('/// Known attributes. Unknown names get ids from `AttrName._last` on.\nenum AttrName : uint\n{\n')
+o.append('/// Known attributes. Unknown names get ids from `AttrName.Last` on.\nenum AttrName : uint\n{\n')
 for i, n in enumerate(attrs):
-    o.append('    %s = %d,\n' % ('_undef' if n == '#undef' else ident(n), i))
-o.append('    _last = %d,\n}\n\n' % len(attrs))
-o.append('/// Names of the known attributes\nimmutable string[AttrName._last] attrNames = [\n')
+    o.append('    %s = %d,\n' % ('Undef' if n == '#undef' else ident(n), i))
+o.append('    Last = %d,\n}\n\n' % len(attrs))
+o.append('/// Names of the known attributes\nimmutable string[AttrName.Last] attrNames = [\n')
 for n in attrs: o.append('    %s,\n' % dstr(n))
 o.append('];\n')
 
 o.append('''
-/// Id of a known tag (`name` must be lowercase), or `Tag._undef`
+/// Id of a known tag (`name` must be lowercase), or `Tag.Undef`
 Tag knownTag(scope const(char)[] name) @trusted { return cast(Tag) staticLookup!tagNames(name); }
 
-/// Id of a known attribute (`name` must be lowercase), or `AttrName._undef`
+/// Id of a known attribute (`name` must be lowercase), or `AttrName.Undef`
 AttrName knownAttr(scope const(char)[] name) @trusted { return cast(AttrName) staticLookup!attrNames(name); }
 
 ///
 unittest
 {
-    assert(knownTag("div") == Tag.div);
-    assert(knownTag("template") == Tag.template_);
-    assert(knownTag("nope") == Tag._undef);
-    assert(knownAttr("href") == AttrName.href);
-    static assert(knownTag("svg") == Tag.svg);
+    assert(knownTag("div") == Tag.Div);
+    assert(knownTag("template") == Tag.Template);
+    assert(knownTag("nope") == Tag.Undef);
+    assert(knownAttr("href") == AttrName.Href);
+    static assert(knownTag("svg") == Tag.Svg);
 }
 
 /++ Interned names of a document: known names have their static id, the others

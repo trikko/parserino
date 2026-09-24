@@ -45,8 +45,8 @@ OTHER DEALINGS IN THE SOFTWARE.
 module parserino;
 
 import parserino.names : Tag, Ns;
-import parserino.dom : textContent, DomNode = Node, DomElement = Element, DomAttribute = Attribute, DomDocument = Document,
-    CharacterData, NodeType;
+import parserino.dom : textContent, DomNode, DomElement, DomAttribute, DomDocument,
+    DomCharacterData, NodeType;
 import parserino.html.parser : Parser, newParser, freeParser, parseDocument, parseFragment;
 import parserino.html.treebuilder : TreeBuilder;
 static import parserino.html.serializer;
@@ -265,7 +265,7 @@ struct Document
     {
         auto d = (cast() this).mutableImpl();
         d.finish();
-        serializeTo(Serialize.tree, &d.dom.node, sink);
+        serializeTo(Serialize.Tree, &d.dom.node, sink);
     }
 
     /// ditto
@@ -308,7 +308,7 @@ struct Document
         auto t = findTitle();
         if (t is null)
         {
-            auto e = dom.createElement(Tag.title, Ns.html);
+            auto e = dom.createElement(Tag.Title, Ns.Html);
             if (e is null) throw new ParserinoException("Out of memory");
             dom.head.appendChild(&e.node);
             t = &e.node;
@@ -335,7 +335,7 @@ struct Document
         onlyValid();
         import std.uni : toLower;
         auto id = impl.dom.tagId(tagName.toLower);
-        auto e = id == 0 ? null : impl.dom.createElement(id, Ns.html);
+        auto e = id == 0 ? null : impl.dom.createElement(id, Ns.Html);
         if (e is null) throw new ParserinoException("Can't create element `" ~ tagName.idup ~ "`");
         return Element(this, &e.node);
     }
@@ -511,7 +511,7 @@ struct Document
         onlyValid();
         impl.finish();
 
-        auto context = impl.dom.createElement(Tag.div, Ns.html);
+        auto context = impl.dom.createElement(Tag.Div, Ns.Html);
         auto root = context is null ? null : parseFragment(impl.dom, context, html);
         if (root is null) throw new ParserinoException("Can't parse the fragment (out of memory)");
         return Element(this, &root.node);
@@ -545,7 +545,7 @@ struct Document
     DomNode* findTitle()
     {
         foreach (t; rootElement.byTagName("title"))
-            if (t.node.ns == Ns.html) return t.node;
+            if (t.node.ns == Ns.Html) return t.node;
         return null;
     }
 
@@ -593,13 +593,13 @@ struct Element
     @property bool isValid() const @safe nothrow pure @nogc { return node !is null; }
 
     /// Is this a html element? (and not a text or a comment node)
-    @property bool isElement() const @safe nothrow pure @nogc { return node !is null && node.type == NodeType.element; }
+    @property bool isElement() const @safe nothrow pure @nogc { return node !is null && node.type == NodeType.Element; }
 
     /// Is this a text node?
-    @property bool isText() const @safe nothrow pure @nogc { return node !is null && node.type == NodeType.text; }
+    @property bool isText() const @safe nothrow pure @nogc { return node !is null && node.type == NodeType.Text; }
 
     /// Is this a comment?
-    @property bool isComment() const @safe nothrow pure @nogc { return node !is null && node.type == NodeType.comment; }
+    @property bool isComment() const @safe nothrow pure @nogc { return node !is null && node.type == NodeType.Comment; }
 
     /// Is this element empty? (no elements and no text, whitespaces excluded)
     @property bool isEmpty() { onlyValidElements(); impl.ensureClosed(node); return node.isBlank; }
@@ -1103,7 +1103,7 @@ struct Element
         impl.ensureClosed(node);
 
         auto app = appender!string;
-        serializeTo(Serialize.children, node, (const(char)[] s) { app.put(s); });
+        serializeTo(Serialize.Children, node, (const(char)[] s) { app.put(s); });
         return app.data;
     }
 
@@ -1113,13 +1113,13 @@ struct Element
         onlyValidElements();
         impl.ensureClosed(node);
 
-        if (node.type == NodeType.text || node.type == NodeType.comment
-            || node.type == NodeType.processingInstruction)
+        if (node.type == NodeType.Text || node.type == NodeType.Comment
+            || node.type == NodeType.ProcessingInstruction)
         {
-            return node.as!CharacterData.data.idup;
+            return node.as!DomCharacterData.data.idup;
         }
 
-        if (node.type != NodeType.element && node.type != NodeType.document)
+        if (node.type != NodeType.Element && node.type != NodeType.Document)
             return string.init;
 
         import std.array : appender;
@@ -1134,7 +1134,7 @@ struct Element
         onlyValidElements();
         impl.finish();
 
-        if (node.type != NodeType.element)
+        if (node.type != NodeType.Element)
         {
             if (auto cd = node.asCharacterData)
                 if (!cd.setData(text)) throw new ParserinoException("Out of memory");
@@ -1242,7 +1242,7 @@ struct Element
     {
         onlyValidElements();
         if (!selector.isValid) throw new ParserinoException("Invalid selector");
-        if (node.type != NodeType.element) return false;
+        if (node.type != NodeType.Element) return false;
 
         impl.ensureStable(node);
         if (selector.forward && node.parent !is null) impl.ensureClosed(node.parent);
@@ -1340,7 +1340,7 @@ struct Element
         impl.ensureStable(node);
 
         auto el = node.prev;
-        while (el !is null && !includeAllElements && el.type != NodeType.element)
+        while (el !is null && !includeAllElements && el.type != NodeType.Element)
             el = el.prev;
 
         return Element(doc, el);
@@ -1374,7 +1374,7 @@ struct Element
     @property Element firstChild(bool includeAllElements = false)
     {
         onlyValidElements();
-        if (node.type != NodeType.element && node.type != NodeType.document) return Element.init;
+        if (node.type != NodeType.Element && node.type != NodeType.Document) return Element.init;
         return NodeRange!AnyFilter(doc, node, false, includeAllElements, AnyFilter.init).frontOrInit;
     }
 
@@ -1385,7 +1385,7 @@ struct Element
         impl.ensureClosed(node);
 
         auto el = node.lastChild;
-        while (el !is null && !includeAllElements && el.type != NodeType.element)
+        while (el !is null && !includeAllElements && el.type != NodeType.Element)
             el = el.prev;
 
         return Element(doc, el);
@@ -1607,13 +1607,13 @@ struct Element
         if (deep)
         {
             self.impl.ensureClosed(self.node);
-            serializeTo(Serialize.tree, self.node, sink);
+            serializeTo(Serialize.Tree, self.node, sink);
         }
         else
         {
             self.impl.ensureStable(self.node);
             self.impl.ensureAttrs(self.node);
-            serializeTo(Serialize.node, self.node, sink);
+            serializeTo(Serialize.Node, self.node, sink);
         }
     }
 
@@ -1726,14 +1726,14 @@ struct Element
     {
         onlyValidElements(fname);
 
-        if (node.type != NodeType.element)
+        if (node.type != NodeType.Element)
             throw new ParserinoException("Can't call `" ~ fname ~ "` for a node with type " ~ name());
     }
 
     void onlyRealOrDocument(string fname = __FUNCTION__)
     {
         onlyValidElements(fname);
-        if (node.type != NodeType.document) onlyRealElements(fname);
+        if (node.type != NodeType.Document) onlyRealElements(fname);
     }
 
     void removeChildren()
@@ -2140,7 +2140,7 @@ struct NodeRange(Filter, VisitOrder order = VisitOrder.Normal)
 
             pos = next;
 
-            if ((all || next.type == NodeType.element) && filter.match(d, next))
+            if ((all || next.type == NodeType.Element) && filter.match(d, next))
                 return next;
         }
     }
@@ -2214,19 +2214,19 @@ struct TagFilter
     enum strict = false;
 
     string name;
-    uint id = Tag._undef;
+    uint id = Tag.Undef;
     size_t generation = size_t.max;
 
     bool match(DocImpl* d, DomNode* n)
     {
         // Unknown tags get an id when the parser meets them: retry after each parsed chunk
-        if (id == Tag._undef && generation != d.generation)
+        if (id == Tag.Undef && generation != d.generation)
         {
             id = d.dom.findTagName(name);
             generation = d.generation;
         }
 
-        return id != Tag._undef && n.name == id;
+        return id != Tag.Undef && n.name == id;
     }
 }
 
@@ -2289,9 +2289,9 @@ struct CommentFilter
     {
         import std.string : strip;
 
-        if (n.type != NodeType.comment) return false;
+        if (n.type != NodeType.Comment) return false;
 
-        auto cd = n.as!CharacterData;
+        auto cd = n.as!DomCharacterData;
         auto text = cd.data;
         return (stripSpaces ? text.strip : text) == comment;
     }
@@ -2437,8 +2437,8 @@ struct DocImpl
     bool isOpen(const(DomNode)* n)
     {
         if (!parsing) return false;
-        if (n.type == NodeType.document) return n is &dom.node;
-        if (n.type != NodeType.element) return false;
+        if (n.type == NodeType.Document) return n is &dom.node;
+        if (n.type != NodeType.Element) return false;
 
         // In the "after head" insertion mode the parser puts <head> back on the stack
         // for <script>, <style>, <meta>, ...: it can get children until <body> exists.
@@ -2464,7 +2464,7 @@ struct DocImpl
 
         foreach (n; oe)
         {
-            if (n.ns == Ns.html && n.name == Tag.table) tables.add(n);
+            if (n.ns == Ns.Html && n.name == Tag.Table) tables.add(n);
             else
             {
                 foreach (f; af)
@@ -2498,7 +2498,7 @@ struct DocImpl
             }
         }
 
-        if (n.type == NodeType.text)
+        if (n.type == NodeType.Text)
         {
             if (n.next is null) return n.parent is null || !isOpen(n.parent);
             if (tables.contains(n.next)) return false;
@@ -2558,8 +2558,8 @@ struct NodeList
 
 bool isRootElement(const(DomNode)* n) nothrow @nogc
 {
-    return n.type == NodeType.element && n.ns == Ns.html
-        && (n.name == Tag.html || n.name == Tag.body);
+    return n.type == NodeType.Element && n.ns == Ns.Html
+        && (n.name == Tag.Html || n.name == Tag.Body);
 }
 
 bool isHtmlSpace(char c) nothrow @nogc pure { return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f'; }
@@ -2599,12 +2599,12 @@ size_t scanRootTags(const(ubyte)[] s) nothrow @nogc
 // Offset after the '>' closing a start tag, beginning at the end of the tag name.
 size_t startTagEnd(const(ubyte)[] s, size_t i) nothrow @nogc
 {
-    enum S { beforeName, name, afterName, beforeValue, dq, sq, unquoted, afterQuoted, selfClosing }
-    S st = S.beforeName;
+    enum S { BeforeName, Name, AfterName, BeforeValue, Dq, Sq, Unquoted, AfterQuoted, SelfClosing }
+    S st = S.BeforeName;
 
     // The tag name state: whitespace, '/' or '>' ends it
     if (s[i] == '>') return i + 1;
-    if (s[i] == '/') st = S.selfClosing;
+    if (s[i] == '/') st = S.SelfClosing;
     i++;
 
     for (; i < s.length; i++)
@@ -2614,56 +2614,56 @@ size_t startTagEnd(const(ubyte)[] s, size_t i) nothrow @nogc
 
         final switch (st)
         {
-            case S.beforeName:
+            case S.BeforeName:
                 if (ws) break;
-                if (c == '/' || c == '>') { st = S.afterName; i--; break; }
-                st = S.name;
+                if (c == '/' || c == '>') { st = S.AfterName; i--; break; }
+                st = S.Name;
                 break;
 
-            case S.name:
-                if (ws || c == '/' || c == '>') { st = S.afterName; i--; break; }
-                if (c == '=') st = S.beforeValue;
+            case S.Name:
+                if (ws || c == '/' || c == '>') { st = S.AfterName; i--; break; }
+                if (c == '=') st = S.BeforeValue;
                 break;
 
-            case S.afterName:
+            case S.AfterName:
                 if (ws) break;
-                if (c == '/') { st = S.selfClosing; break; }
-                if (c == '=') { st = S.beforeValue; break; }
+                if (c == '/') { st = S.SelfClosing; break; }
+                if (c == '=') { st = S.BeforeValue; break; }
                 if (c == '>') return i + 1;
-                st = S.name;
+                st = S.Name;
                 break;
 
-            case S.beforeValue:
+            case S.BeforeValue:
                 if (ws) break;
-                if (c == '"') { st = S.dq; break; }
-                if (c == '\'') { st = S.sq; break; }
+                if (c == '"') { st = S.Dq; break; }
+                if (c == '\'') { st = S.Sq; break; }
                 if (c == '>') return i + 1;
-                st = S.unquoted;
+                st = S.Unquoted;
                 break;
 
-            case S.dq:
-                if (c == '"') st = S.afterQuoted;
+            case S.Dq:
+                if (c == '"') st = S.AfterQuoted;
                 break;
 
-            case S.sq:
-                if (c == '\'') st = S.afterQuoted;
+            case S.Sq:
+                if (c == '\'') st = S.AfterQuoted;
                 break;
 
-            case S.unquoted:
-                if (ws) { st = S.beforeName; break; }
+            case S.Unquoted:
+                if (ws) { st = S.BeforeName; break; }
                 if (c == '>') return i + 1;
                 break;
 
-            case S.afterQuoted:
-                if (ws) { st = S.beforeName; break; }
-                if (c == '/') { st = S.selfClosing; break; }
+            case S.AfterQuoted:
+                if (ws) { st = S.BeforeName; break; }
+                if (c == '/') { st = S.SelfClosing; break; }
                 if (c == '>') return i + 1;
-                st = S.beforeName; i--;
+                st = S.BeforeName; i--;
                 break;
 
-            case S.selfClosing:
+            case S.SelfClosing:
                 if (c == '>') return i + 1;
-                st = S.beforeName; i--;
+                st = S.BeforeName; i--;
                 break;
         }
     }

@@ -9,20 +9,20 @@ module parserino.html.tokenizer;
 
 import parserino.arena;
 import parserino.names;
-import parserino.dom : Document;
+import parserino.dom : DomDocument;
 import parserino.html.entities;
 
 @nogc nothrow pure:
 
 enum TokenType : ubyte
 {
-    startTag,
-    endTag,
-    text,
-    comment,
-    doctype,
-    processingInstruction,
-    eof,
+    StartTag,
+    EndTag,
+    Text,
+    Comment,
+    Doctype,
+    ProcessingInstruction,
+    Eof,
 }
 
 struct TokenAttribute
@@ -69,29 +69,29 @@ struct TokenSink
 /// States of the tokenizer (the ones the tree builder can set are `data`, `rcdata`, `rawtext`, `scriptData`, `plaintext`)
 enum State : ubyte
 {
-    data, rcdata, rawtext, scriptData, plaintext,
-    tagOpen, endTagOpen, tagName,
-    rcdataLessThan, rcdataEndTagOpen, rcdataEndTagName,
-    rawtextLessThan, rawtextEndTagOpen, rawtextEndTagName,
-    scriptDataLessThan, scriptDataEndTagOpen, scriptDataEndTagName,
-    scriptDataEscapeStart, scriptDataEscapeStartDash, scriptDataEscaped, scriptDataEscapedDash, scriptDataEscapedDashDash,
-    scriptDataEscapedLessThan, scriptDataEscapedEndTagOpen, scriptDataEscapedEndTagName,
-    scriptDataDoubleEscapeStart, scriptDataDoubleEscaped, scriptDataDoubleEscapedDash, scriptDataDoubleEscapedDashDash,
-    scriptDataDoubleEscapedLessThan, scriptDataDoubleEscapeEnd,
-    beforeAttrName, attrName, afterAttrName, beforeAttrValue,
-    attrValueDoubleQuoted, attrValueSingleQuoted, attrValueUnquoted, afterAttrValueQuoted, selfClosingStartTag,
-    bogusComment, markupDeclarationOpen,
-    commentStart, commentStartDash, comment, commentLessThan, commentLessThanBang, commentLessThanBangDash,
-    commentLessThanBangDashDash, commentEndDash, commentEnd, commentEndBang,
-    doctype, beforeDoctypeName, doctypeName, afterDoctypeName,
-    afterDoctypePublicKeyword, beforeDoctypePublicId, doctypePublicIdDoubleQuoted, doctypePublicIdSingleQuoted,
-    afterDoctypePublicId, betweenDoctypePublicAndSystem,
-    afterDoctypeSystemKeyword, beforeDoctypeSystemId, doctypeSystemIdDoubleQuoted, doctypeSystemIdSingleQuoted,
-    afterDoctypeSystemId, bogusDoctype,
-    cdataSection, cdataSectionBracket, cdataSectionEnd,
-    charRef, namedCharRef, numericCharRef, hexCharRefStart, decimalCharRefStart, hexCharRef, decimalCharRef,
-    processingInstructionOpen, processingInstructionTarget, afterProcessingInstructionTarget,
-    processingInstructionData, processingInstructionQuestionable,
+    Data, Rcdata, Rawtext, ScriptData, Plaintext,
+    TagOpen, EndTagOpen, TagName,
+    RcdataLessThan, RcdataEndTagOpen, RcdataEndTagName,
+    RawtextLessThan, RawtextEndTagOpen, RawtextEndTagName,
+    ScriptDataLessThan, ScriptDataEndTagOpen, ScriptDataEndTagName,
+    ScriptDataEscapeStart, ScriptDataEscapeStartDash, ScriptDataEscaped, ScriptDataEscapedDash, ScriptDataEscapedDashDash,
+    ScriptDataEscapedLessThan, ScriptDataEscapedEndTagOpen, ScriptDataEscapedEndTagName,
+    ScriptDataDoubleEscapeStart, ScriptDataDoubleEscaped, ScriptDataDoubleEscapedDash, ScriptDataDoubleEscapedDashDash,
+    ScriptDataDoubleEscapedLessThan, ScriptDataDoubleEscapeEnd,
+    BeforeAttrName, AttrName, AfterAttrName, BeforeAttrValue,
+    AttrValueDoubleQuoted, AttrValueSingleQuoted, AttrValueUnquoted, AfterAttrValueQuoted, SelfClosingStartTag,
+    BogusComment, MarkupDeclarationOpen,
+    CommentStart, CommentStartDash, Comment, CommentLessThan, CommentLessThanBang, CommentLessThanBangDash,
+    CommentLessThanBangDashDash, CommentEndDash, CommentEnd, CommentEndBang,
+    Doctype, BeforeDoctypeName, DoctypeName, AfterDoctypeName,
+    AfterDoctypePublicKeyword, BeforeDoctypePublicId, DoctypePublicIdDoubleQuoted, DoctypePublicIdSingleQuoted,
+    AfterDoctypePublicId, BetweenDoctypePublicAndSystem,
+    AfterDoctypeSystemKeyword, BeforeDoctypeSystemId, DoctypeSystemIdDoubleQuoted, DoctypeSystemIdSingleQuoted,
+    AfterDoctypeSystemId, BogusDoctype,
+    CDataSection, CDataSectionBracket, CDataSectionEnd,
+    CharRef, NamedCharRef, NumericCharRef, HexCharRefStart, DecimalCharRefStart, HexCharRef, DecimalCharRef,
+    ProcessingInstructionOpen, ProcessingInstructionTarget, AfterProcessingInstructionTarget,
+    ProcessingInstructionData, ProcessingInstructionQuestionable,
 }
 
 struct Tokenizer
@@ -99,7 +99,7 @@ struct Tokenizer
 @nogc nothrow pure:
     @disable this(this);
 
-    this(Document* document, TokenSink sink)
+    this(DomDocument* document, TokenSink sink)
     {
         this.document = document;
         this.sink = sink;
@@ -111,7 +111,7 @@ struct Tokenizer
     void switchTo(State s)
     {
         state = s;
-        if (s == State.rcdata || s == State.rawtext || s == State.scriptData)
+        if (s == State.Rcdata || s == State.Rawtext || s == State.ScriptData)
         {
             lastStartTag.clear();
             lastStartTag.put(tagName[]);
@@ -181,7 +181,7 @@ struct Tokenizer
         flushText();
 
         Token t;
-        t.type = TokenType.eof;
+        t.type = TokenType.Eof;
         emit(t);
         return !failed;
     }
@@ -191,7 +191,7 @@ struct Tokenizer
 
     private:
 
-    Document* document;
+    DomDocument* document;
     TokenSink sink;
     State state;
     State returnState;
@@ -247,17 +247,17 @@ struct Tokenizer
     static bool isHex(char c) pure { return isDigit(c) || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F'); }
     static char lower(char c) pure { return c >= 'A' && c <= 'Z' ? cast(char) (c | 0x20) : c; }
 
-    enum replacement = "\xEF\xBF\xBD";
+    enum Replacement = "\xEF\xBF\xBD";
 
     // Character classes for the fast loops
-    enum : ubyte { dataSpecial = 1, endOfName = 2, endOfAttrName = 4, endOfUnquoted = 8 }
+    enum : ubyte { DataSpecial = 1, EndOfName = 2, EndOfAttrName = 4, EndOfUnquoted = 8 }
 
     static immutable ubyte[256] charClass = () {
         ubyte[256] t;
-        foreach (c; "<&\0") t[c] |= dataSpecial;
-        foreach (c; " \t\n\f\r/>\0") t[c] |= endOfName;
-        foreach (c; " \t\n\f\r/>=\0") t[c] |= endOfAttrName;
-        foreach (c; " \t\n\f\r>&\0") t[c] |= endOfUnquoted;
+        foreach (c; "<&\0") t[c] |= DataSpecial;
+        foreach (c; " \t\n\f\r/>\0") t[c] |= EndOfName;
+        foreach (c; " \t\n\f\r/>=\0") t[c] |= EndOfAttrName;
+        foreach (c; " \t\n\f\r>&\0") t[c] |= EndOfUnquoted;
         return t;
     }();
 
@@ -275,7 +275,7 @@ struct Tokenizer
 
     bool attributeState() const
     {
-        return returnState == State.attrValueDoubleQuoted || returnState == State.attrValueSingleQuoted || returnState == State.attrValueUnquoted;
+        return returnState == State.AttrValueDoubleQuoted || returnState == State.AttrValueSingleQuoted || returnState == State.AttrValueUnquoted;
     }
 
     // Chars consumed by a character reference: to the attribute value or to the text
@@ -296,7 +296,7 @@ struct Tokenizer
         if (text.length == 0) return;
 
         Token t;
-        t.type = TokenType.text;
+        t.type = TokenType.Text;
         t.data = text[];
         t.hasNull = textHasNull;
         emit(t);
@@ -366,14 +366,14 @@ struct Tokenizer
         }
 
         Token t;
-        t.type = isEndTag ? TokenType.endTag : TokenType.startTag;
+        t.type = isEndTag ? TokenType.EndTag : TokenType.StartTag;
         t.name = tagName[];
         t.tag = document.tagId(t.name);
         if (t.tag == 0) { failed = true; return; }
         t.selfClosing = selfClosing;
         t.attributes = attrSlices[];
 
-        state = State.data;
+        state = State.Data;
         emit(t);
     }
 
@@ -383,7 +383,7 @@ struct Tokenizer
     {
         flushText();
         Token t;
-        t.type = TokenType.comment;
+        t.type = TokenType.Comment;
         t.data = tokData[];
         emit(t);
     }
@@ -400,7 +400,7 @@ struct Tokenizer
         flushText();
         auto d = tokData[];
         Token t;
-        t.type = TokenType.doctype;
+        t.type = TokenType.Doctype;
         t.forceQuirks = forceQuirks;
         t.hasName = hasName;
         t.hasPublicId = hasPublic;
@@ -416,7 +416,7 @@ struct Tokenizer
         flushText();
         auto d = tokData[];
         Token t;
-        t.type = TokenType.processingInstruction;
+        t.type = TokenType.ProcessingInstruction;
         t.target = d[0 .. targetLen];
         t.data = d[targetLen .. $];
         emit(t);
@@ -463,24 +463,24 @@ struct Tokenizer
 
         final switch (state)
         {
-            case State.data:
+            case State.Data:
             {
                 // Fast path: a run of plain text
                 size_t start = pos;
-                while (pos < input.length && !(charClass[input[pos]] & dataSpecial)) pos++;
+                while (pos < input.length && !(charClass[input[pos]] & DataSpecial)) pos++;
                 if (pos > start) emitText(input[start .. pos]);
                 if (pos == input.length) return;
                 c = input[pos];
                 if (pos == input.length) return;
 
                 pos++;
-                if (c == '<') state = State.tagOpen;
-                else if (c == '&') { returnState = State.data; state = State.charRef; }
+                if (c == '<') state = State.TagOpen;
+                else if (c == '&') { returnState = State.Data; state = State.CharRef; }
                 else emitText('\0');
                 return;
             }
 
-            case State.rcdata:
+            case State.Rcdata:
             {
                 size_t start = pos;
                 while (pos < input.length && input[pos] != '<' && input[pos] != '&' && input[pos] != '\0') pos++;
@@ -488,82 +488,82 @@ struct Tokenizer
                 if (pos == input.length) return;
 
                 c = input[pos++];
-                if (c == '<') state = State.rcdataLessThan;
-                else if (c == '&') { returnState = State.rcdata; state = State.charRef; }
-                else emitText(replacement);
+                if (c == '<') state = State.RcdataLessThan;
+                else if (c == '&') { returnState = State.Rcdata; state = State.CharRef; }
+                else emitText(Replacement);
                 return;
             }
 
-            case State.rawtext, State.scriptData, State.plaintext:
+            case State.Rawtext, State.ScriptData, State.Plaintext:
             {
                 size_t start = pos;
-                bool lt = state != State.plaintext;
+                bool lt = state != State.Plaintext;
                 while (pos < input.length && !(lt && input[pos] == '<') && input[pos] != '\0') pos++;
                 if (pos > start) emitText(input[start .. pos]);
                 if (pos == input.length) return;
 
                 c = input[pos++];
-                if (c == '\0') emitText(replacement);
-                else state = state == State.rawtext ? State.rawtextLessThan : State.scriptDataLessThan;
+                if (c == '\0') emitText(Replacement);
+                else state = state == State.Rawtext ? State.RawtextLessThan : State.ScriptDataLessThan;
                 return;
             }
 
-            case State.tagOpen:
-                if (c == '!') { pos++; state = State.markupDeclarationOpen; }
-                else if (c == '/') { pos++; state = State.endTagOpen; }
-                else if (isAlpha(c)) { startTag(false); state = State.tagName; }
-                else if (c == '?') { pos++; state = State.processingInstructionOpen; }
-                else { emitText('<'); state = State.data; }
+            case State.TagOpen:
+                if (c == '!') { pos++; state = State.MarkupDeclarationOpen; }
+                else if (c == '/') { pos++; state = State.EndTagOpen; }
+                else if (isAlpha(c)) { startTag(false); state = State.TagName; }
+                else if (c == '?') { pos++; state = State.ProcessingInstructionOpen; }
+                else { emitText('<'); state = State.Data; }
                 return;
 
-            case State.endTagOpen:
-                if (isAlpha(c)) { startTag(true); state = State.tagName; }
-                else if (c == '>') { pos++; state = State.data; }
-                else { startComment(); state = State.bogusComment; }
+            case State.EndTagOpen:
+                if (isAlpha(c)) { startTag(true); state = State.TagName; }
+                else if (c == '>') { pos++; state = State.Data; }
+                else { startComment(); state = State.BogusComment; }
                 return;
 
-            case State.tagName:
+            case State.TagName:
                 while (pos < input.length)
                 {
                     size_t start = pos;
-                    while (pos < input.length && !(charClass[input[pos]] & endOfName)) pos++;
+                    while (pos < input.length && !(charClass[input[pos]] & EndOfName)) pos++;
                     putLower(tagName, input[start .. pos]);
                     if (pos == input.length) return;
 
                     c = input[pos++];
-                    if (isSpace(c)) { state = State.beforeAttrName; return; }
-                    if (c == '/') { state = State.selfClosingStartTag; return; }
+                    if (isSpace(c)) { state = State.BeforeAttrName; return; }
+                    if (c == '/') { state = State.SelfClosingStartTag; return; }
                     if (c == '>') { emitTag(); return; }
-                    tagName.put(replacement);
+                    tagName.put(Replacement);
                 }
                 return;
 
             // RCDATA, RAWTEXT and script data end tags
-            case State.rcdataLessThan, State.rawtextLessThan:
+            case State.RcdataLessThan, State.RawtextLessThan:
                 if (c == '/')
                 {
                     pos++;
                     temp.clear();
-                    state = state == State.rcdataLessThan ? State.rcdataEndTagOpen : State.rawtextEndTagOpen;
+                    state = state == State.RcdataLessThan ? State.RcdataEndTagOpen : State.RawtextEndTagOpen;
                 }
-                else { emitText('<'); state = state == State.rcdataLessThan ? State.rcdata : State.rawtext; }
+                else { emitText('<'); state = state == State.RcdataLessThan ? State.Rcdata : State.Rawtext; }
                 return;
 
-            case State.rcdataEndTagOpen, State.rawtextEndTagOpen, State.scriptDataEndTagOpen, State.scriptDataEscapedEndTagOpen:
+            case State.RcdataEndTagOpen, State.RawtextEndTagOpen, State.ScriptDataEndTagOpen, State.ScriptDataEscapedEndTagOpen:
             {
                 auto back = textStateOf(state);
                 if (isAlpha(c))
                 {
                     startTag(true);
-                    state = state == State.rcdataEndTagOpen ? State.rcdataEndTagName
-                        : state == State.rawtextEndTagOpen ? State.rawtextEndTagName
-                        : state == State.scriptDataEndTagOpen ? State.scriptDataEndTagName : State.scriptDataEscapedEndTagName;
+                    state = state == State.RcdataEndTagOpen ? State.RcdataEndTagName
+                        : state == State.RawtextEndTagOpen ? State.RawtextEndTagName
+                        : state == State.ScriptDataEndTagOpen ? State.ScriptDataEndTagName : State.ScriptDataEscapedEndTagName;
                 }
                 else { emitText("</"); state = back; }
                 return;
             }
 
-            case State.rcdataEndTagName, State.rawtextEndTagName, State.scriptDataEndTagName, State.scriptDataEscapedEndTagName:
+            case State.RcdataEndTagName, State.RawtextEndTagName, State.ScriptDataEndTagName, State.ScriptDataEscapedEndTagName:
             {
                 auto back = textStateOf(state);
                 if (isAlpha(c))
@@ -576,8 +576,8 @@ struct Tokenizer
 
                 if (appropriateEndTag())
                 {
-                    if (isSpace(c)) { pos++; state = State.beforeAttrName; return; }
-                    if (c == '/') { pos++; state = State.selfClosingStartTag; return; }
+                    if (isSpace(c)) { pos++; state = State.BeforeAttrName; return; }
+                    if (c == '/') { pos++; state = State.SelfClosingStartTag; return; }
                     if (c == '>') { pos++; emitTag(); return; }
                 }
 
@@ -587,23 +587,23 @@ struct Tokenizer
                 return;
             }
 
-            case State.scriptDataLessThan:
-                if (c == '/') { pos++; temp.clear(); state = State.scriptDataEndTagOpen; }
-                else if (c == '!') { pos++; emitText("<!"); state = State.scriptDataEscapeStart; }
-                else { emitText('<'); state = State.scriptData; }
+            case State.ScriptDataLessThan:
+                if (c == '/') { pos++; temp.clear(); state = State.ScriptDataEndTagOpen; }
+                else if (c == '!') { pos++; emitText("<!"); state = State.ScriptDataEscapeStart; }
+                else { emitText('<'); state = State.ScriptData; }
                 return;
 
-            case State.scriptDataEscapeStart:
-                if (c == '-') { pos++; emitText('-'); state = State.scriptDataEscapeStartDash; }
-                else state = State.scriptData;
+            case State.ScriptDataEscapeStart:
+                if (c == '-') { pos++; emitText('-'); state = State.ScriptDataEscapeStartDash; }
+                else state = State.ScriptData;
                 return;
 
-            case State.scriptDataEscapeStartDash:
-                if (c == '-') { pos++; emitText('-'); state = State.scriptDataEscapedDashDash; }
-                else state = State.scriptData;
+            case State.ScriptDataEscapeStartDash:
+                if (c == '-') { pos++; emitText('-'); state = State.ScriptDataEscapedDashDash; }
+                else state = State.ScriptData;
                 return;
 
-            case State.scriptDataEscaped:
+            case State.ScriptDataEscaped:
             {
                 size_t start = pos;
                 while (pos < input.length && input[pos] != '-' && input[pos] != '<' && input[pos] != '\0') pos++;
@@ -611,52 +611,52 @@ struct Tokenizer
                 if (pos == input.length) return;
 
                 c = input[pos++];
-                if (c == '-') { emitText('-'); state = State.scriptDataEscapedDash; }
-                else if (c == '<') state = State.scriptDataEscapedLessThan;
-                else emitText(replacement);
+                if (c == '-') { emitText('-'); state = State.ScriptDataEscapedDash; }
+                else if (c == '<') state = State.ScriptDataEscapedLessThan;
+                else emitText(Replacement);
                 return;
             }
 
-            case State.scriptDataEscapedDash:
+            case State.ScriptDataEscapedDash:
                 pos++;
-                if (c == '-') { emitText('-'); state = State.scriptDataEscapedDashDash; }
-                else if (c == '<') state = State.scriptDataEscapedLessThan;
-                else if (c == '\0') { emitText(replacement); state = State.scriptDataEscaped; }
-                else { emitText(c); state = State.scriptDataEscaped; }
+                if (c == '-') { emitText('-'); state = State.ScriptDataEscapedDashDash; }
+                else if (c == '<') state = State.ScriptDataEscapedLessThan;
+                else if (c == '\0') { emitText(Replacement); state = State.ScriptDataEscaped; }
+                else { emitText(c); state = State.ScriptDataEscaped; }
                 return;
 
-            case State.scriptDataEscapedDashDash:
+            case State.ScriptDataEscapedDashDash:
                 pos++;
                 if (c == '-') emitText('-');
-                else if (c == '<') state = State.scriptDataEscapedLessThan;
-                else if (c == '>') { emitText('>'); state = State.scriptData; }
-                else if (c == '\0') { emitText(replacement); state = State.scriptDataEscaped; }
-                else { emitText(c); state = State.scriptDataEscaped; }
+                else if (c == '<') state = State.ScriptDataEscapedLessThan;
+                else if (c == '>') { emitText('>'); state = State.ScriptData; }
+                else if (c == '\0') { emitText(Replacement); state = State.ScriptDataEscaped; }
+                else { emitText(c); state = State.ScriptDataEscaped; }
                 return;
 
-            case State.scriptDataEscapedLessThan:
-                if (c == '/') { pos++; temp.clear(); state = State.scriptDataEscapedEndTagOpen; }
-                else if (isAlpha(c)) { temp.clear(); emitText('<'); state = State.scriptDataDoubleEscapeStart; }
-                else { emitText('<'); state = State.scriptDataEscaped; }
+            case State.ScriptDataEscapedLessThan:
+                if (c == '/') { pos++; temp.clear(); state = State.ScriptDataEscapedEndTagOpen; }
+                else if (isAlpha(c)) { temp.clear(); emitText('<'); state = State.ScriptDataDoubleEscapeStart; }
+                else { emitText('<'); state = State.ScriptDataEscaped; }
                 return;
 
-            case State.scriptDataDoubleEscapeStart, State.scriptDataDoubleEscapeEnd:
+            case State.ScriptDataDoubleEscapeStart, State.ScriptDataDoubleEscapeEnd:
             {
-                bool starting = state == State.scriptDataDoubleEscapeStart;
+                bool starting = state == State.ScriptDataDoubleEscapeStart;
                 if (isSpace(c) || c == '/' || c == '>')
                 {
                     pos++;
                     emitText(c);
                     bool isScript = temp[] == "script";
-                    if (starting) state = isScript ? State.scriptDataDoubleEscaped : State.scriptDataEscaped;
-                    else state = isScript ? State.scriptDataEscaped : State.scriptDataDoubleEscaped;
+                    if (starting) state = isScript ? State.ScriptDataDoubleEscaped : State.ScriptDataEscaped;
+                    else state = isScript ? State.ScriptDataEscaped : State.ScriptDataDoubleEscaped;
                 }
                 else if (isAlpha(c)) { pos++; temp.put(lower(c)); emitText(c); }
-                else state = starting ? State.scriptDataEscaped : State.scriptDataDoubleEscaped;
+                else state = starting ? State.ScriptDataEscaped : State.ScriptDataDoubleEscaped;
                 return;
             }
 
-            case State.scriptDataDoubleEscaped:
+            case State.ScriptDataDoubleEscaped:
             {
                 size_t start = pos;
                 while (pos < input.length && input[pos] != '-' && input[pos] != '<' && input[pos] != '\0') pos++;
@@ -664,80 +664,80 @@ struct Tokenizer
                 if (pos == input.length) return;
 
                 c = input[pos++];
-                if (c == '-') { emitText('-'); state = State.scriptDataDoubleEscapedDash; }
-                else if (c == '<') { emitText('<'); state = State.scriptDataDoubleEscapedLessThan; }
-                else emitText(replacement);
+                if (c == '-') { emitText('-'); state = State.ScriptDataDoubleEscapedDash; }
+                else if (c == '<') { emitText('<'); state = State.ScriptDataDoubleEscapedLessThan; }
+                else emitText(Replacement);
                 return;
             }
 
-            case State.scriptDataDoubleEscapedDash:
+            case State.ScriptDataDoubleEscapedDash:
                 pos++;
-                if (c == '-') { emitText('-'); state = State.scriptDataDoubleEscapedDashDash; }
-                else if (c == '<') { emitText('<'); state = State.scriptDataDoubleEscapedLessThan; }
-                else if (c == '\0') { emitText(replacement); state = State.scriptDataDoubleEscaped; }
-                else { emitText(c); state = State.scriptDataDoubleEscaped; }
+                if (c == '-') { emitText('-'); state = State.ScriptDataDoubleEscapedDashDash; }
+                else if (c == '<') { emitText('<'); state = State.ScriptDataDoubleEscapedLessThan; }
+                else if (c == '\0') { emitText(Replacement); state = State.ScriptDataDoubleEscaped; }
+                else { emitText(c); state = State.ScriptDataDoubleEscaped; }
                 return;
 
-            case State.scriptDataDoubleEscapedDashDash:
+            case State.ScriptDataDoubleEscapedDashDash:
                 pos++;
                 if (c == '-') emitText('-');
-                else if (c == '<') { emitText('<'); state = State.scriptDataDoubleEscapedLessThan; }
-                else if (c == '>') { emitText('>'); state = State.scriptData; }
-                else if (c == '\0') { emitText(replacement); state = State.scriptDataDoubleEscaped; }
-                else { emitText(c); state = State.scriptDataDoubleEscaped; }
+                else if (c == '<') { emitText('<'); state = State.ScriptDataDoubleEscapedLessThan; }
+                else if (c == '>') { emitText('>'); state = State.ScriptData; }
+                else if (c == '\0') { emitText(Replacement); state = State.ScriptDataDoubleEscaped; }
+                else { emitText(c); state = State.ScriptDataDoubleEscaped; }
                 return;
 
-            case State.scriptDataDoubleEscapedLessThan:
-                if (c == '/') { pos++; temp.clear(); emitText('/'); state = State.scriptDataDoubleEscapeEnd; }
-                else state = State.scriptDataDoubleEscaped;
+            case State.ScriptDataDoubleEscapedLessThan:
+                if (c == '/') { pos++; temp.clear(); emitText('/'); state = State.ScriptDataDoubleEscapeEnd; }
+                else state = State.ScriptDataDoubleEscaped;
                 return;
 
             // Attributes
-            case State.beforeAttrName:
+            case State.BeforeAttrName:
                 if (isSpace(c)) { pos++; return; }
-                if (c == '/' || c == '>') { state = State.afterAttrName; return; }
+                if (c == '/' || c == '>') { state = State.AfterAttrName; return; }
                 startAttribute();
                 if (c == '=') { pos++; tokData.put('='); }
-                state = State.attrName;
+                state = State.AttrName;
                 return;
 
-            case State.attrName:
+            case State.AttrName:
                 while (pos < input.length)
                 {
                     size_t start = pos;
-                    while (pos < input.length && !(charClass[input[pos]] & endOfAttrName)) pos++;
+                    while (pos < input.length && !(charClass[input[pos]] & EndOfAttrName)) pos++;
                     putLower(tokData, input[start .. pos]);
                     if (pos == input.length) return;
 
                     c = input[pos];
-                    if (isSpace(c) || c == '/' || c == '>') { endAttrName(); state = State.afterAttrName; return; }
+                    if (isSpace(c) || c == '/' || c == '>') { endAttrName(); state = State.AfterAttrName; return; }
                     pos++;
-                    if (c == '=') { endAttrName(); state = State.beforeAttrValue; return; }
-                    tokData.put(replacement);
+                    if (c == '=') { endAttrName(); state = State.BeforeAttrValue; return; }
+                    tokData.put(Replacement);
                 }
                 return;
 
-            case State.afterAttrName:
+            case State.AfterAttrName:
                 if (isSpace(c)) { pos++; return; }
-                if (c == '/') { pos++; state = State.selfClosingStartTag; return; }
-                if (c == '=') { pos++; state = State.beforeAttrValue; return; }
+                if (c == '/') { pos++; state = State.SelfClosingStartTag; return; }
+                if (c == '=') { pos++; state = State.BeforeAttrValue; return; }
                 if (c == '>') { pos++; emitTag(); return; }
                 startAttribute();
-                state = State.attrName;
+                state = State.AttrName;
                 return;
 
-            case State.beforeAttrValue:
+            case State.BeforeAttrValue:
                 if (isSpace(c)) { pos++; return; }
                 startValue();
-                if (c == '"') { pos++; state = State.attrValueDoubleQuoted; }
-                else if (c == '\'') { pos++; state = State.attrValueSingleQuoted; }
+                if (c == '"') { pos++; state = State.AttrValueDoubleQuoted; }
+                else if (c == '\'') { pos++; state = State.AttrValueSingleQuoted; }
                 else if (c == '>') { pos++; emitTag(); }
-                else state = State.attrValueUnquoted;
+                else state = State.AttrValueUnquoted;
                 return;
 
-            case State.attrValueDoubleQuoted, State.attrValueSingleQuoted:
+            case State.AttrValueDoubleQuoted, State.AttrValueSingleQuoted:
             {
-                char q = state == State.attrValueDoubleQuoted ? '"' : '\'';
+                char q = state == State.AttrValueDoubleQuoted ? '"' : '\'';
                 while (pos < input.length)
                 {
                     size_t start = pos;
@@ -746,64 +746,64 @@ struct Tokenizer
                     if (pos == input.length) return;
 
                     c = input[pos++];
-                    if (c == q) { state = State.afterAttrValueQuoted; return; }
-                    if (c == '&') { returnState = state; state = State.charRef; return; }
-                    tokData.put(replacement);
+                    if (c == q) { state = State.AfterAttrValueQuoted; return; }
+                    if (c == '&') { returnState = state; state = State.CharRef; return; }
+                    tokData.put(Replacement);
                 }
                 return;
             }
 
-            case State.attrValueUnquoted:
+            case State.AttrValueUnquoted:
                 while (pos < input.length)
                 {
                     size_t start = pos;
-                    while (pos < input.length && !(charClass[input[pos]] & endOfUnquoted)) pos++;
+                    while (pos < input.length && !(charClass[input[pos]] & EndOfUnquoted)) pos++;
                     tokData.put(input[start .. pos]);
                     if (pos == input.length) return;
 
                     c = input[pos];
-                    if (isSpace(c)) { pos++; endAttribute(); state = State.beforeAttrName; return; }
+                    if (isSpace(c)) { pos++; endAttribute(); state = State.BeforeAttrName; return; }
                     if (c == '>') { pos++; emitTag(); return; }
                     pos++;
-                    if (c == '&') { returnState = State.attrValueUnquoted; state = State.charRef; return; }
-                    if (c == '\0') { foreach (r; replacement) tokData.put(r); continue; }
+                    if (c == '&') { returnState = State.AttrValueUnquoted; state = State.CharRef; return; }
+                    if (c == '\0') { foreach (r; Replacement) tokData.put(r); continue; }
                     tokData.put(c);
                 }
                 return;
 
-            case State.afterAttrValueQuoted:
+            case State.AfterAttrValueQuoted:
                 endAttribute();
-                if (isSpace(c)) { pos++; state = State.beforeAttrName; }
-                else if (c == '/') { pos++; state = State.selfClosingStartTag; }
+                if (isSpace(c)) { pos++; state = State.BeforeAttrName; }
+                else if (c == '/') { pos++; state = State.SelfClosingStartTag; }
                 else if (c == '>') { pos++; emitTag(); }
-                else state = State.beforeAttrName;
+                else state = State.BeforeAttrName;
                 return;
 
-            case State.selfClosingStartTag:
+            case State.SelfClosingStartTag:
                 if (c == '>') { pos++; selfClosing = true; emitTag(); }
-                else state = State.beforeAttrName;
+                else state = State.BeforeAttrName;
                 return;
 
             // Comments
-            case State.bogusComment:
+            case State.BogusComment:
                 while (pos < input.length)
                 {
                     c = input[pos++];
-                    if (c == '>') { emitComment(); state = State.data; return; }
-                    if (c == '\0') { foreach (r; replacement) tokData.put(r); continue; }
+                    if (c == '>') { emitComment(); state = State.Data; return; }
+                    if (c == '\0') { foreach (r; Replacement) tokData.put(r); continue; }
                     tokData.put(c);
                 }
                 return;
 
-            case State.markupDeclarationOpen:
+            case State.MarkupDeclarationOpen:
             {
                 auto dashes = lookahead("--", false);
                 if (dashes < 0) { holdBack(); return; }
-                if (dashes > 0) { pos += 2; startComment(); state = State.commentStart; return; }
+                if (dashes > 0) { pos += 2; startComment(); state = State.CommentStart; return; }
 
                 auto dt = lookahead("doctype", true);
                 if (dt < 0) { holdBack(); return; }
-                if (dt > 0) { pos += 7; state = State.doctype; return; }
+                if (dt > 0) { pos += 7; state = State.Doctype; return; }
 
                 auto cd = lookahead("[CDATA[", false);
                 if (cd < 0) { holdBack(); return; }
@@ -811,34 +811,34 @@ struct Tokenizer
                 {
                     pos += 7;
                     flushText();
-                    if (sink.inForeignContent(sink.context)) state = State.cdataSection;
+                    if (sink.inForeignContent(sink.context)) state = State.CDataSection;
                     else
                     {
                         startComment();
                         foreach (ch; "[CDATA[") tokData.put(ch);
-                        state = State.bogusComment;
+                        state = State.BogusComment;
                     }
                     return;
                 }
 
                 startComment();
-                state = State.bogusComment;
+                state = State.BogusComment;
                 return;
             }
 
-            case State.commentStart:
-                if (c == '-') { pos++; state = State.commentStartDash; }
-                else if (c == '>') { pos++; emitComment(); state = State.data; }
-                else state = State.comment;
+            case State.CommentStart:
+                if (c == '-') { pos++; state = State.CommentStartDash; }
+                else if (c == '>') { pos++; emitComment(); state = State.Data; }
+                else state = State.Comment;
                 return;
 
-            case State.commentStartDash:
-                if (c == '-') { pos++; state = State.commentEnd; }
-                else if (c == '>') { pos++; emitComment(); state = State.data; }
-                else { tokData.put('-'); state = State.comment; }
+            case State.CommentStartDash:
+                if (c == '-') { pos++; state = State.CommentEnd; }
+                else if (c == '>') { pos++; emitComment(); state = State.Data; }
+                else { tokData.put('-'); state = State.Comment; }
                 return;
 
-            case State.comment:
+            case State.Comment:
                 while (pos < input.length)
                 {
                     size_t start = pos;
@@ -847,114 +847,114 @@ struct Tokenizer
                     if (pos == input.length) return;
 
                     c = input[pos++];
-                    if (c == '<') { tokData.put('<'); state = State.commentLessThan; return; }
-                    if (c == '-') { state = State.commentEndDash; return; }
-                    tokData.put(replacement);
+                    if (c == '<') { tokData.put('<'); state = State.CommentLessThan; return; }
+                    if (c == '-') { state = State.CommentEndDash; return; }
+                    tokData.put(Replacement);
                 }
                 return;
 
-            case State.commentLessThan:
-                if (c == '!') { pos++; tokData.put('!'); state = State.commentLessThanBang; }
+            case State.CommentLessThan:
+                if (c == '!') { pos++; tokData.put('!'); state = State.CommentLessThanBang; }
                 else if (c == '<') { pos++; tokData.put('<'); }
-                else state = State.comment;
+                else state = State.Comment;
                 return;
 
-            case State.commentLessThanBang:
-                if (c == '-') { pos++; state = State.commentLessThanBangDash; }
-                else state = State.comment;
+            case State.CommentLessThanBang:
+                if (c == '-') { pos++; state = State.CommentLessThanBangDash; }
+                else state = State.Comment;
                 return;
 
-            case State.commentLessThanBangDash:
-                if (c == '-') { pos++; state = State.commentLessThanBangDashDash; }
-                else state = State.commentEndDash;
+            case State.CommentLessThanBangDash:
+                if (c == '-') { pos++; state = State.CommentLessThanBangDashDash; }
+                else state = State.CommentEndDash;
                 return;
 
-            case State.commentLessThanBangDashDash:
-                state = State.commentEnd;
+            case State.CommentLessThanBangDashDash:
+                state = State.CommentEnd;
                 return;
 
-            case State.commentEndDash:
-                if (c == '-') { pos++; state = State.commentEnd; }
-                else { tokData.put('-'); state = State.comment; }
+            case State.CommentEndDash:
+                if (c == '-') { pos++; state = State.CommentEnd; }
+                else { tokData.put('-'); state = State.Comment; }
                 return;
 
-            case State.commentEnd:
-                if (c == '>') { pos++; emitComment(); state = State.data; }
-                else if (c == '!') { pos++; state = State.commentEndBang; }
+            case State.CommentEnd:
+                if (c == '>') { pos++; emitComment(); state = State.Data; }
+                else if (c == '!') { pos++; state = State.CommentEndBang; }
                 else if (c == '-') { pos++; tokData.put('-'); }
-                else { tokData.put('-'); tokData.put('-'); state = State.comment; }
+                else { tokData.put('-'); tokData.put('-'); state = State.Comment; }
                 return;
 
-            case State.commentEndBang:
-                if (c == '-') { pos++; foreach (ch; "--!") tokData.put(ch); state = State.commentEndDash; }
-                else if (c == '>') { pos++; emitComment(); state = State.data; }
-                else { foreach (ch; "--!") tokData.put(ch); state = State.comment; }
+            case State.CommentEndBang:
+                if (c == '-') { pos++; foreach (ch; "--!") tokData.put(ch); state = State.CommentEndDash; }
+                else if (c == '>') { pos++; emitComment(); state = State.Data; }
+                else { foreach (ch; "--!") tokData.put(ch); state = State.Comment; }
                 return;
 
             // Doctype
-            case State.doctype:
+            case State.Doctype:
                 startDoctype();
                 if (isSpace(c)) pos++;
-                state = State.beforeDoctypeName;
+                state = State.BeforeDoctypeName;
                 return;
 
-            case State.beforeDoctypeName:
+            case State.BeforeDoctypeName:
                 if (isSpace(c)) { pos++; return; }
-                if (c == '>') { pos++; forceQuirks = true; emitDoctype(); state = State.data; return; }
+                if (c == '>') { pos++; forceQuirks = true; emitDoctype(); state = State.Data; return; }
                 hasName = true;
                 nameStart = tokData.length;
-                state = State.doctypeName;
+                state = State.DoctypeName;
                 return;
 
-            case State.doctypeName:
+            case State.DoctypeName:
                 while (pos < input.length)
                 {
                     c = input[pos++];
-                    if (isSpace(c)) { nameLen = tokData.length - nameStart; state = State.afterDoctypeName; return; }
-                    if (c == '>') { nameLen = tokData.length - nameStart; emitDoctype(); state = State.data; return; }
-                    if (c == '\0') { foreach (r; replacement) tokData.put(r); continue; }
+                    if (isSpace(c)) { nameLen = tokData.length - nameStart; state = State.AfterDoctypeName; return; }
+                    if (c == '>') { nameLen = tokData.length - nameStart; emitDoctype(); state = State.Data; return; }
+                    if (c == '\0') { foreach (r; Replacement) tokData.put(r); continue; }
                     tokData.put(lower(c));
                 }
                 return;
 
-            case State.afterDoctypeName:
+            case State.AfterDoctypeName:
             {
                 if (isSpace(c)) { pos++; return; }
-                if (c == '>') { pos++; emitDoctype(); state = State.data; return; }
+                if (c == '>') { pos++; emitDoctype(); state = State.Data; return; }
 
                 auto pub = lookahead("public", true);
                 if (pub < 0) { holdBack(); return; }
-                if (pub > 0) { pos += 6; state = State.afterDoctypePublicKeyword; return; }
+                if (pub > 0) { pos += 6; state = State.AfterDoctypePublicKeyword; return; }
 
                 auto sys = lookahead("system", true);
                 if (sys < 0) { holdBack(); return; }
-                if (sys > 0) { pos += 6; state = State.afterDoctypeSystemKeyword; return; }
+                if (sys > 0) { pos += 6; state = State.AfterDoctypeSystemKeyword; return; }
 
                 forceQuirks = true;
-                state = State.bogusDoctype;
+                state = State.BogusDoctype;
                 return;
             }
 
-            case State.afterDoctypePublicKeyword, State.beforeDoctypePublicId:
-                if (isSpace(c)) { pos++; state = State.beforeDoctypePublicId; return; }
+            case State.AfterDoctypePublicKeyword, State.BeforeDoctypePublicId:
+                if (isSpace(c)) { pos++; state = State.BeforeDoctypePublicId; return; }
                 if (c == '"' || c == '\'')
                 {
                     pos++;
                     hasPublic = true;
                     publicStart = tokData.length;
-                    state = c == '"' ? State.doctypePublicIdDoubleQuoted : State.doctypePublicIdSingleQuoted;
+                    state = c == '"' ? State.DoctypePublicIdDoubleQuoted : State.DoctypePublicIdSingleQuoted;
                     return;
                 }
-                if (c == '>') { pos++; forceQuirks = true; emitDoctype(); state = State.data; return; }
+                if (c == '>') { pos++; forceQuirks = true; emitDoctype(); state = State.Data; return; }
                 forceQuirks = true;
-                state = State.bogusDoctype;
+                state = State.BogusDoctype;
                 return;
 
-            case State.doctypePublicIdDoubleQuoted, State.doctypePublicIdSingleQuoted,
-                 State.doctypeSystemIdDoubleQuoted, State.doctypeSystemIdSingleQuoted:
+            case State.DoctypePublicIdDoubleQuoted, State.DoctypePublicIdSingleQuoted,
+                 State.DoctypeSystemIdDoubleQuoted, State.DoctypeSystemIdSingleQuoted:
             {
-                bool pub = state == State.doctypePublicIdDoubleQuoted || state == State.doctypePublicIdSingleQuoted;
-                char q = state == State.doctypePublicIdDoubleQuoted || state == State.doctypeSystemIdDoubleQuoted ? '"' : '\'';
+                bool pub = state == State.DoctypePublicIdDoubleQuoted || state == State.DoctypePublicIdSingleQuoted;
+                char q = state == State.DoctypePublicIdDoubleQuoted || state == State.DoctypeSystemIdDoubleQuoted ? '"' : '\'';
                 while (pos < input.length)
                 {
                     c = input[pos++];
@@ -963,59 +963,59 @@ struct Tokenizer
                         if (pub) publicLen = tokData.length - publicStart;
                         else systemLen = tokData.length - systemStart;
 
-                        if (c == q) state = pub ? State.afterDoctypePublicId : State.afterDoctypeSystemId;
-                        else { forceQuirks = true; emitDoctype(); state = State.data; }
+                        if (c == q) state = pub ? State.AfterDoctypePublicId : State.AfterDoctypeSystemId;
+                        else { forceQuirks = true; emitDoctype(); state = State.Data; }
                         return;
                     }
-                    if (c == '\0') { foreach (r; replacement) tokData.put(r); continue; }
+                    if (c == '\0') { foreach (r; Replacement) tokData.put(r); continue; }
                     tokData.put(c);
                 }
                 return;
             }
 
-            case State.afterDoctypePublicId, State.betweenDoctypePublicAndSystem:
-                if (isSpace(c)) { pos++; state = State.betweenDoctypePublicAndSystem; return; }
-                if (c == '>') { pos++; emitDoctype(); state = State.data; return; }
+            case State.AfterDoctypePublicId, State.BetweenDoctypePublicAndSystem:
+                if (isSpace(c)) { pos++; state = State.BetweenDoctypePublicAndSystem; return; }
+                if (c == '>') { pos++; emitDoctype(); state = State.Data; return; }
                 if (c == '"' || c == '\'')
                 {
                     pos++;
                     hasSystem = true;
                     systemStart = tokData.length;
-                    state = c == '"' ? State.doctypeSystemIdDoubleQuoted : State.doctypeSystemIdSingleQuoted;
+                    state = c == '"' ? State.DoctypeSystemIdDoubleQuoted : State.DoctypeSystemIdSingleQuoted;
                     return;
                 }
                 forceQuirks = true;
-                state = State.bogusDoctype;
+                state = State.BogusDoctype;
                 return;
 
-            case State.afterDoctypeSystemKeyword, State.beforeDoctypeSystemId:
-                if (isSpace(c)) { pos++; state = State.beforeDoctypeSystemId; return; }
+            case State.AfterDoctypeSystemKeyword, State.BeforeDoctypeSystemId:
+                if (isSpace(c)) { pos++; state = State.BeforeDoctypeSystemId; return; }
                 if (c == '"' || c == '\'')
                 {
                     pos++;
                     hasSystem = true;
                     systemStart = tokData.length;
-                    state = c == '"' ? State.doctypeSystemIdDoubleQuoted : State.doctypeSystemIdSingleQuoted;
+                    state = c == '"' ? State.DoctypeSystemIdDoubleQuoted : State.DoctypeSystemIdSingleQuoted;
                     return;
                 }
-                if (c == '>') { pos++; forceQuirks = true; emitDoctype(); state = State.data; return; }
+                if (c == '>') { pos++; forceQuirks = true; emitDoctype(); state = State.Data; return; }
                 forceQuirks = true;
-                state = State.bogusDoctype;
+                state = State.BogusDoctype;
                 return;
 
-            case State.afterDoctypeSystemId:
+            case State.AfterDoctypeSystemId:
                 if (isSpace(c)) { pos++; return; }
-                if (c == '>') { pos++; emitDoctype(); state = State.data; return; }
-                state = State.bogusDoctype;
+                if (c == '>') { pos++; emitDoctype(); state = State.Data; return; }
+                state = State.BogusDoctype;
                 return;
 
-            case State.bogusDoctype:
+            case State.BogusDoctype:
                 while (pos < input.length)
-                    if (input[pos++] == '>') { emitDoctype(); state = State.data; return; }
+                    if (input[pos++] == '>') { emitDoctype(); state = State.Data; return; }
                 return;
 
             // CDATA sections: the text is emitted as is
-            case State.cdataSection:
+            case State.CDataSection:
             {
                 size_t start = pos;
                 while (pos < input.length && input[pos] != ']') pos++;
@@ -1023,29 +1023,29 @@ struct Tokenizer
                 foreach (ch; input[start .. pos]) if (ch == '\0') { textHasNull = true; break; }
                 if (pos == input.length) return;
                 pos++;
-                state = State.cdataSectionBracket;
+                state = State.CDataSectionBracket;
                 return;
             }
 
-            case State.cdataSectionBracket:
-                if (c == ']') { pos++; state = State.cdataSectionEnd; }
-                else { emitText(']'); state = State.cdataSection; }
+            case State.CDataSectionBracket:
+                if (c == ']') { pos++; state = State.CDataSectionEnd; }
+                else { emitText(']'); state = State.CDataSection; }
                 return;
 
-            case State.cdataSectionEnd:
+            case State.CDataSectionEnd:
                 if (c == ']') { pos++; emitText(']'); }
-                else if (c == '>') { pos++; state = State.data; }
-                else { emitText("]]"); state = State.cdataSection; }
+                else if (c == '>') { pos++; state = State.Data; }
+                else { emitText("]]"); state = State.CDataSection; }
                 return;
 
             // Character references
-            case State.charRef:
-                if (isAlnum(c)) { matcher = EntityMatcher.init; refBuf.clear(); state = State.namedCharRef; }
-                else if (c == '#') { pos++; state = State.numericCharRef; }
+            case State.CharRef:
+                if (isAlnum(c)) { matcher = EntityMatcher.init; refBuf.clear(); state = State.NamedCharRef; }
+                else if (c == '#') { pos++; state = State.NumericCharRef; }
                 else { flushRef("&"); state = returnState; }
                 return;
 
-            case State.namedCharRef:
+            case State.NamedCharRef:
                 while (pos < input.length)
                 {
                     c = input[pos];
@@ -1055,26 +1055,26 @@ struct Tokenizer
                 }
                 return;
 
-            case State.numericCharRef:
+            case State.NumericCharRef:
                 charCode = 0;
                 charCodeOverflow = false;
-                if (c == 'x' || c == 'X') { pos++; refBuf.clear(); refBuf.put(c); state = State.hexCharRefStart; }
-                else state = State.decimalCharRefStart;
+                if (c == 'x' || c == 'X') { pos++; refBuf.clear(); refBuf.put(c); state = State.HexCharRefStart; }
+                else state = State.DecimalCharRefStart;
                 return;
 
-            case State.hexCharRefStart:
-                if (isHex(c)) state = State.hexCharRef;
+            case State.HexCharRefStart:
+                if (isHex(c)) state = State.HexCharRef;
                 else { flushRef("&#"); flushRef(refBuf[]); state = returnState; }
                 return;
 
-            case State.decimalCharRefStart:
-                if (isDigit(c)) state = State.decimalCharRef;
+            case State.DecimalCharRefStart:
+                if (isDigit(c)) state = State.DecimalCharRef;
                 else { flushRef("&#"); state = returnState; }
                 return;
 
-            case State.hexCharRef, State.decimalCharRef:
+            case State.HexCharRef, State.DecimalCharRef:
             {
-                bool hex = state == State.hexCharRef;
+                bool hex = state == State.HexCharRef;
                 while (pos < input.length)
                 {
                     c = input[pos];
@@ -1096,17 +1096,17 @@ struct Tokenizer
             }
 
             // Processing instructions (`<?target data?>`)
-            case State.processingInstructionOpen:
-                if (isAlpha(c) || c == '_') { tokData.clear(); state = State.processingInstructionTarget; }
+            case State.ProcessingInstructionOpen:
+                if (isAlpha(c) || c == '_') { tokData.clear(); state = State.ProcessingInstructionTarget; }
                 else
                 {
                     startComment();
                     tokData.put('?');
-                    state = State.bogusComment;
+                    state = State.BogusComment;
                 }
                 return;
 
-            case State.processingInstructionTarget:
+            case State.ProcessingInstructionTarget:
                 while (pos < input.length)
                 {
                     c = input[pos];
@@ -1115,7 +1115,7 @@ struct Tokenizer
                         auto t = tokData[];
                         if (equalsCi(t, "xml") || equalsCi(t, "xml-stylesheet")) { targetToComment(); return; }
                         targetLen = tokData.length;
-                        state = State.afterProcessingInstructionTarget;
+                        state = State.AfterProcessingInstructionTarget;
                         return;
                     }
                     if (!isAlnum(c) && c != '-' && c != '_') { targetToComment(); return; }
@@ -1124,24 +1124,24 @@ struct Tokenizer
                 }
                 return;
 
-            case State.afterProcessingInstructionTarget:
+            case State.AfterProcessingInstructionTarget:
                 if (isSpace(c)) { pos++; return; }
-                state = State.processingInstructionData;
+                state = State.ProcessingInstructionData;
                 return;
 
-            case State.processingInstructionData:
+            case State.ProcessingInstructionData:
                 while (pos < input.length)
                 {
                     c = input[pos++];
-                    if (c == '?') { state = State.processingInstructionQuestionable; return; }
-                    if (c == '>') { emitProcessingInstruction(); state = State.data; return; }
+                    if (c == '?') { state = State.ProcessingInstructionQuestionable; return; }
+                    if (c == '>') { emitProcessingInstruction(); state = State.Data; return; }
                     tokData.put(c);
                 }
                 return;
 
-            case State.processingInstructionQuestionable:
-                if (c == '>') { pos++; emitProcessingInstruction(); state = State.data; }
-                else { tokData.put('?'); state = State.processingInstructionData; }
+            case State.ProcessingInstructionQuestionable:
+                if (c == '>') { pos++; emitProcessingInstruction(); state = State.Data; }
+                else { tokData.put('?'); state = State.ProcessingInstructionData; }
                 return;
         }
     }
@@ -1162,7 +1162,7 @@ struct Tokenizer
         tokData.clear();
         tokData.put('?');
         foreach (ch; temp[]) tokData.put(ch);
-        state = State.bogusComment;
+        state = State.BogusComment;
     }
 
     // The text state an end tag state goes back to
@@ -1170,10 +1170,10 @@ struct Tokenizer
     {
         switch (s)
         {
-            case State.rcdataEndTagOpen, State.rcdataEndTagName: return State.rcdata;
-            case State.rawtextEndTagOpen, State.rawtextEndTagName: return State.rawtext;
-            case State.scriptDataEndTagOpen, State.scriptDataEndTagName: return State.scriptData;
-            default: return State.scriptDataEscaped;
+            case State.RcdataEndTagOpen, State.RcdataEndTagName: return State.Rcdata;
+            case State.RawtextEndTagOpen, State.RawtextEndTagName: return State.Rawtext;
+            case State.ScriptDataEndTagOpen, State.ScriptDataEndTagName: return State.ScriptData;
+            default: return State.ScriptDataEscaped;
         }
     }
 
@@ -1252,74 +1252,74 @@ struct Tokenizer
         {
             final switch (state)
             {
-                case State.data, State.rcdata, State.rawtext, State.scriptData, State.plaintext,
-                     State.scriptDataEscaped, State.scriptDataEscapedDash, State.scriptDataEscapedDashDash,
-                     State.scriptDataDoubleEscaped, State.scriptDataDoubleEscapedDash, State.scriptDataDoubleEscapedDashDash,
-                     State.cdataSection:
+                case State.Data, State.Rcdata, State.Rawtext, State.ScriptData, State.Plaintext,
+                     State.ScriptDataEscaped, State.ScriptDataEscapedDash, State.ScriptDataEscapedDashDash,
+                     State.ScriptDataDoubleEscaped, State.ScriptDataDoubleEscapedDash, State.ScriptDataDoubleEscapedDashDash,
+                     State.CDataSection:
                     return;
 
-                case State.tagOpen: emitText('<'); return;
-                case State.endTagOpen: emitText("</"); return;
+                case State.TagOpen: emitText('<'); return;
+                case State.EndTagOpen: emitText("</"); return;
 
-                case State.rcdataLessThan, State.rawtextLessThan, State.scriptDataLessThan, State.scriptDataEscapedLessThan:
+                case State.RcdataLessThan, State.RawtextLessThan, State.ScriptDataLessThan, State.ScriptDataEscapedLessThan:
                     emitText('<'); return;
 
-                case State.rcdataEndTagOpen, State.rawtextEndTagOpen, State.scriptDataEndTagOpen, State.scriptDataEscapedEndTagOpen:
+                case State.RcdataEndTagOpen, State.RawtextEndTagOpen, State.ScriptDataEndTagOpen, State.ScriptDataEscapedEndTagOpen:
                     emitText("</"); return;
 
-                case State.rcdataEndTagName, State.rawtextEndTagName, State.scriptDataEndTagName, State.scriptDataEscapedEndTagName:
+                case State.RcdataEndTagName, State.RawtextEndTagName, State.ScriptDataEndTagName, State.ScriptDataEscapedEndTagName:
                     emitText("</"); emitText(temp[]); return;
 
-                case State.scriptDataEscapeStart, State.scriptDataEscapeStartDash,
-                     State.scriptDataDoubleEscapeStart, State.scriptDataDoubleEscapeEnd, State.scriptDataDoubleEscapedLessThan:
+                case State.ScriptDataEscapeStart, State.ScriptDataEscapeStartDash,
+                     State.ScriptDataDoubleEscapeStart, State.ScriptDataDoubleEscapeEnd, State.ScriptDataDoubleEscapedLessThan:
                     return;
 
                 // EOF in a tag: the tag is dropped
-                case State.tagName, State.beforeAttrName, State.attrName, State.afterAttrName, State.beforeAttrValue,
-                     State.attrValueDoubleQuoted, State.attrValueSingleQuoted, State.attrValueUnquoted,
-                     State.afterAttrValueQuoted, State.selfClosingStartTag:
+                case State.TagName, State.BeforeAttrName, State.AttrName, State.AfterAttrName, State.BeforeAttrValue,
+                     State.AttrValueDoubleQuoted, State.AttrValueSingleQuoted, State.AttrValueUnquoted,
+                     State.AfterAttrValueQuoted, State.SelfClosingStartTag:
                     return;
 
-                case State.bogusComment, State.commentStart, State.commentStartDash, State.comment, State.commentLessThan,
-                     State.commentLessThanBang, State.commentLessThanBangDash, State.commentLessThanBangDashDash,
-                     State.commentEndDash, State.commentEnd, State.commentEndBang:
+                case State.BogusComment, State.CommentStart, State.CommentStartDash, State.Comment, State.CommentLessThan,
+                     State.CommentLessThanBang, State.CommentLessThanBangDash, State.CommentLessThanBangDashDash,
+                     State.CommentEndDash, State.CommentEnd, State.CommentEndBang:
                     emitComment(); return;
 
-                case State.markupDeclarationOpen:
+                case State.MarkupDeclarationOpen:
                     startComment(); emitComment(); return;
 
-                case State.doctype, State.beforeDoctypeName:
+                case State.Doctype, State.BeforeDoctypeName:
                     startDoctype(); forceQuirks = true; emitDoctype(); return;
 
-                case State.doctypeName:
+                case State.DoctypeName:
                     nameLen = tokData.length - nameStart; forceQuirks = true; emitDoctype(); return;
 
-                case State.doctypePublicIdDoubleQuoted, State.doctypePublicIdSingleQuoted:
+                case State.DoctypePublicIdDoubleQuoted, State.DoctypePublicIdSingleQuoted:
                     publicLen = tokData.length - publicStart; forceQuirks = true; emitDoctype(); return;
 
-                case State.doctypeSystemIdDoubleQuoted, State.doctypeSystemIdSingleQuoted:
+                case State.DoctypeSystemIdDoubleQuoted, State.DoctypeSystemIdSingleQuoted:
                     systemLen = tokData.length - systemStart; forceQuirks = true; emitDoctype(); return;
 
-                case State.afterDoctypeName, State.afterDoctypePublicKeyword, State.beforeDoctypePublicId,
-                     State.afterDoctypePublicId, State.betweenDoctypePublicAndSystem, State.afterDoctypeSystemKeyword,
-                     State.beforeDoctypeSystemId, State.afterDoctypeSystemId:
+                case State.AfterDoctypeName, State.AfterDoctypePublicKeyword, State.BeforeDoctypePublicId,
+                     State.AfterDoctypePublicId, State.BetweenDoctypePublicAndSystem, State.AfterDoctypeSystemKeyword,
+                     State.BeforeDoctypeSystemId, State.AfterDoctypeSystemId:
                     forceQuirks = true; emitDoctype(); return;
 
-                case State.bogusDoctype: emitDoctype(); return;
+                case State.BogusDoctype: emitDoctype(); return;
 
-                case State.cdataSectionBracket: emitText(']'); return;
-                case State.cdataSectionEnd: emitText("]]"); return;
+                case State.CDataSectionBracket: emitText(']'); return;
+                case State.CDataSectionEnd: emitText("]]"); return;
 
-                case State.charRef: flushRef("&"); state = returnState; continue;
-                case State.namedCharRef: namedRefDone('\0', false); continue;
-                case State.numericCharRef: flushRef("&#"); state = returnState; continue;
-                case State.hexCharRefStart: flushRef("&#"); flushRef(refBuf[]); state = returnState; continue;
-                case State.decimalCharRefStart: flushRef("&#"); state = returnState; continue;
-                case State.hexCharRef, State.decimalCharRef: numericRefDone(); continue;
+                case State.CharRef: flushRef("&"); state = returnState; continue;
+                case State.NamedCharRef: namedRefDone('\0', false); continue;
+                case State.NumericCharRef: flushRef("&#"); state = returnState; continue;
+                case State.HexCharRefStart: flushRef("&#"); flushRef(refBuf[]); state = returnState; continue;
+                case State.DecimalCharRefStart: flushRef("&#"); state = returnState; continue;
+                case State.HexCharRef, State.DecimalCharRef: numericRefDone(); continue;
 
                 // EOF in a processing instruction: nothing is emitted (as lexbor does)
-                case State.processingInstructionOpen, State.processingInstructionTarget, State.afterProcessingInstructionTarget,
-                     State.processingInstructionData, State.processingInstructionQuestionable:
+                case State.ProcessingInstructionOpen, State.ProcessingInstructionTarget, State.AfterProcessingInstructionTarget,
+                     State.ProcessingInstructionData, State.ProcessingInstructionQuestionable:
                     return;
             }
         }

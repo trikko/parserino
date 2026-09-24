@@ -3,12 +3,12 @@ import parserino.dom, parserino.html.parser, parserino.html.serializer, parserin
 import core.stdc.stdio, core.stdc.stdlib;
 extern(C) int main()
 {
-    auto doc = cast(Document*) calloc(1, Document.sizeof);
+    auto doc = cast(DomDocument*) calloc(1, DomDocument.sizeof);
     doc.initialize();
     parseDocument(doc, "<p class=x>Hello <b>betterC</b>");
     struct Sink { void put(scope const(char)[] s) @nogc nothrow { printf("%.*s", cast(int) s.length, s.ptr); } }
     Sink s;
-    serialize(&doc.node, s, Serialize.tree);
+    serialize(&doc.node, s, Serialize.Tree);
     printf("\n");
     doc.release();
     free(doc);

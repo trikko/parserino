@@ -10,29 +10,29 @@ import parserino.arena;
 
 enum TokenType : ubyte
 {
-    eof,
-    ident,
-    function_,      /// `name(`: `text` is the name
-    atKeyword,
-    hash,           /// `text` is the name after '#'
-    string_,
-    badString,
-    delim,          /// `delim` is the character
-    number,
-    percentage,
-    dimension,      /// number + `text` (the unit)
-    whitespace,
-    cdo,
-    cdc,
-    colon,
-    semicolon,
-    comma,
-    leftSquare,
-    rightSquare,
-    leftParen,
-    rightParen,
-    leftCurly,
-    rightCurly,
+    Eof,
+    Ident,
+    Function,      /// `name(`: `text` is the name
+    AtKeyword,
+    Hash,           /// `text` is the name after '#'
+    String,
+    BadString,
+    Delim,          /// `delim` is the character
+    Number,
+    Percentage,
+    Dimension,      /// number + `text` (the unit)
+    Whitespace,
+    Cdo,
+    Cdc,
+    Colon,
+    Semicolon,
+    Comma,
+    LeftSquare,
+    RightSquare,
+    LeftParen,
+    RightParen,
+    LeftCurly,
+    RightCurly,
 }
 
 struct Token
@@ -73,7 +73,7 @@ struct Tokenizer
     /// Current token, skipping one whitespace token
     ref const(Token) frontSkipSpace()
     {
-        if (front.type == TokenType.whitespace) popFront();
+        if (front.type == TokenType.Whitespace) popFront();
         return front;
     }
 
@@ -130,7 +130,7 @@ struct Tokenizer
 
         // Comments are dropped: whitespace separated by comments is a single token
         skipComments();
-        if (!more()) { t.type = TokenType.eof; return t; }
+        if (!more()) { t.type = TokenType.Eof; return t; }
 
         char c = at(0);
 
@@ -144,7 +144,7 @@ struct Tokenizer
                 if (!more() || !isSpace(at(0))) { pos = save; break; }
             }
 
-            t.type = TokenType.whitespace;
+            t.type = TokenType.Whitespace;
             return t;
         }
 
@@ -157,21 +157,21 @@ struct Tokenizer
                 if (more(1) && (isName(at(1)) || validEscape(1)))
                 {
                     pos++;
-                    t.type = TokenType.hash;
+                    t.type = TokenType.Hash;
                     t.text = readName();
                     return t;
                 }
                 break;
 
-            case '(': pos++; t.type = TokenType.leftParen; return t;
-            case ')': pos++; t.type = TokenType.rightParen; return t;
-            case '[': pos++; t.type = TokenType.leftSquare; return t;
-            case ']': pos++; t.type = TokenType.rightSquare; return t;
-            case '{': pos++; t.type = TokenType.leftCurly; return t;
-            case '}': pos++; t.type = TokenType.rightCurly; return t;
-            case ',': pos++; t.type = TokenType.comma; return t;
-            case ':': pos++; t.type = TokenType.colon; return t;
-            case ';': pos++; t.type = TokenType.semicolon; return t;
+            case '(': pos++; t.type = TokenType.LeftParen; return t;
+            case ')': pos++; t.type = TokenType.RightParen; return t;
+            case '[': pos++; t.type = TokenType.LeftSquare; return t;
+            case ']': pos++; t.type = TokenType.RightSquare; return t;
+            case '{': pos++; t.type = TokenType.LeftCurly; return t;
+            case '}': pos++; t.type = TokenType.RightCurly; return t;
+            case ',': pos++; t.type = TokenType.Comma; return t;
+            case ':': pos++; t.type = TokenType.Colon; return t;
+            case ';': pos++; t.type = TokenType.Semicolon; return t;
 
             case '+': case '.':
                 if (startsNumber(0)) return readNumeric();
@@ -179,19 +179,19 @@ struct Tokenizer
 
             case '-':
                 if (startsNumber(0)) return readNumeric();
-                if (at(1) == '-' && at(2) == '>') { pos += 3; t.type = TokenType.cdc; return t; }
+                if (at(1) == '-' && at(2) == '>') { pos += 3; t.type = TokenType.Cdc; return t; }
                 if (startsIdent(0)) return readIdentLike();
                 break;
 
             case '<':
-                if (at(1) == '!' && at(2) == '-' && at(3) == '-') { pos += 4; t.type = TokenType.cdo; return t; }
+                if (at(1) == '!' && at(2) == '-' && at(3) == '-') { pos += 4; t.type = TokenType.Cdo; return t; }
                 break;
 
             case '@':
                 if (startsIdent(1))
                 {
                     pos++;
-                    t.type = TokenType.atKeyword;
+                    t.type = TokenType.AtKeyword;
                     t.text = readName();
                     return t;
                 }
@@ -208,7 +208,7 @@ struct Tokenizer
         }
 
         // A delim: a whole UTF-8 sequence counts as one character
-        t.type = TokenType.delim;
+        t.type = TokenType.Delim;
         t.delim = decodeChar();
         return t;
     }
@@ -243,11 +243,11 @@ struct Tokenizer
         if (at(0) == '(')
         {
             pos++;
-            t.type = TokenType.function_;
+            t.type = TokenType.Function;
             return t;
         }
 
-        t.type = TokenType.ident;
+        t.type = TokenType.Ident;
         return t;
     }
 
@@ -332,7 +332,7 @@ struct Tokenizer
             while (more() && at(0) != quote) pos++;
             t.text = input[start .. pos];
             if (more()) pos++;
-            t.type = TokenType.string_;
+            t.type = TokenType.String;
             return t;
         }
 
@@ -347,7 +347,7 @@ struct Tokenizer
             if (c == '\n' || c == '\r' || c == '\f')
             {
                 // Unescaped newline: bad string (the newline is not consumed)
-                t.type = TokenType.badString;
+                t.type = TokenType.BadString;
                 return t;
             }
 
@@ -366,7 +366,7 @@ struct Tokenizer
             pos++;
         }
 
-        t.type = TokenType.string_;
+        t.type = TokenType.String;
         t.text = keep(buf[]);
         return t;
     }
@@ -399,15 +399,15 @@ struct Tokenizer
 
         if (startsIdent(0))
         {
-            t.type = TokenType.dimension;
+            t.type = TokenType.Dimension;
             t.text = readName();
         }
         else if (at(0) == '%')
         {
             pos++;
-            t.type = TokenType.percentage;
+            t.type = TokenType.Percentage;
         }
-        else t.type = TokenType.number;
+        else t.type = TokenType.Number;
 
         return t;
     }

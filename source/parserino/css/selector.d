@@ -17,68 +17,68 @@ import parserino.css.tokenizer;
 /// How a compound selector is related to the previous one
 enum Combinator : ubyte
 {
-    descendant,         /// `a b`
-    child,              /// `a > b`
-    nextSibling,        /// `a + b`
-    subsequentSibling,  /// `a ~ b`
+    Descendant,         /// `a b`
+    Child,              /// `a > b`
+    NextSibling,        /// `a + b`
+    SubsequentSibling,  /// `a ~ b`
 }
 
 enum SimpleKind : ubyte
 {
-    universal,      /// `*`
-    type,           /// `div`
-    id,             /// `#x`
-    class_,         /// `.x`
-    attribute,      /// `[x]`, `[x=y]`, ...
-    pseudoClass,    /// `:first-child`, ...
-    not,            /// `:not(list)`
-    is_,            /// `:is(list)`, `:where(list)`
-    has,            /// `:has(relative list)`
-    nthChild,       /// `:nth-child(an+b [of list])`
-    nthLastChild,
-    nthOfType,
-    nthLastOfType,
-    contains,       /// `:lexbor-contains(text [i])`
-    lang,           /// `:lang(en, "fr-CH")`
-    never,          /// states of a live document (`:hover`), pseudo-elements (`::before`)
+    Universal,      /// `*`
+    Type,           /// `div`
+    Id,             /// `#x`
+    Class,         /// `.x`
+    Attribute,      /// `[x]`, `[x=y]`, ...
+    PseudoClass,    /// `:first-child`, ...
+    Not,            /// `:not(list)`
+    Is,            /// `:is(list)`, `:where(list)`
+    Has,            /// `:has(relative list)`
+    NthChild,       /// `:nth-child(an+b [of list])`
+    NthLastChild,
+    NthOfType,
+    NthLastOfType,
+    Contains,       /// `:lexbor-contains(text [i])`
+    Lang,           /// `:lang(en, "fr-CH")`
+    Never,          /// states of a live document (`:hover`), pseudo-elements (`::before`)
 }
 
 /// Namespace of a type or attribute selector (`svg|rect`, `[xlink|href]`)
 enum NsMatch : ubyte
 {
-    any,    /// `*|x`, or no prefix for type selectors
-    none,   /// `|x`, or no prefix for attribute selectors
-    html,
-    svg,
-    math,
-    xlink,
-    xml,
-    xmlns,
+    Any,    /// `*|x`, or no prefix for type selectors
+    None,   /// `|x`, or no prefix for attribute selectors
+    Html,
+    Svg,
+    Math,
+    Xlink,
+    Xml,
+    Xmlns,
 }
 
 enum AttrMatch : ubyte
 {
-    exists,     /// `[x]`
-    equal,      /// `[x=y]`
-    includes,   /// `[x~=y]`
-    dash,       /// `[x|=y]`
-    prefix,     /// `[x^=y]`
-    suffix,     /// `[x$=y]`
-    substring,  /// `[x*=y]`
+    Exists,     /// `[x]`
+    Equal,      /// `[x=y]`
+    Includes,   /// `[x~=y]`
+    Dash,       /// `[x|=y]`
+    Prefix,     /// `[x^=y]`
+    Suffix,     /// `[x$=y]`
+    Substring,  /// `[x*=y]`
 }
 
 enum AttrCase : ubyte
 {
-    auto_,          /// case-insensitive only for some html attributes (type, lang, ...)
-    insensitive,    /// `[x=y i]`
-    sensitive,      /// `[x=y s]`
+    Auto,          /// case-insensitive only for some html attributes (type, lang, ...)
+    Insensitive,    /// `[x=y i]`
+    Sensitive,      /// `[x=y s]`
 }
 
 enum PseudoClass : ubyte
 {
-    anyLink, blank, checked, disabled, empty, enabled, firstChild, firstOfType,
-    lastChild, lastOfType, link, onlyChild, onlyOfType, optional, placeholderShown,
-    readOnly, readWrite, required, root, scope_,
+    AnyLink, Blank, Checked, Disabled, Empty, Enabled, FirstChild, FirstOfType,
+    LastChild, LastOfType, Link, OnlyChild, OnlyOfType, Optional, PlaceholderShown,
+    ReadOnly, ReadWrite, Required, Root, Scope,
 }
 
 /// A simple selector
@@ -125,13 +125,13 @@ struct SelectorList
                 {
                     switch (s.kind)
                     {
-                        case SimpleKind.has, SimpleKind.nthLastChild, SimpleKind.nthLastOfType, SimpleKind.contains:
+                        case SimpleKind.Has, SimpleKind.NthLastChild, SimpleKind.NthLastOfType, SimpleKind.Contains:
                             return true;
 
-                        case SimpleKind.pseudoClass:
+                        case SimpleKind.PseudoClass:
                             with (PseudoClass) switch (s.pseudo)
                             {
-                                case blank, empty, lastChild, lastOfType, onlyChild, onlyOfType, checked, placeholderShown: return true;
+                                case Blank, Empty, LastChild, LastOfType, OnlyChild, OnlyOfType, Checked, PlaceholderShown: return true;
                                 default: break;
                             }
                             break;
@@ -152,9 +152,9 @@ struct SelectorList
 const(SelectorList)* parseSelector(const(char)[] input, ref Arena arena)
 {
     auto p = Parser(input, &arena);
-    auto list = p.parseList(ListKind.complex, false);
+    auto list = p.parseList(ListKind.Complex, false);
     if (list is null || p.tokens.failed) return null;
-    if (p.tokens.frontSkipSpace.type != TokenType.eof) return null;
+    if (p.tokens.frontSkipSpace.type != TokenType.Eof) return null;
     return list;
 }
 
@@ -166,7 +166,7 @@ unittest
     assert(l !is null);
     assert(l.items.length == 2);
     assert(l.items[0].compounds.length == 2);
-    assert(l.items[0].compounds[1].combinator == Combinator.child);
+    assert(l.items[0].compounds[1].combinator == Combinator.Child);
     assert(l.items[0].compounds[1].simples[1].name == "a");
 
     assert(parseSelector("div >", a) is null);
@@ -196,7 +196,7 @@ unittest
 
 private:
 
-enum ListKind { complex, relative }
+enum ListKind { Complex, Relative }
 
 struct Parser
 {
@@ -221,12 +221,12 @@ struct Parser
     bool isEnd()
     {
         auto t = tok.type;
-        return t == TokenType.eof || (depth > 0 && t == TokenType.rightParen);
+        return t == TokenType.Eof || (depth > 0 && t == TokenType.RightParen);
     }
 
-    bool isDelim(dchar c) { return tok.type == TokenType.delim && tok.delim == c; }
+    bool isDelim(dchar c) { return tok.type == TokenType.Delim && tok.delim == c; }
 
-    void skipSpace() { if (tok.type == TokenType.whitespace) next(); }
+    void skipSpace() { if (tok.type == TokenType.Whitespace) next(); }
 
     /+ A comma separated list.
      + Forgiving lists (:is, :where, :has) drop the invalid items, the others fail.
@@ -238,7 +238,7 @@ struct Parser
         while (true)
         {
             Complex c;
-            bool ok = kind == ListKind.relative ? parseRelative(c) : parseComplex(c);
+            bool ok = kind == ListKind.Relative ? parseRelative(c) : parseComplex(c);
 
             if (ok) items.put(c);
             else if (!forgiving || tokens.failed) return null;
@@ -246,13 +246,13 @@ struct Parser
 
             skipSpace();
 
-            if (tok.type == TokenType.comma) { next(); continue; }
+            if (tok.type == TokenType.Comma) { next(); continue; }
             if (isEnd()) break;
 
             // Unexpected token after a selector
             if (!forgiving) return null;
             skipToComma();
-            if (tok.type == TokenType.comma) { next(); continue; }
+            if (tok.type == TokenType.Comma) { next(); continue; }
             break;
         }
 
@@ -269,13 +269,13 @@ struct Parser
     void skipToComma()
     {
         int nested = 0;
-        while (tok.type != TokenType.eof)
+        while (tok.type != TokenType.Eof)
         {
             auto t = tok.type;
-            if (nested == 0 && (t == TokenType.comma || t == TokenType.rightParen)) return;
+            if (nested == 0 && (t == TokenType.Comma || t == TokenType.RightParen)) return;
 
-            if (t == TokenType.function_ || t == TokenType.leftParen || t == TokenType.leftSquare || t == TokenType.leftCurly) nested++;
-            else if (t == TokenType.rightParen || t == TokenType.rightSquare || t == TokenType.rightCurly) nested--;
+            if (t == TokenType.Function || t == TokenType.LeftParen || t == TokenType.LeftSquare || t == TokenType.LeftCurly) nested++;
+            else if (t == TokenType.RightParen || t == TokenType.RightSquare || t == TokenType.RightCurly) nested--;
             next();
         }
     }
@@ -283,18 +283,18 @@ struct Parser
     // <relative-selector>: an optional leading combinator
     bool parseRelative(ref Complex c)
     {
-        auto combinator = Combinator.descendant;
+        auto combinator = Combinator.Descendant;
         skipSpace();
 
-        if (isDelim('>')) { combinator = Combinator.child; next(); }
-        else if (isDelim('+')) { combinator = Combinator.nextSibling; next(); }
-        else if (isDelim('~')) { combinator = Combinator.subsequentSibling; next(); }
+        if (isDelim('>')) { combinator = Combinator.Child; next(); }
+        else if (isDelim('+')) { combinator = Combinator.NextSibling; next(); }
+        else if (isDelim('~')) { combinator = Combinator.SubsequentSibling; next(); }
 
         return parseComplex(c, combinator);
     }
 
     // <complex-selector>
-    bool parseComplex(ref Complex c, Combinator first = Combinator.descendant)
+    bool parseComplex(ref Complex c, Combinator first = Combinator.Descendant)
     {
         Buffer!Compound compounds;
         Compound comp;
@@ -306,15 +306,15 @@ struct Parser
 
         while (true)
         {
-            bool space = tok.type == TokenType.whitespace;
+            bool space = tok.type == TokenType.Whitespace;
             if (space) next();
 
-            Combinator combinator = Combinator.descendant;
+            Combinator combinator = Combinator.Descendant;
             bool explicit = true;
 
-            if (isDelim('>')) combinator = Combinator.child;
-            else if (isDelim('+')) combinator = Combinator.nextSibling;
-            else if (isDelim('~')) combinator = Combinator.subsequentSibling;
+            if (isDelim('>')) combinator = Combinator.Child;
+            else if (isDelim('+')) combinator = Combinator.NextSibling;
+            else if (isDelim('~')) combinator = Combinator.SubsequentSibling;
             else explicit = false;
 
             if (explicit)
@@ -322,7 +322,7 @@ struct Parser
                 next();
                 skipSpace();
             }
-            else if (!space || tok.type == TokenType.comma || isEnd()) break;
+            else if (!space || tok.type == TokenType.Comma || isEnd()) break;
 
             comp = Compound.init;
             comp.combinator = combinator;
@@ -341,7 +341,7 @@ struct Parser
         Simple s;
 
         TokenType t = tok.type;
-        if (t == TokenType.ident || isDelim('*') || isDelim('|'))
+        if (t == TokenType.Ident || isDelim('*') || isDelim('|'))
         {
             if (!parseType(s)) return false;
             simples.put(s);
@@ -352,26 +352,26 @@ struct Parser
             s = Simple.init;
             t = tok.type;
 
-            if (t == TokenType.hash)
+            if (t == TokenType.Hash)
             {
-                s.kind = SimpleKind.id;
+                s.kind = SimpleKind.Id;
                 s.name = tok.text;
                 next();
             }
             else if (isDelim('.'))
             {
                 next();
-                if (tok.type != TokenType.ident) return false;
-                s.kind = SimpleKind.class_;
+                if (tok.type != TokenType.Ident) return false;
+                s.kind = SimpleKind.Class;
                 s.name = tok.text;
                 next();
             }
-            else if (t == TokenType.leftSquare)
+            else if (t == TokenType.LeftSquare)
             {
                 next();
                 if (!parseAttribute(s)) return false;
             }
-            else if (t == TokenType.colon)
+            else if (t == TokenType.Colon)
             {
                 next();
                 bool element;
@@ -393,9 +393,9 @@ struct Parser
     // `name`, `*`, `ns|name`, `ns|*`, `*|name`, `|name`
     bool parseType(ref Simple s)
     {
-        s.ns = NsMatch.any;
+        s.ns = NsMatch.Any;
 
-        if (tok.type == TokenType.ident)
+        if (tok.type == TokenType.Ident)
         {
             auto name = tok.text;
             next();
@@ -407,7 +407,7 @@ struct Parser
                 return parseTypeName(s);
             }
 
-            s.kind = SimpleKind.type;
+            s.kind = SimpleKind.Type;
             s.name = lower(name);
             return true;
         }
@@ -416,21 +416,21 @@ struct Parser
         {
             next();
             if (isDelim('|')) { next(); return parseTypeName(s); }
-            s.kind = SimpleKind.universal;
+            s.kind = SimpleKind.Universal;
             return true;
         }
 
         // `|name`: no namespace
         next();
-        s.ns = NsMatch.none;
+        s.ns = NsMatch.None;
         return parseTypeName(s);
     }
 
     bool parseTypeName(ref Simple s)
     {
-        if (tok.type == TokenType.ident)
+        if (tok.type == TokenType.Ident)
         {
-            s.kind = SimpleKind.type;
+            s.kind = SimpleKind.Type;
             s.name = lower(tok.text);
             next();
             return true;
@@ -438,7 +438,7 @@ struct Parser
 
         if (isDelim('*'))
         {
-            s.kind = SimpleKind.universal;
+            s.kind = SimpleKind.Universal;
             next();
             return true;
         }
@@ -449,10 +449,10 @@ struct Parser
     // After '['. EOF closes the attribute selector.
     bool parseAttribute(ref Simple s)
     {
-        s.kind = SimpleKind.attribute;
-        s.match = AttrMatch.exists;
+        s.kind = SimpleKind.Attribute;
+        s.match = AttrMatch.Exists;
 
-        s.ns = NsMatch.none;
+        s.ns = NsMatch.None;
         skipSpace();
 
         if (isDelim('|') || isDelim('*'))
@@ -462,16 +462,16 @@ struct Parser
             {
                 next();
                 if (!isDelim('|')) return false;
-                s.ns = NsMatch.any;
+                s.ns = NsMatch.Any;
             }
 
             next();
-            if (tok.type != TokenType.ident) return false;
+            if (tok.type != TokenType.Ident) return false;
             s.name = lower(tok.text);
             next();
             skipSpace();
         }
-        else if (tok.type == TokenType.ident)
+        else if (tok.type == TokenType.Ident)
         {
             auto name = tok.text;
             next();
@@ -479,11 +479,11 @@ struct Parser
             if (isDelim('|'))
             {
                 next();
-                if (tok.type != TokenType.ident)
+                if (tok.type != TokenType.Ident)
                 {
                     // `[x|=y]`
                     s.name = lower(name);
-                    s.match = AttrMatch.dash;
+                    s.match = AttrMatch.Dash;
                     return parseAttributeValue(s);
                 }
 
@@ -499,19 +499,19 @@ struct Parser
         else return false;
 
         auto t = tok.type;
-        if (t == TokenType.rightSquare) { next(); return true; }
-        if (t == TokenType.eof) return true;
-        if (t != TokenType.delim) return false;
+        if (t == TokenType.RightSquare) { next(); return true; }
+        if (t == TokenType.Eof) return true;
+        if (t != TokenType.Delim) return false;
 
         switch (tok.delim)
         {
-            case '~': s.match = AttrMatch.includes; break;
-            case '|': s.match = AttrMatch.dash; break;
-            case '^': s.match = AttrMatch.prefix; break;
-            case '$': s.match = AttrMatch.suffix; break;
-            case '*': s.match = AttrMatch.substring; break;
+            case '~': s.match = AttrMatch.Includes; break;
+            case '|': s.match = AttrMatch.Dash; break;
+            case '^': s.match = AttrMatch.Prefix; break;
+            case '$': s.match = AttrMatch.Suffix; break;
+            case '*': s.match = AttrMatch.Substring; break;
             case '=':
-                s.match = AttrMatch.equal;
+                s.match = AttrMatch.Equal;
                 next();
                 skipSpace();
                 return parseAttributeString(s);
@@ -533,55 +533,55 @@ struct Parser
 
     bool parseAttributeString(ref Simple s)
     {
-        if (tok.type != TokenType.string_ && tok.type != TokenType.ident) return false;
+        if (tok.type != TokenType.String && tok.type != TokenType.Ident) return false;
         s.value = tok.text.length ? tok.text : "";
         next();
         skipSpace();
 
-        if (tok.type == TokenType.rightSquare) { next(); return true; }
-        if (tok.type == TokenType.eof) return true;
-        if (tok.type != TokenType.ident || tok.text.length != 1) return false;
+        if (tok.type == TokenType.RightSquare) { next(); return true; }
+        if (tok.type == TokenType.Eof) return true;
+        if (tok.type != TokenType.Ident || tok.text.length != 1) return false;
 
         switch (tok.text[0])
         {
-            case 'i', 'I': s.attrCase = AttrCase.insensitive; break;
-            case 's', 'S': s.attrCase = AttrCase.sensitive; break;
+            case 'i', 'I': s.attrCase = AttrCase.Insensitive; break;
+            case 's', 'S': s.attrCase = AttrCase.Sensitive; break;
             default: return false;
         }
 
         next();
         skipSpace();
 
-        if (tok.type == TokenType.rightSquare) { next(); return true; }
-        return tok.type == TokenType.eof;
+        if (tok.type == TokenType.RightSquare) { next(); return true; }
+        return tok.type == TokenType.Eof;
     }
 
     // After ':'. `element` is set for pseudo-elements.
     bool parsePseudo(ref Simple s, out bool element)
     {
         // `::name`
-        if (tok.type == TokenType.colon)
+        if (tok.type == TokenType.Colon)
         {
             next();
-            if (tok.type != TokenType.ident || !isPseudoElement(tok.text)) return false;
+            if (tok.type != TokenType.Ident || !isPseudoElement(tok.text)) return false;
             next();
-            s.kind = SimpleKind.never;
+            s.kind = SimpleKind.Never;
             element = true;
             return true;
         }
 
-        if (tok.type == TokenType.ident)
+        if (tok.type == TokenType.Ident)
         {
             auto name = tok.text;
             next();
 
-            if (pseudoClassByName(name, s.pseudo)) { s.kind = SimpleKind.pseudoClass; return true; }
-            if (isStatePseudoClass(name)) { s.kind = SimpleKind.never; return true; }
+            if (pseudoClassByName(name, s.pseudo)) { s.kind = SimpleKind.PseudoClass; return true; }
+            if (isStatePseudoClass(name)) { s.kind = SimpleKind.Never; return true; }
 
             // Legacy pseudo-elements with a single colon
             if (eq(name, "before") || eq(name, "after") || eq(name, "first-line") || eq(name, "first-letter"))
             {
-                s.kind = SimpleKind.never;
+                s.kind = SimpleKind.Never;
                 element = true;
                 return true;
             }
@@ -589,7 +589,7 @@ struct Parser
             return false;
         }
 
-        if (tok.type != TokenType.function_) return false;
+        if (tok.type != TokenType.Function) return false;
 
         auto name = tok.text;
         next();
@@ -598,13 +598,13 @@ struct Parser
         scope(exit) depth--;
 
         bool ok;
-        if (eq(name, "not")) { s.kind = SimpleKind.not; ok = parseArgList(s, ListKind.complex, false); }
-        else if (eq(name, "is") || eq(name, "where")) { s.kind = SimpleKind.is_; ok = parseArgList(s, ListKind.complex, true); }
+        if (eq(name, "not")) { s.kind = SimpleKind.Not; ok = parseArgList(s, ListKind.Complex, false); }
+        else if (eq(name, "is") || eq(name, "where")) { s.kind = SimpleKind.Is; ok = parseArgList(s, ListKind.Complex, true); }
         else if (eq(name, "current"))
         {
             // Time-dimensional: nothing is "current" in a parsed document
-            ok = parseArgList(s, ListKind.complex, true);
-            s.kind = SimpleKind.never;
+            ok = parseArgList(s, ListKind.Complex, true);
+            s.kind = SimpleKind.Never;
             s.list = null;
         }
         else if (eq(name, "has"))
@@ -613,15 +613,15 @@ struct Parser
             if (inHas) return false;
             inHas = true;
             scope(exit) inHas = false;
-            s.kind = SimpleKind.has;
-            ok = parseArgList(s, ListKind.relative, false);
+            s.kind = SimpleKind.Has;
+            ok = parseArgList(s, ListKind.Relative, false);
         }
-        else if (eq(name, "nth-child")) { s.kind = SimpleKind.nthChild; ok = parseNth(s, true); }
-        else if (eq(name, "nth-last-child")) { s.kind = SimpleKind.nthLastChild; ok = parseNth(s, true); }
-        else if (eq(name, "nth-of-type")) { s.kind = SimpleKind.nthOfType; ok = parseNth(s, false); }
-        else if (eq(name, "nth-last-of-type")) { s.kind = SimpleKind.nthLastOfType; ok = parseNth(s, false); }
-        else if (eq(name, "lexbor-contains")) { s.kind = SimpleKind.contains; ok = parseContains(s); }
-        else if (eq(name, "lang")) { s.kind = SimpleKind.lang; ok = parseLang(s); }
+        else if (eq(name, "nth-child")) { s.kind = SimpleKind.NthChild; ok = parseNth(s, true); }
+        else if (eq(name, "nth-last-child")) { s.kind = SimpleKind.NthLastChild; ok = parseNth(s, true); }
+        else if (eq(name, "nth-of-type")) { s.kind = SimpleKind.NthOfType; ok = parseNth(s, false); }
+        else if (eq(name, "nth-last-of-type")) { s.kind = SimpleKind.NthLastOfType; ok = parseNth(s, false); }
+        else if (eq(name, "lexbor-contains")) { s.kind = SimpleKind.Contains; ok = parseContains(s); }
+        else if (eq(name, "lang")) { s.kind = SimpleKind.Lang; ok = parseLang(s); }
         else return false;
 
         if (!ok) return false;
@@ -638,12 +638,12 @@ struct Parser
         while (true)
         {
             skipSpace();
-            if (tok.type != TokenType.ident && tok.type != TokenType.string_) return false;
+            if (tok.type != TokenType.Ident && tok.type != TokenType.String) return false;
             ranges.put(tok.text.length ? tok.text : "");
             next();
             skipSpace();
 
-            if (tok.type != TokenType.comma) break;
+            if (tok.type != TokenType.Comma) break;
             next();
         }
 
@@ -655,8 +655,8 @@ struct Parser
     bool closeFunction()
     {
         skipSpace();
-        if (tok.type == TokenType.rightParen) { next(); return true; }
-        return tok.type == TokenType.eof;
+        if (tok.type == TokenType.RightParen) { next(); return true; }
+        return tok.type == TokenType.Eof;
     }
 
     bool parseArgList(ref Simple s, ListKind kind, bool forgiving)
@@ -671,10 +671,10 @@ struct Parser
         if (!parseAnb(s)) return false;
 
         skipSpace();
-        if (allowOf && tok.type == TokenType.ident && eq(tok.text, "of"))
+        if (allowOf && tok.type == TokenType.Ident && eq(tok.text, "of"))
         {
             next();
-            s.list = parseList(ListKind.complex, false);
+            s.list = parseList(ListKind.Complex, false);
             return s.list !is null;
         }
 
@@ -684,12 +684,12 @@ struct Parser
     bool parseContains(ref Simple s)
     {
         skipSpace();
-        if (tok.type != TokenType.string_ && tok.type != TokenType.ident) return false;
+        if (tok.type != TokenType.String && tok.type != TokenType.Ident) return false;
         s.name = tok.text;
         next();
         skipSpace();
 
-        if (tok.type == TokenType.ident && tok.text.length == 1 && (tok.text[0] == 'i' || tok.text[0] == 'I'))
+        if (tok.type == TokenType.Ident && tok.text.length == 1 && (tok.text[0] == 'i' || tok.text[0] == 'I'))
         {
             s.insensitive = true;
             next();
@@ -709,7 +709,7 @@ struct Parser
         const(char)[] rest;
         auto t = tok.type;
 
-        if (t == TokenType.dimension)
+        if (t == TokenType.Dimension)
         {
             if (!tok.isInteger) return false;
             s.a = toLong(tok.number);
@@ -717,7 +717,7 @@ struct Parser
             if (rest[0] != 'n' && rest[0] != 'N') return false;
             rest = rest[1 .. $];
         }
-        else if (t == TokenType.number)
+        else if (t == TokenType.Number)
         {
             if (!tok.isInteger) return false;
             s.a = 0;
@@ -725,7 +725,7 @@ struct Parser
             next();
             return true;
         }
-        else if (t == TokenType.ident)
+        else if (t == TokenType.Ident)
         {
             auto id = tok.text;
             if (eq(id, "odd")) { s.a = 2; s.b = 1; next(); return true; }
@@ -738,7 +738,7 @@ struct Parser
         else if (isDelim('+'))
         {
             next();
-            if (tok.type != TokenType.ident) return false;
+            if (tok.type != TokenType.Ident) return false;
             auto id = tok.text;
             if (id[0] != 'n' && id[0] != 'N') return false;
             s.a = 1;
@@ -753,7 +753,7 @@ struct Parser
             skipSpace();
 
             int sign = 0;
-            if (tok.type == TokenType.number)
+            if (tok.type == TokenType.Number)
             {
                 if (!tok.hasSign) { s.b = 0; return true; }
             }
@@ -792,7 +792,7 @@ struct Parser
 
     bool anbNumber(ref Simple s, int sign)
     {
-        if (tok.type != TokenType.number || !tok.isInteger) return false;
+        if (tok.type != TokenType.Number || !tok.isInteger) return false;
         if (sign != 0 && tok.hasSign) return false;
 
         s.b = toLong(tok.number);
@@ -835,12 +835,12 @@ bool eq(const(char)[] a, string lowerB)
 
 bool nsByPrefix(const(char)[] prefix, ref NsMatch ns)
 {
-    if (eq(prefix, "html")) ns = NsMatch.html;
-    else if (eq(prefix, "svg")) ns = NsMatch.svg;
-    else if (eq(prefix, "math") || eq(prefix, "mathml")) ns = NsMatch.math;
-    else if (eq(prefix, "xlink")) ns = NsMatch.xlink;
-    else if (eq(prefix, "xml")) ns = NsMatch.xml;
-    else if (eq(prefix, "xmlns")) ns = NsMatch.xmlns;
+    if (eq(prefix, "html")) ns = NsMatch.Html;
+    else if (eq(prefix, "svg")) ns = NsMatch.Svg;
+    else if (eq(prefix, "math") || eq(prefix, "mathml")) ns = NsMatch.Math;
+    else if (eq(prefix, "xlink")) ns = NsMatch.Xlink;
+    else if (eq(prefix, "xml")) ns = NsMatch.Xml;
+    else if (eq(prefix, "xmlns")) ns = NsMatch.Xmlns;
     else return false;
     return true;
 }
@@ -874,17 +874,17 @@ bool pseudoClassByName(const(char)[] name, ref PseudoClass p)
     static struct Entry { string name; PseudoClass id; }
 
     static immutable Entry[] entries = [
-        Entry("any-link", PseudoClass.anyLink),
-        Entry("blank", PseudoClass.blank), Entry("checked", PseudoClass.checked),
-        Entry("disabled", PseudoClass.disabled), Entry("empty", PseudoClass.empty),
-        Entry("enabled", PseudoClass.enabled), Entry("first-child", PseudoClass.firstChild),
-        Entry("first-of-type", PseudoClass.firstOfType), Entry("last-child", PseudoClass.lastChild),
-        Entry("last-of-type", PseudoClass.lastOfType), Entry("link", PseudoClass.link),
-        Entry("only-child", PseudoClass.onlyChild), Entry("only-of-type", PseudoClass.onlyOfType),
-        Entry("optional", PseudoClass.optional), Entry("placeholder-shown", PseudoClass.placeholderShown),
-        Entry("read-only", PseudoClass.readOnly), Entry("read-write", PseudoClass.readWrite),
-        Entry("required", PseudoClass.required), Entry("root", PseudoClass.root),
-        Entry("scope", PseudoClass.scope_),
+        Entry("any-link", PseudoClass.AnyLink),
+        Entry("blank", PseudoClass.Blank), Entry("checked", PseudoClass.Checked),
+        Entry("disabled", PseudoClass.Disabled), Entry("empty", PseudoClass.Empty),
+        Entry("enabled", PseudoClass.Enabled), Entry("first-child", PseudoClass.FirstChild),
+        Entry("first-of-type", PseudoClass.FirstOfType), Entry("last-child", PseudoClass.LastChild),
+        Entry("last-of-type", PseudoClass.LastOfType), Entry("link", PseudoClass.Link),
+        Entry("only-child", PseudoClass.OnlyChild), Entry("only-of-type", PseudoClass.OnlyOfType),
+        Entry("optional", PseudoClass.Optional), Entry("placeholder-shown", PseudoClass.PlaceholderShown),
+        Entry("read-only", PseudoClass.ReadOnly), Entry("read-write", PseudoClass.ReadWrite),
+        Entry("required", PseudoClass.Required), Entry("root", PseudoClass.Root),
+        Entry("scope", PseudoClass.Scope),
     ];
 
     foreach (ref e; entries)

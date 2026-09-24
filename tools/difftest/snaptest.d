@@ -14,16 +14,16 @@ import parserino.dom, parserino.html.parser, parserino.html.serializer, parserin
 import core.stdc.stdlib : calloc, free;
 import std.file, std.stdio, std.path, std.datetime.stopwatch;
 
-string toHtml(Document* d)
+string toHtml(DomDocument* d)
 {
     struct Sink { string s; void put(scope const(char)[] x) { s ~= x; } }
     Sink sink;
-    serialize(&d.node, sink, Serialize.tree);
+    serialize(&d.node, sink, Serialize.Tree);
     return sink.s;
 }
 
-Document* newDoc() { auto d = cast(Document*) calloc(1, Document.sizeof); d.initialize(); return d; }
-void freeDoc(Document* d) { d.release(); free(d); }
+DomDocument* newDoc() { auto d = cast(DomDocument*) calloc(1, DomDocument.sizeof); d.initialize(); return d; }
+void freeDoc(DomDocument* d) { d.release(); free(d); }
 
 int main(string[] args)
 {

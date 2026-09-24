@@ -15,12 +15,12 @@ void main(string[] args)
     foreach (f; args[1 .. $].sort)
     {
         auto html = readText(f);
-        auto doc = cast(Document*) calloc(1, Document.sizeof);
+        auto doc = cast(DomDocument*) calloc(1, DomDocument.sizeof);
         doc.initialize();
         parseDocument(doc, html);
         string s;
         auto sink = (const(char)[] c) { s ~= c; };
-        serialize(&doc.node, sink, Serialize.tree);
+        serialize(&doc.node, sink, Serialize.Tree);
         writeln("=== ", f.baseName);
         writeln("doc ", s.length, " ", hashOf(s));
         if (s.length < 3000) writeln(s);
@@ -30,7 +30,7 @@ void main(string[] args)
         foreach (chunk; 1 .. 17)
         {
             if (chunk == 1 && html.length > 50_000) continue;
-            auto d2 = cast(Document*) calloc(1, Document.sizeof);
+            auto d2 = cast(DomDocument*) calloc(1, DomDocument.sizeof);
             d2.initialize();
             auto p = newParser();
             p.begin(d2);
@@ -39,7 +39,7 @@ void main(string[] args)
             freeParser(p);
             string s2;
             auto sink2 = (const(char)[] c) { s2 ~= c; };
-            serialize(&d2.node, sink2, Serialize.tree);
+            serialize(&d2.node, sink2, Serialize.Tree);
             if (s2 != s) { stderr.writeln("CHUNK DIFF ", f.baseName, " ", chunk); break; }
             d2.release();
             free(d2);

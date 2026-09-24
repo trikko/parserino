@@ -34,7 +34,7 @@ struct Collector
     {
         final switch (t.type)
         {
-            case TokenType.startTag:
+            case TokenType.StartTag:
             {
                 JSONValue attrs = JSONValue(string[string].init);
                 foreach (a; t.attributes) attrs[a.name.idup] = a.value.idup;
@@ -43,29 +43,29 @@ struct Collector
                 tokens ~= j;
                 break;
             }
-            case TokenType.endTag:
+            case TokenType.EndTag:
                 tokens ~= JSONValue([JSONValue("EndTag"), JSONValue(t.name.idup)]);
                 break;
-            case TokenType.text:
+            case TokenType.Text:
                 if (tokens.length && tokens[$ - 1].array[0].str == "Character")
                     tokens[$ - 1].array[1] = JSONValue(tokens[$ - 1].array[1].str ~ t.data.idup);
                 else
                     tokens ~= JSONValue([JSONValue("Character"), JSONValue(t.data.idup)]);
                 break;
-            case TokenType.comment:
+            case TokenType.Comment:
                 tokens ~= JSONValue([JSONValue("Comment"), JSONValue(t.data.idup)]);
                 break;
-            case TokenType.doctype:
+            case TokenType.Doctype:
                 tokens ~= JSONValue([JSONValue("DOCTYPE"),
                     t.hasName ? JSONValue(t.name.idup) : JSONValue(null),
                     t.hasPublicId ? JSONValue(t.publicId.idup) : JSONValue(null),
                     t.hasSystemId ? JSONValue(t.systemId.idup) : JSONValue(null),
                     JSONValue(!t.forceQuirks)]);
                 break;
-            case TokenType.processingInstruction:
+            case TokenType.ProcessingInstruction:
                 tokens ~= JSONValue([JSONValue("ProcessingInstruction"), JSONValue(t.target.idup), JSONValue(t.data.idup)]);
                 break;
-            case TokenType.eof:
+            case TokenType.Eof:
                 break;
         }
     }
@@ -75,12 +75,12 @@ State stateByName(string s)
 {
     switch (s)
     {
-        case "Data state": return State.data;
-        case "PLAINTEXT state": return State.plaintext;
-        case "RCDATA state": return State.rcdata;
-        case "RAWTEXT state": return State.rawtext;
-        case "Script data state": return State.scriptData;
-        case "CDATA section state": return State.cdataSection;
+        case "Data state": return State.Data;
+        case "PLAINTEXT state": return State.Plaintext;
+        case "RCDATA state": return State.Rcdata;
+        case "RAWTEXT state": return State.Rawtext;
+        case "Script data state": return State.ScriptData;
+        case "CDATA section state": return State.CDataSection;
         default: throw new Exception("unknown state " ~ s);
     }
 }
@@ -149,7 +149,7 @@ JSONValue[] normalize(JSONValue[] tokens)
 
 JSONValue[] tokenize(string input, State state, string lastStartTag, bool oneByOne)
 {
-    auto doc = cast(Document*) calloc(1, Document.sizeof);
+    auto doc = cast(DomDocument*) calloc(1, DomDocument.sizeof);
     doc.initialize();
     scope(exit) { doc.release(); free(doc); }
 
