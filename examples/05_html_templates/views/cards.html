@@ -42,8 +42,10 @@
     <div class="wrap">
         <aside id="offer"><strong>Classics week</strong> — 20% off, only until Sunday.</aside>
 
+        <p id="sorting" class="note">Sort by <button data-sort="title">title</button> <button data-sort="price">price</button></p>
+
         <div id="results" class="grid">
-            <div class="book">
+            <div class="book" data-title="A book title" data-price="10">
                 <div class="title">A book title</div>
                 <div>by <span class="author">An Author</span></div>
                 <div class="tags"><a class="tag" href="#">novel</a><a class="tag" href="#">classic</a></div>
@@ -53,7 +55,7 @@
                     <span class="sold-out">Sold out</span>
                 </div>
             </div>
-            <div class="book">
+            <div class="book" data-title="Another title" data-price="8.5">
                 <div class="title">Another title</div>
                 <div>by <span class="author">Someone Else</span></div>
                 <div class="tags"><a class="tag" href="#">essay</a></div>
@@ -68,5 +70,14 @@
 
         <p class="note"><span id="count">2</span> books · generated in <span id="elapsed">0</span> µs</p>
     </div>
+    <script>
+        // Frontend code: it only reads the data-* attributes that the server fills in
+        document.querySelectorAll("[data-sort]").forEach(button => button.onclick = () => {
+            const key = button.dataset.sort;
+            const books = [...document.querySelectorAll(".book")];
+            books.sort((a, b) => key == "price" ? a.dataset.price - b.dataset.price : a.dataset.title.localeCompare(b.dataset.title));
+            books.forEach(book => book.parentNode.appendChild(book));
+        });
+    </script>
 </body>
 </html>

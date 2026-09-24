@@ -115,7 +115,7 @@ void render(Document page, string query)
 
     // 4. Remove what is not needed in this case
     if (query.length > 0) page.byId("offer").remove();          // the offer only on the home page
-    if (found.length == 0) page.byId("results").remove();       // no results: no table (or grid)
+    if (found.length == 0) foreach (id; ["results", "sorting"]) page.byId(id).remove();    // no results: no table, no sorting
     else page.byId("no-results").remove();                      // results: no "nothing found" message
 
     // 5. Repeat a row. The template contains some example books: the first is the model,
@@ -131,6 +131,11 @@ void render(Document page, string query)
         row.byClass("title").front.innerText = book.title;
         row.byClass("author").front.innerText = book.author;
         row.byClass("price").front.innerText = format("€ %.2f", book.price);
+
+        // Data for the frontend: the template's javascript reads them (element.dataset) to sort the
+        // books in the browser. Escaped automatically too: `&` and `<` in the titles are safe.
+        row.setAttribute("data-title", book.title);
+        row.setAttribute("data-price", book.price.to!string);
 
         // A list inside the row: the same trick, one level down
         auto tags = row.byClass("tag").array;

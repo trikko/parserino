@@ -40,6 +40,10 @@
             the results when there are none, "Details" or "Sold out" on each book.</li>
         <li><b>Escaping is automatic</b>: texts are set as texts, never read as html.
             Try searching for <code>&lt;script&gt;alert(1)&lt;/script&gt;</code>.</li>
+        <li>The server also fills <b><code>data-*</code> attributes for the frontend</b>: each book gets
+            <code>data-title</code> and <code>data-price</code>, and the javascript in the template uses them
+            to sort the books in the browser, without asking the server. The raw templates have example
+            values, so the frontend can be developed without the backend.</li>
         <li>Ids and classes are just the <b>contract with the designer</b>: the code has the whole DOM,
             with CSS selectors and tree navigation, for changes that depend on what the elements are and not
             on where they are. For example every external link (<code>a[href^="https://"]</code>) opens in a
