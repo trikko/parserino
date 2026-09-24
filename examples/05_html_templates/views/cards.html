@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<!--
+    The same page with a different layout: cards made of divs instead of a table.
+    The ids and classes are the same as in table.html, so the same D code fills both.
+-->
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Bookshop</title>
+    <style>
+        body { font-family: Georgia, serif; margin: 0; background: #f6f3ee; color: #333; }
+        .top { background: #2d2a26; color: #f6f3ee; padding: 1.5rem 2rem; }
+        .top a { color: #f0c987; }
+        .top h1 { margin: 0 0 .5rem; font-weight: normal; letter-spacing: .05em; }
+        .wrap { padding: 2rem; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr)); gap: 1.5rem; }
+        .book { background: white; border-radius: .5rem; padding: 1.2rem; box-shadow: 0 1px 4px #0002; display: flex; flex-direction: column; gap: .5rem; }
+        .book .title { font-size: 1.2rem; font-weight: bold; }
+        .book .author { font-style: italic; }
+        .tags { display: flex; gap: .3rem; flex-wrap: wrap; }
+        .tag { font-size: .75rem; color: #7a5b2e; text-decoration: none; border: 1px solid #e3d3b8; border-radius: .2rem; padding: 0 .4rem; }
+        .bottom { margin-top: auto; display: flex; justify-content: space-between; align-items: center; }
+        .price { font-size: 1.3rem; }
+        .details { background: #2d2a26; color: white; padding: .3rem .8rem; border-radius: .3rem; text-decoration: none; }
+        .sold-out { color: #b00; }
+        .note { color: #888; font-size: .9rem; }
+        #offer { background: #f0c987; padding: 1rem; margin-bottom: 1.5rem; border-radius: .5rem; }
+    </style>
+</head>
+<body>
+    <div class="top">
+        <h1 id="shop-name">Bookshop</h1>
+        <form action="/cards">
+            <input id="search" name="q" type="search" placeholder="Search books">
+            <button>Go</button>
+            <span class="note">— view as <a id="layout-table" href="/">table</a> or <a id="layout-cards" href="/cards">cards</a></span>
+        </form>
+    </div>
+
+    <div class="wrap">
+        <aside id="offer"><strong>Classics week</strong> — 20% off, only until Sunday.</aside>
+
+        <div id="results" class="grid">
+            <div class="book">
+                <div class="title">A book title</div>
+                <div>by <span class="author">An Author</span></div>
+                <div class="tags"><a class="tag" href="#">novel</a><a class="tag" href="#">classic</a></div>
+                <div class="bottom">
+                    <span class="price">€ 10.00</span>
+                    <a class="details" href="#">Details</a>
+                    <span class="sold-out">Sold out</span>
+                </div>
+            </div>
+            <div class="book">
+                <div class="title">Another title</div>
+                <div>by <span class="author">Someone Else</span></div>
+                <div class="tags"><a class="tag" href="#">essay</a></div>
+                <div class="bottom"><span class="price">€ 8.50</span><a class="details" href="#">Details</a></div>
+            </div>
+        </div>
+
+        <div id="no-results">
+            <h2>Nothing here</h2>
+            <p>We couldn't find “<b id="query">your search</b>”. Try another word.</p>
+        </div>
+
+        <p class="note"><span id="count">2</span> books · generated in <span id="elapsed">0</span> µs</p>
+    </div>
+</body>
+</html>

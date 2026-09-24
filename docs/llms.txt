@@ -74,4 +74,4 @@ Explore the `examples/` directory for practical implementations:
 - `02_search_elements`: Using `byTagName` and CSS selectors.
 - `03_edit_dom`: Adding fragments and creating new elements.
 - `04_wikipedia_scraper`: Real-world scraping with lazy filtering and CSS selectors.
-- `05_serve_html`: Integration with web servers.
+- `05_html_templates`: Parserino as a template engine with serverino: plain html templates (parsed at compile time with `ctDocument`) filled by id/class, cloned rows, removed sections, automatic escaping; two different layouts filled by the same code.

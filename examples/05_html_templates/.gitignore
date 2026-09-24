@@ -1,0 +1,7 @@
+.dub
+dub.selections.json
+/html_templates
+*.exe
+*.pdb
+*.o
+*.obj

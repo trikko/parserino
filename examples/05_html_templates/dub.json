@@ -1,0 +1,15 @@
+{
+	"name": "html_templates",
+	"description": "Parserino as a template engine: plain html templates filled from D",
+	"authors": ["Andrea Fontana"],
+	"license": "MIT",
+	"dependencies": {
+		"serverino": "~>0.8",
+		"parserino": { "path": "../../" }
+	},
+	"stringImportPaths": ["views"],
+	"configurations": [
+		{ "name": "default", "targetType": "executable" },
+		{ "name": "live", "targetType": "executable", "versions": ["LiveTemplates"] }
+	]
+}

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<!--
+    A plain html template: open it in a browser, edit it with any html editor.
+
+    The server fills the elements with these ids and classes. Keep them, but feel free to move
+    the elements around, to change their tags or to restyle them:
+
+        #shop-name  #count  #search  #layout-table  #layout-cards  #results  #no-results  #query  #elapsed  #offer
+        .book       one book: the first one is the model, the others are just examples
+          .title  .author  .price  .tag (repeated)  .details  .sold-out
+-->
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Bookshop</title>
+    <style>
+        body { font-family: system-ui, sans-serif; margin: 2rem auto; max-width: 60rem; color: #222; }
+        header { display: flex; flex-wrap: wrap; gap: 1rem; align-items: baseline; justify-content: space-between; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { text-align: left; padding: .5rem; border-bottom: 1px solid #ddd; }
+        .price { text-align: right; white-space: nowrap; }
+        .tag { font-size: .8rem; background: #eef; border-radius: 1rem; padding: .1rem .5rem; margin-right: .3rem; text-decoration: none; }
+        .sold-out { color: #b00; font-weight: bold; }
+        footer { margin-top: 2rem; color: #888; }
+        #offer { background: #ffd; border: 1px dashed #cc9; padding: .8rem; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1 id="shop-name">Bookshop</h1>
+        <nav>Layout: <a id="layout-table" href="/">table</a> · <a id="layout-cards" href="/cards">cards</a></nav>
+        <form action="/">
+            <input id="search" name="q" type="search" placeholder="Title, author or tag">
+            <button>Search</button>
+        </form>
+    </header>
+
+    <main>
+        <p id="offer">📚 This week: 20% off on every classic!</p>
+
+        <p><span id="count">3</span> books found</p>
+
+        <table id="results">
+            <thead>
+                <tr><th>Title</th><th>Author</th><th>Tags</th><th class="price">Price</th><th></th></tr>
+            </thead>
+            <tbody>
+                <tr class="book">
+                    <td class="title">A book title</td>
+                    <td class="author">An Author</td>
+                    <td><a class="tag" href="#">novel</a> <a class="tag" href="#">classic</a></td>
+                    <td class="price">€ 10.00</td>
+                    <td><a class="details" href="#">Details</a> <span class="sold-out">Sold out</span></td>
+                </tr>
+                <tr class="book">
+                    <td class="title">Another title</td>
+                    <td class="author">Someone Else</td>
+                    <td><a class="tag" href="#">essay</a></td>
+                    <td class="price">€ 8.50</td>
+                    <td><a class="details" href="#">Details</a></td>
+                </tr>
+                <tr class="book">
+                    <td class="title">The last example</td>
+                    <td class="author">A. N. Other</td>
+                    <td><a class="tag" href="#">poetry</a></td>
+                    <td class="price">€ 15.00</td>
+                    <td><span class="sold-out">Sold out</span></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <p id="no-results">No books found for “<span id="query">your search</span>”.</p>
+    </main>
+
+    <footer>Page generated in <span id="elapsed">0</span> µs</footer>
+</body>
+</html>
