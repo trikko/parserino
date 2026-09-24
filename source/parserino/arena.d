@@ -165,8 +165,9 @@ struct Buffer(T)
 
     size_t length;
 
+    package T[] data;
+
     private:
-    T[] data;
 
     void grow() @trusted
     {

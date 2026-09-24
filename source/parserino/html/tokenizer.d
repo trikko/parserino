@@ -105,14 +105,16 @@ struct Tokenizer
         this.sink = sink;
     }
 
-    /// Set by the tree builder: the new state and the name of the last start tag
-    void switchTo(State s, scope const(char)[] lastStartTagName = null)
+    /++ Set by the tree builder, while it processes a start tag (or before the input for fragments).
+     + For RCDATA, RAWTEXT and script data, the current start tag is the one that closes them.
+     +/
+    void switchTo(State s)
     {
         state = s;
-        if (lastStartTagName !is null)
+        if (s == State.rcdata || s == State.rawtext || s == State.scriptData)
         {
             lastStartTag.clear();
-            foreach (c; lastStartTagName) lastStartTag.put(c);
+            lastStartTag.put(tagName[]);
         }
     }
 
@@ -240,6 +242,27 @@ struct Tokenizer
 
     enum replacement = "\xEF\xBF\xBD";
 
+    // Character classes for the fast loops
+    enum : ubyte { dataSpecial = 1, endOfName = 2, endOfAttrName = 4, endOfUnquoted = 8 }
+
+    static immutable ubyte[256] charClass = () {
+        ubyte[256] t;
+        foreach (c; "<&\0") t[c] |= dataSpecial;
+        foreach (c; " \t\n\f\r/>\0") t[c] |= endOfName;
+        foreach (c; " \t\n\f\r/>=\0") t[c] |= endOfAttrName;
+        foreach (c; " \t\n\f\r>&\0") t[c] |= endOfUnquoted;
+        return t;
+    }();
+
+    // Append ASCII-lowercased
+    static void putLower(ref Buffer!char buf, scope const(char)[] s)
+    {
+        auto at = buf.length;
+        buf.put(s);
+        foreach (ref c; buf.data[at .. buf.length])
+            if (c >= 'A' && c <= 'Z') c |= 0x20;
+    }
+
     void emitText(char c) { text.put(c); if (c == '\0') textHasNull = true; }
     void emitText(scope const(char)[] s) { text.put(s); }
 
@@ -343,12 +366,6 @@ struct Tokenizer
         t.selfClosing = selfClosing;
         t.attributes = attrSlices[];
 
-        if (!isEndTag)
-        {
-            lastStartTag.clear();
-            foreach (c; tagName[]) lastStartTag.put(c);
-        }
-
         state = State.data;
         emit(t);
     }
@@ -443,13 +460,10 @@ struct Tokenizer
             {
                 // Fast path: a run of plain text
                 size_t start = pos;
-                while (pos < input.length)
-                {
-                    c = input[pos];
-                    if (c == '<' || c == '&' || c == '\0') break;
-                    pos++;
-                }
+                while (pos < input.length && !(charClass[input[pos]] & dataSpecial)) pos++;
                 if (pos > start) emitText(input[start .. pos]);
+                if (pos == input.length) return;
+                c = input[pos];
                 if (pos == input.length) return;
 
                 pos++;
@@ -504,12 +518,16 @@ struct Tokenizer
             case State.tagName:
                 while (pos < input.length)
                 {
+                    size_t start = pos;
+                    while (pos < input.length && !(charClass[input[pos]] & endOfName)) pos++;
+                    putLower(tagName, input[start .. pos]);
+                    if (pos == input.length) return;
+
                     c = input[pos++];
                     if (isSpace(c)) { state = State.beforeAttrName; return; }
                     if (c == '/') { state = State.selfClosingStartTag; return; }
                     if (c == '>') { emitTag(); return; }
-                    if (c == '\0') { foreach (r; replacement) tagName.put(r); continue; }
-                    tagName.put(lower(c));
+                    tagName.put(replacement);
                 }
                 return;
 
@@ -679,12 +697,16 @@ struct Tokenizer
             case State.attrName:
                 while (pos < input.length)
                 {
+                    size_t start = pos;
+                    while (pos < input.length && !(charClass[input[pos]] & endOfAttrName)) pos++;
+                    putLower(tokData, input[start .. pos]);
+                    if (pos == input.length) return;
+
                     c = input[pos];
                     if (isSpace(c) || c == '/' || c == '>') { endAttrName(); state = State.afterAttrName; return; }
                     pos++;
                     if (c == '=') { endAttrName(); state = State.beforeAttrValue; return; }
-                    if (c == '\0') { foreach (r; replacement) tokData.put(r); continue; }
-                    tokData.put(lower(c));
+                    tokData.put(replacement);
                 }
                 return;
 
@@ -727,6 +749,11 @@ struct Tokenizer
             case State.attrValueUnquoted:
                 while (pos < input.length)
                 {
+                    size_t start = pos;
+                    while (pos < input.length && !(charClass[input[pos]] & endOfUnquoted)) pos++;
+                    tokData.put(input[start .. pos]);
+                    if (pos == input.length) return;
+
                     c = input[pos];
                     if (isSpace(c)) { pos++; endAttribute(); state = State.beforeAttrName; return; }
                     if (c == '>') { pos++; emitTag(); return; }
