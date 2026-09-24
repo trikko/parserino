@@ -7,7 +7,8 @@
  Benchmark of parsing (full and lazy), `ctDocument`, queries and serialization.
  See README.md for the instructions (fixed core, compiler flags).
 
- Usage: bench [--rounds N] [files...]   (default: the real_* pages of tools/corpus/files)
+ Usage: bench [--rounds N] [--only name] [files...]   (default: the real_* pages of tools/corpus/files)
+   --only name   run only the measures whose name starts with `name` (for profiling)
 +/
 module bench;
 
@@ -25,6 +26,7 @@ enum string[] selectors = ["a[href]", "div p", "ul > li:nth-child(2n+1)", ".mw-b
 // The median time (in µs) of `rounds` runs of `fn`
 double median(size_t rounds, scope void delegate() fn)
 {
+    if (rounds == 0) return 0;
     double[] times;
     foreach (_; 0 .. rounds)
     {
@@ -39,10 +41,12 @@ double median(size_t rounds, scope void delegate() fn)
 void main(string[] args)
 {
     size_t rounds = 30;
+    string only;
     string[] files;
     for (size_t i = 1; i < args.length; i++)
     {
         if (args[i] == "--rounds") rounds = args[++i].to!size_t;
+        else if (args[i] == "--only") only = args[++i];
         else files ~= args[i];
     }
     if (files.length == 0)
@@ -53,35 +57,57 @@ void main(string[] args)
     size_t total = pages.map!(p => p.length).sum;
     writefln("%d files, %.2f MB, median of %d rounds", pages.length, total / 1e6, rounds);
 
+    // With --only, the other measures run 0 rounds
+    size_t roundsOf(string name) { return only.length && !name.startsWith(only) ? 0 : rounds; }
+
     void report(string name, double us, size_t bytes = 0)
     {
+        if (us == 0) return;
         if (bytes) writefln("%-28s %10.0f µs  %8.1f MB/s", name, us, bytes / us);
         else writefln("%-28s %10.0f µs", name, us);
     }
 
-    report("parse", median(rounds, { foreach (p; pages) { auto d = Document(p); } }), total);
+    report("parse", median(roundsOf("parse"), { foreach (p; pages) { auto d = Document(p); } }), total);
 
-    report("parse lazy + 5 links", median(rounds, {
+    report("parse lazy + 5 links", median(roundsOf("parse lazy + 5 links"), {
         foreach (p; pages) { auto d = Document(p, Parsing.Lazy); d.byTagName("a").take(5).walkLength; }
     }));
 
-    report("parse lazy + finish", median(rounds, {
+    report("parse lazy + finish", median(roundsOf("parse lazy + finish"), {
         foreach (p; pages) { auto d = Document(p, Parsing.Lazy); d.finishParsing(); }
     }), total);
 
-    report("ctDocument (60 KB)", median(rounds, { foreach (_; 0 .. 10) { auto d = ctDocument!ctHtml; } }) / 10);
-    report("parse the same 60 KB", median(rounds, { foreach (_; 0 .. 10) { auto d = Document(ctHtml); } }) / 10);
+    report("ctDocument (60 KB)", median(roundsOf("ctDocument (60 KB)"), { foreach (_; 0 .. 10) { auto d = ctDocument!ctHtml; } }) / 10);
+    report("parse the same 60 KB", median(roundsOf("parse the same 60 KB"), { foreach (_; 0 .. 10) { auto d = Document(ctHtml); } }) / 10);
 
     auto docs = pages.map!(p => Document(p)).array;
 
     auto sels = selectors.map!(s => Selector(s)).array;
-    report("selectors", median(rounds, {
+    report("selectors", median(roundsOf("selectors"), {
         foreach (ref d; docs) foreach (ref s; sels) d.bySelector(s).walkLength;
     }));
 
-    report("byTagName + byClass + byId", median(rounds, {
+    auto descendant = [Selector("div div a"), Selector("body div span"), Selector("ul li a"), Selector("div p")];
+    report("descendant selectors", median(roundsOf("descendant selectors"), {
+        foreach (ref d; docs) foreach (ref s; descendant) d.bySelector(s).walkLength;
+    }));
+
+    report("byTagName + byClass + byId", median(roundsOf("byTagName + byClass + byId"), {
         foreach (ref d; docs) { d.byTagName("a").walkLength; d.byClass("x").walkLength; d.byId("content"); }
     }));
 
-    report("serialize", median(rounds, { foreach (ref d; docs) d.toString(); }), total);
+    // 100 lookups of ids of each document
+    auto idsOf = docs.map!(d => d.descendants.map!(e => e.id).filter!(i => i.length).take(100).array).array;
+    report("byId x100", median(roundsOf("byId x100"), {
+        foreach (i, ref d; docs) foreach (id; idsOf[i]) d.byId(id);
+    }));
+
+    // Into a sink that only counts: no GC in the measure
+    size_t written;
+    report("serialize", median(roundsOf("serialize"), {
+        foreach (ref d; docs) d.toString((const(char)[] s) { written += s.length; });
+    }), total);
+
+    auto snaps = docs.map!(d => d.snapshot).array;
+    report("Document(snapshot)", median(roundsOf("Document(snapshot)"), { foreach (ref s; snaps) { auto d = Document(s); } }), total);
 }

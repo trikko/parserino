@@ -286,7 +286,7 @@ struct Tokenizer
     enum Replacement = "\xEF\xBF\xBD";
 
     // Character classes for the fast loops
-    enum : ubyte { DataSpecial = 1, EndOfName = 2, EndOfAttrName = 4, EndOfUnquoted = 8 }
+    enum : ubyte { DataSpecial = 1, EndOfName = 2, EndOfAttrName = 4, EndOfUnquoted = 8, Upper = 16 }
 
     static immutable ubyte[256] charClass = () {
         ubyte[256] t;
@@ -294,8 +294,32 @@ struct Tokenizer
         foreach (c; " \t\n\f\r/>\0") t[c] |= EndOfName;
         foreach (c; " \t\n\f\r/>=\0") t[c] |= EndOfAttrName;
         foreach (c; " \t\n\f\r>&\0") t[c] |= EndOfUnquoted;
+        foreach (c; 'A' .. 'Z' + 1) t[c] |= Upper;
         return t;
     }();
+
+    /+ The index of the first `a`, `b` or `c` in `s` from `i`, or `s.length`. It reads 8 bytes at
+     + a time (SWAR: a byte equal to `a` is a zero byte of `w ^ a...a`).
+     +/
+    static size_t findAny(char a, char b, char c)(scope const(char)[] s, size_t i) @trusted
+    {
+        enum ulong ones = 0x0101_0101_0101_0101, high = 0x8080_8080_8080_8080;
+        enum ulong ma = ones * a, mb = ones * b, mc = ones * c;
+
+        if (!__ctfe)
+        {
+            while (i + 8 <= s.length)
+            {
+                ulong w = *cast(const(ulong)*) (s.ptr + i);
+                ulong x = w ^ ma, y = w ^ mb, z = w ^ mc;
+                if ((((x - ones) & ~x) | ((y - ones) & ~y) | ((z - ones) & ~z)) & high) break;
+                i += 8;
+            }
+        }
+
+        while (i < s.length && s[i] != a && s[i] != b && s[i] != c) i++;
+        return i;
+    }
 
     // Did a buffer run out of memory?
     bool buffersFailed() const
@@ -549,11 +573,10 @@ struct Tokenizer
             {
                 // Fast path: a run of plain text
                 size_t start = pos;
-                while (pos < input.length && !(charClass[input[pos]] & DataSpecial)) pos++;
+                pos = findAny!('<', '&', '\0')(input, pos);
                 if (pos > start) emitText(input[start .. pos]);
                 if (pos == input.length) return;
                 c = input[pos];
-                if (pos == input.length) return;
 
                 pos++;
                 if (c == '<') state = State.TagOpen;
@@ -565,7 +588,7 @@ struct Tokenizer
             case State.Rcdata:
             {
                 size_t start = pos;
-                while (pos < input.length && input[pos] != '<' && input[pos] != '&' && input[pos] != '\0') pos++;
+                pos = findAny!('<', '&', '\0')(input, pos);
                 if (pos > start) emitText(input[start .. pos]);
                 if (pos == input.length) return;
 
@@ -579,8 +602,7 @@ struct Tokenizer
             case State.Rawtext, State.ScriptData, State.Plaintext:
             {
                 size_t start = pos;
-                bool lt = state != State.Plaintext;
-                while (pos < input.length && !(lt && input[pos] == '<') && input[pos] != '\0') pos++;
+                pos = state != State.Plaintext ? findAny!('<', '\0', '\0')(input, pos) : findAny!('\0', '\0', '\0')(input, pos);
                 if (pos > start) emitText(input[start .. pos]);
                 if (pos == input.length) return;
 
@@ -607,9 +629,18 @@ struct Tokenizer
             case State.TagName:
                 while (pos < input.length)
                 {
+                    // The names are almost always lowercase: they are lowercased only if needed
                     size_t start = pos;
-                    while (pos < input.length && !(charClass[input[pos]] & EndOfName)) pos++;
-                    tagName.putLower(input[start .. pos]);
+                    ubyte seen = 0;
+                    while (pos < input.length)
+                    {
+                        auto k = charClass[input[pos]];
+                        if (k & EndOfName) break;
+                        seen |= k;
+                        pos++;
+                    }
+                    if (seen & Upper) tagName.putLower(input[start .. pos]);
+                    else tagName.put(input[start .. pos]);
                     if (pos == input.length) return;
 
                     c = input[pos++];
@@ -689,7 +720,7 @@ struct Tokenizer
             case State.ScriptDataEscaped:
             {
                 size_t start = pos;
-                while (pos < input.length && input[pos] != '-' && input[pos] != '<' && input[pos] != '\0') pos++;
+                pos = findAny!('-', '<', '\0')(input, pos);
                 if (pos > start) emitText(input[start .. pos]);
                 if (pos == input.length) return;
 
@@ -742,7 +773,7 @@ struct Tokenizer
             case State.ScriptDataDoubleEscaped:
             {
                 size_t start = pos;
-                while (pos < input.length && input[pos] != '-' && input[pos] != '<' && input[pos] != '\0') pos++;
+                pos = findAny!('-', '<', '\0')(input, pos);
                 if (pos > start) emitText(input[start .. pos]);
                 if (pos == input.length) return;
 
@@ -788,14 +819,22 @@ struct Tokenizer
                 while (pos < input.length)
                 {
                     size_t start = pos;
-                    while (pos < input.length && !(charClass[input[pos]] & EndOfAttrName)) pos++;
+                    ubyte seen = 0;
+                    while (pos < input.length)
+                    {
+                        auto k = charClass[input[pos]];
+                        if (k & EndOfAttrName) break;
+                        seen |= k;
+                        pos++;
+                    }
                     if (collectErrors) foreach (i, ch; input[start .. pos])
                         if (ch == '"' || ch == '\'' || ch == '<')
                         {
                             countTo(start + i);
                             errors.put(RawParseError(ParseErrorCode.UnexpectedCharacterInAttributeName, line, column + 1));
                         }
-                    tokData.putLower(input[start .. pos]);
+                    if (seen & Upper) tokData.putLower(input[start .. pos]);
+                    else tokData.put(input[start .. pos]);
                     if (pos == input.length) return;
 
                     c = input[pos];
@@ -831,7 +870,7 @@ struct Tokenizer
                 while (pos < input.length)
                 {
                     size_t start = pos;
-                    while (pos < input.length && input[pos] != q && input[pos] != '&' && input[pos] != '\0') pos++;
+                    pos = q == '"' ? findAny!('"', '&', '\0')(input, pos) : findAny!('\'', '&', '\0')(input, pos);
                     tokData.put(input[start .. pos]);
                     if (pos == input.length) return;
 
@@ -941,7 +980,7 @@ struct Tokenizer
                 while (pos < input.length)
                 {
                     size_t start = pos;
-                    while (pos < input.length && input[pos] != '<' && input[pos] != '-' && input[pos] != '\0') pos++;
+                    pos = findAny!('<', '-', '\0')(input, pos);
                     tokData.put(input[start .. pos]);
                     if (pos == input.length) return;
 
