@@ -323,7 +323,7 @@ NegativeThinSpace;	e2808b
 NegativeVeryThinSpace;	e2808b
 NestedGreaterGreater;	e289ab
 NestedLessLess;	e289aa
-NewLine;	78
+NewLine;	0a
 Nfr;	f09d9491
 NoBreak;	e281a0
 NonBreakingSpace;	c2a0
@@ -527,7 +527,7 @@ THORN;	c39e
 TRADE;	e284a2
 TSHcy;	d08b
 TScy;	d0a6
-Tab;	78
+Tab;	09
 Tau;	cea4
 Tcaron;	c5a4
 Tcedil;	c5a2

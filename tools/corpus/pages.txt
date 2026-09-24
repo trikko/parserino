@@ -1,0 +1,9 @@
+20260831021048 https://dlang.org/
+20260829032121 https://en.wikipedia.org/wiki/D_(programming_language)
+20260902032949 https://en.wikipedia.org/wiki/HTML5
+20260827042637 https://github.com/lexbor/lexbor
+20260921071439 https://html.spec.whatwg.org/multipage/parsing.html
+20260902000321 https://news.ycombinator.com/
+20260901235618 https://www.bbc.com/news
+20260902014039 https://www.repubblica.it/
+20260801224624 https://www.w3.org/TR/selectors-4/

@@ -1,0 +1,9 @@
+9 files, 4.15 MB, median of 30 rounds
+parse                             14067 µs     294.9 MB/s
+parse lazy + 5 links                898 µs
+parse lazy + finish               14108 µs     294.0 MB/s
+ctDocument (60 KB)                   39 µs
+parse the same 60 KB                373 µs
+selectors                          6924 µs
+byTagName + byClass + byId         2213 µs
+serialize                         16738 µs     247.8 MB/s

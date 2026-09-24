@@ -17,3 +17,12 @@ tools/difftest/lazytest
 tools/difftest/dump
 tools/difftest/selfuzz
 tools/difftest/newparse
+tools/difftest/snaptest
+tools/html5lib/treetest
+tools/html5lib/tokentest
+tools/bench/bench
+tools/corpus/files/
+tools/corpus/wpt/
+tools/corpus/html5lib-tests/
+lexbor.dll
+libparserino.a

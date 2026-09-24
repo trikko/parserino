@@ -1,0 +1,25 @@
+# Tokenizer tests that fail (file:index:state[:bytes]). Regenerate with tokentest --update.
+# The <? tests of html5lib-tests expect bogus comments: the tree construction tests of WPT (newer)
+# expect processing instructions, as the current standard does. We follow WPT.
+test2.test:31:Data state
+test2.test:31:Data state:bytes
+test2.test:32:Data state
+test2.test:32:Data state:bytes
+test3.test:1158:Data state
+test3.test:1158:Data state:bytes
+test3.test:1180:Data state
+test3.test:1180:Data state:bytes
+test3.test:1181:Data state
+test3.test:1181:Data state:bytes
+test3.test:1182:Data state
+test3.test:1182:Data state:bytes
+test3.test:1183:Data state
+test3.test:1183:Data state:bytes
+test3.test:1185:Data state
+test3.test:1185:Data state:bytes
+test3.test:1186:Data state
+test3.test:1186:Data state:bytes
+test3.test:1187:Data state
+test3.test:1187:Data state:bytes
+test3.test:1188:Data state
+test3.test:1188:Data state:bytes

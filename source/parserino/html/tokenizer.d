@@ -118,6 +118,13 @@ struct Tokenizer
         }
     }
 
+    /// Set the last start tag, which closes RCDATA, RAWTEXT and script data (for tests of the tokenizer alone)
+    void setLastStartTag(scope const(char)[] name)
+    {
+        lastStartTag.clear();
+        lastStartTag.put(name);
+    }
+
     /// Tokenize a chunk. It returns false on errors (out of memory).
     bool feed(scope const(char)[] chunk)
     {
