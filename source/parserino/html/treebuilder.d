@@ -9,6 +9,7 @@ import parserino.arena;
 import parserino.names;
 import parserino.dom;
 import parserino.html.tokenizer;
+import parserino.html.errors;
 
 @nogc nothrow pure @safe:
 
@@ -111,6 +112,15 @@ struct TreeBuilder
             }
         }
 
+        // "Acknowledge the self-closing flag": only void and foreign elements can have it
+        if (t.type == TokenType.StartTag && t.selfClosing && tokenizer !is null && tokenizer.collectErrors)
+        {
+            auto adjusted = adjustedCurrent();
+            bool foreign = t.tag == Tag.Svg || t.tag == Tag.Math || (adjusted !is null && adjusted.ns != Ns.Html
+                && !htmlIntegrationPoint(adjusted) && !mathTextIntegrationPoint(adjusted));
+            if (!foreign && !isVoidTag(t.tag)) err(ParseErrorCode.NonVoidHtmlElementStartTagWithTrailingSolidus);
+        }
+
         while (!failed && !dispatch(t)) {}
         if (buffersFailed()) failed = true;
         return !failed;
@@ -169,6 +179,63 @@ struct TreeBuilder
     // ------------------------------------------------------------ stack of open elements
 
     DomNode* current() { return openElements.length ? openElements[openElements.length - 1] : null; }
+
+    // A parse error of the tree construction (collected by the tokenizer, if it collects them)
+    void err(ParseErrorCode code) { if (tokenizer !is null) tokenizer.error(code); }
+
+    // The parse error of a token that is not allowed here
+    void errToken(ref const Token t)
+    {
+        final switch (t.type)
+        {
+            case TokenType.StartTag: err(ParseErrorCode.UnexpectedStartTag); break;
+            case TokenType.EndTag: err(ParseErrorCode.UnexpectedEndTag); break;
+            case TokenType.Text: err(ParseErrorCode.UnexpectedText); break;
+            case TokenType.Doctype: err(ParseErrorCode.UnexpectedDoctype); break;
+            case TokenType.Eof: err(ParseErrorCode.UnclosedElementAtEof); break;
+            case TokenType.Comment, TokenType.ProcessingInstruction: break;
+        }
+    }
+
+    // Pop up to the element `tag`: an error if it isn't the current node
+    void popUntilChecked(uint tag)
+    {
+        if (!current().isHtml(tag)) err(ParseErrorCode.MisnestedTag);
+        popUntil(tag);
+    }
+
+    // Are there open elements that can't be left open at the end of the body?
+    bool unclosedElements()
+    {
+        foreach (n; openElements[])
+        {
+            if (n.type != NodeType.Element || n.ns != Ns.Html) return true;
+            switch (n.name)
+            {
+                case Tag.Dd, Tag.Dt, Tag.Li, Tag.Optgroup, Tag.Option, Tag.P, Tag.Rb, Tag.Rp, Tag.Rt, Tag.Rtc,
+                     Tag.Tbody, Tag.Td, Tag.Tfoot, Tag.Th, Tag.Thead, Tag.Tr, Tag.Body, Tag.Html:
+                    continue;
+                default: return true;
+            }
+        }
+        return false;
+    }
+
+    static bool conformingDoctype(ref const Token t)
+    {
+        return t.name == "html" && !t.hasPublicId && (!t.hasSystemId || t.systemId == "about:legacy-compat");
+    }
+
+    static bool isVoidTag(uint tag)
+    {
+        switch (tag)
+        {
+            case Tag.Area, Tag.Base, Tag.Basefont, Tag.Bgsound, Tag.Br, Tag.Col, Tag.Embed, Tag.Frame, Tag.Hr,
+                 Tag.Img, Tag.Input, Tag.Keygen, Tag.Link, Tag.Meta, Tag.Param, Tag.Source, Tag.Track, Tag.Wbr:
+                return true;
+            default: return false;
+        }
+    }
 
     // A template on the stack, or a template as fragment context: the form element pointer is ignored
     bool parsingTemplateContents()
@@ -358,7 +425,7 @@ struct TreeBuilder
     void closePElement()
     {
         generateImpliedEndTags(Tag.P);
-        popUntil(Tag.P);
+        popUntilChecked(Tag.P);
     }
 
     void closePIfInButtonScope()
@@ -915,6 +982,7 @@ struct TreeBuilder
     const(char)[] cleanText(ref Token t, bool replace)
     {
         if (!t.hasNull) return t.data;
+        err(ParseErrorCode.UnexpectedNullCharacter);
 
         scratch.clear();
         foreach (c; t.data)
@@ -1016,6 +1084,7 @@ struct TreeBuilder
             case TokenType.Comment: insertComment(t, &doc.node); return true;
             case TokenType.ProcessingInstruction: insertProcessingInstruction(t, &doc.node); return true;
             case TokenType.Doctype:
+                if (!conformingDoctype(t)) err(ParseErrorCode.NonConformingDoctype);
                 mode = Mode.BeforeHtml;
                 insertDoctype(t);
                 return true;
@@ -1024,6 +1093,7 @@ struct TreeBuilder
                 if (t.data.length == 0) return true;
                 goto default;
             default:
+                err(ParseErrorCode.MissingDoctype);
                 compatMode = CompatMode.Quirks;
                 if (context is null) doc.compatMode = compatMode;
                 mode = Mode.BeforeHtml;
@@ -1083,7 +1153,7 @@ struct TreeBuilder
     {
         switch (t.type)
         {
-            case TokenType.Doctype: return true;
+            case TokenType.Doctype: err(ParseErrorCode.UnexpectedDoctype); return true;
             case TokenType.Comment: insertComment(t, &doc.node); return true;
             case TokenType.ProcessingInstruction: insertProcessingInstruction(t, &doc.node); return true;
             case TokenType.Text:
@@ -1101,7 +1171,11 @@ struct TreeBuilder
                 }
                 break;
             case TokenType.EndTag:
-                if (t.tag != Tag.Head && t.tag != Tag.Body && t.tag != Tag.Html && t.tag != Tag.Br) return true;
+                if (t.tag != Tag.Head && t.tag != Tag.Body && t.tag != Tag.Html && t.tag != Tag.Br)
+                {
+                    err(ParseErrorCode.UnexpectedEndTag);
+                    return true;
+                }
                 break;
             default: break;
         }
@@ -1128,7 +1202,7 @@ struct TreeBuilder
         {
             case TokenType.Comment: insertComment(t); return true;
             case TokenType.ProcessingInstruction: insertProcessingInstruction(t); return true;
-            case TokenType.Doctype: return true;
+            case TokenType.Doctype: err(ParseErrorCode.UnexpectedDoctype); return true;
             case TokenType.Text:
                 leadingSpace(t);
                 if (t.data.length == 0) return true;
@@ -1143,7 +1217,11 @@ struct TreeBuilder
                 }
                 break;
             case TokenType.EndTag:
-                if (t.tag != Tag.Head && t.tag != Tag.Body && t.tag != Tag.Html && t.tag != Tag.Br) return true;
+                if (t.tag != Tag.Head && t.tag != Tag.Body && t.tag != Tag.Html && t.tag != Tag.Br)
+                {
+                    err(ParseErrorCode.UnexpectedEndTag);
+                    return true;
+                }
                 break;
             default: break;
         }
@@ -1161,7 +1239,7 @@ struct TreeBuilder
         {
             case TokenType.Comment: insertComment(t); return true;
             case TokenType.ProcessingInstruction: insertProcessingInstruction(t); return true;
-            case TokenType.Doctype: return true;
+            case TokenType.Doctype: err(ParseErrorCode.UnexpectedDoctype); return true;
 
             case TokenType.Text:
                 insertText(leadingSpace(t));
@@ -1202,7 +1280,7 @@ struct TreeBuilder
                         mode = Mode.InTemplate;
                         templateModes.put(Mode.InTemplate);
                         return true;
-                    case Tag.Head: return true;
+                    case Tag.Head: err(ParseErrorCode.UnexpectedStartTag); return true;
                     default: break;
                 }
                 break;
@@ -1216,7 +1294,7 @@ struct TreeBuilder
                         return true;
                     case Tag.Body, Tag.Html, Tag.Br: break;
                     case Tag.Template: templateEnd(); return true;
-                    default: return true;
+                    default: err(ParseErrorCode.UnexpectedEndTag); return true;
                 }
                 break;
 
@@ -1230,9 +1308,9 @@ struct TreeBuilder
 
     void templateEnd()
     {
-        if (findInStack(Tag.Template) is null) return;
+        if (findInStack(Tag.Template) is null) { err(ParseErrorCode.UnexpectedEndTag); return; }
         generateImpliedEndTagsThoroughly();
-        popUntil(Tag.Template);
+        popUntilChecked(Tag.Template);
         clearToLastMarker();
         if (templateModes.length) templateModes.removeLast();
         resetInsertionMode();
@@ -1242,7 +1320,7 @@ struct TreeBuilder
     {
         switch (t.type)
         {
-            case TokenType.Doctype: return true;
+            case TokenType.Doctype: err(ParseErrorCode.UnexpectedDoctype); return true;
             case TokenType.Comment, TokenType.ProcessingInstruction: return inHead(t);
             case TokenType.Text:
                 insertText(leadingSpace(t));
@@ -1253,17 +1331,18 @@ struct TreeBuilder
                 {
                     case Tag.Html: return inBody(t);
                     case Tag.Basefont, Tag.Bgsound, Tag.Link, Tag.Meta, Tag.Noframes, Tag.Style: return inHead(t);
-                    case Tag.Head, Tag.Noscript: return true;
+                    case Tag.Head, Tag.Noscript: err(ParseErrorCode.UnexpectedStartTag); return true;
                     default: break;
                 }
                 break;
             case TokenType.EndTag:
                 if (t.tag == Tag.Noscript) { pop(); mode = Mode.InHead; return true; }
-                if (t.tag != Tag.Br) return true;
+                if (t.tag != Tag.Br) { err(ParseErrorCode.UnexpectedEndTag); return true; }
                 break;
             default: break;
         }
 
+        errToken(t);
         pop();
         mode = Mode.InHead;
         return false;
@@ -1277,7 +1356,7 @@ struct TreeBuilder
         {
             case TokenType.Comment: insertComment(t); return true;
             case TokenType.ProcessingInstruction: insertProcessingInstruction(t); return true;
-            case TokenType.Doctype: return true;
+            case TokenType.Doctype: err(ParseErrorCode.UnexpectedDoctype); return true;
             case TokenType.Text:
                 insertText(leadingSpace(t));
                 if (t.data.length == 0) return true;
@@ -1298,17 +1377,18 @@ struct TreeBuilder
                     case Tag.Base, Tag.Basefont, Tag.Bgsound, Tag.Link, Tag.Meta, Tag.Noframes, Tag.Script,
                          Tag.Style, Tag.Template, Tag.Title:
                         if (head is null) { failed = true; return true; }
+                        err(ParseErrorCode.UnexpectedStartTag);
                         push(&head.node);
                         inHead(t);
                         removeFromStack(&head.node);
                         return true;
-                    case Tag.Head: return true;
+                    case Tag.Head: err(ParseErrorCode.UnexpectedStartTag); return true;
                     default: break;
                 }
                 break;
             case TokenType.EndTag:
                 if (t.tag == Tag.Template) return inHead(t);
-                if (t.tag != Tag.Body && t.tag != Tag.Html && t.tag != Tag.Br) return true;
+                if (t.tag != Tag.Body && t.tag != Tag.Html && t.tag != Tag.Br) { err(ParseErrorCode.UnexpectedEndTag); return true; }
                 break;
             default: break;
         }
@@ -1334,9 +1414,10 @@ struct TreeBuilder
             }
             case TokenType.Comment: insertComment(t); return true;
             case TokenType.ProcessingInstruction: insertProcessingInstruction(t); return true;
-            case TokenType.Doctype: return true;
+            case TokenType.Doctype: err(ParseErrorCode.UnexpectedDoctype); return true;
             case TokenType.Eof:
                 if (templateModes.length) return inTemplate(t);
+                if (unclosedElements()) err(ParseErrorCode.UnclosedElementAtEof);
                 return true;
             case TokenType.StartTag: return inBodyStart(t);
             case TokenType.EndTag: return inBodyEnd(t);
@@ -1355,6 +1436,7 @@ struct TreeBuilder
         switch (t.tag)
         {
             case Tag.Html:
+                err(ParseErrorCode.UnexpectedStartTag);
                 if (findInStack(Tag.Template) !is null) return true;
                 mergeAttributes(openElements[0].as!DomElement, t);
                 return true;
@@ -1365,6 +1447,7 @@ struct TreeBuilder
 
             case Tag.Body:
             {
+                err(ParseErrorCode.UnexpectedStartTag);
                 if (openElements.length < 2) return true;
                 auto n = openElements[1];
                 if (!n.isHtml(Tag.Body) || findInStack(Tag.Template) !is null) return true;
@@ -1375,6 +1458,7 @@ struct TreeBuilder
 
             case Tag.Frameset:
             {
+                err(ParseErrorCode.UnexpectedStartTag);
                 if (openElements.length < 2) return true;
                 auto n = openElements[1];
                 if (!n.isHtml(Tag.Body) || !framesetOk) return true;
@@ -1396,7 +1480,7 @@ struct TreeBuilder
             {
                 closePIfInButtonScope();
                 auto n = current();
-                if (n.ns == Ns.Html && isHeading(n.name)) pop();
+                if (n.ns == Ns.Html && isHeading(n.name)) { err(ParseErrorCode.MisnestedTag); pop(); }
                 insertElement(t);
                 return true;
             }
@@ -1411,7 +1495,7 @@ struct TreeBuilder
             case Tag.Form:
             {
                 bool inTemplate = parsingTemplateContents();
-                if (form !is null && !inTemplate) return true;
+                if (form !is null && !inTemplate) { err(ParseErrorCode.UnexpectedStartTag); return true; }
                 closePIfInButtonScope();
                 auto e = insertElement(t);
                 if (!inTemplate) form = e;
@@ -1432,7 +1516,7 @@ struct TreeBuilder
                     if (match != Tag.Undef)
                     {
                         generateImpliedEndTags(match);
-                        popUntil(match);
+                        popUntilChecked(match);
                         break;
                     }
 
@@ -1453,6 +1537,7 @@ struct TreeBuilder
             case Tag.Button:
                 if (inScope(Tag.Button, Category.Scope) !is null)
                 {
+                    err(ParseErrorCode.UnexpectedStartTag);
                     generateImpliedEndTags();
                     popUntil(Tag.Button);
                 }
@@ -1465,6 +1550,7 @@ struct TreeBuilder
             {
                 if (auto n = afeAfterLastMarker(Tag.A))
                 {
+                    err(ParseErrorCode.MisnestedTag);
                     adoptionAgency(t);
                     removeFromAfe(n);
                     removeFromStack(n);
@@ -1483,6 +1569,7 @@ struct TreeBuilder
                 reconstructFormatting();
                 if (inScope(Tag.Nobr, Category.Scope) !is null)
                 {
+                    err(ParseErrorCode.MisnestedTag);
                     if (adoptionAgency(t)) anyOtherEndTag(t);
                     reconstructFormatting();
                 }
@@ -1511,8 +1598,8 @@ struct TreeBuilder
 
             case Tag.Input:
             {
-                if (context !is null && context.isHtml(Tag.Select)) return true;
-                if (auto sel = inScope(Tag.Select, Category.Scope)) popUntilNode(sel);
+                if (context !is null && context.isHtml(Tag.Select)) { err(ParseErrorCode.UnexpectedStartTag); return true; }
+                if (auto sel = inScope(Tag.Select, Category.Scope)) { err(ParseErrorCode.UnexpectedStartTag); popUntilNode(sel); }
                 reconstructFormatting();
                 auto e = insertElement(t);
                 if (e is null) return true;
@@ -1534,6 +1621,7 @@ struct TreeBuilder
                 return true;
 
             case Tag.Image:
+                err(ParseErrorCode.UnexpectedStartTag);
                 t.tag = Tag.Img;
                 t.name = "img";
                 return false;
@@ -1569,8 +1657,8 @@ struct TreeBuilder
                 return true;
 
             case Tag.Select:
-                if (context !is null && context.isHtml(Tag.Select)) return true;
-                if (auto sel = inScope(Tag.Select, Category.Scope)) { popUntilNode(sel); return true; }
+                if (context !is null && context.isHtml(Tag.Select)) { err(ParseErrorCode.UnexpectedStartTag); return true; }
+                if (auto sel = inScope(Tag.Select, Category.Scope)) { err(ParseErrorCode.UnexpectedStartTag); popUntilNode(sel); return true; }
                 reconstructFormatting();
                 insertElement(t);
                 framesetOk = false;
@@ -1607,6 +1695,7 @@ struct TreeBuilder
 
             case Tag.Caption, Tag.Col, Tag.Colgroup, Tag.Frame, Tag.Head, Tag.Tbody, Tag.Td, Tag.Tfoot, Tag.Th,
                  Tag.Thead, Tag.Tr:
+                err(ParseErrorCode.UnexpectedStartTag);
                 return true;
 
             default:
@@ -1642,12 +1731,14 @@ struct TreeBuilder
             case Tag.Template: return inHead(t);
 
             case Tag.Body:
-                if (inScope(Tag.Body, Category.Scope) is null) return true;
+                if (inScope(Tag.Body, Category.Scope) is null) { err(ParseErrorCode.UnexpectedEndTag); return true; }
+                if (unclosedElements()) err(ParseErrorCode.MisnestedTag);
                 mode = Mode.AfterBody;
                 return true;
 
             case Tag.Html:
-                if (inScope(Tag.Body, Category.Scope) is null) return true;
+                if (inScope(Tag.Body, Category.Scope) is null) { err(ParseErrorCode.UnexpectedEndTag); return true; }
+                if (unclosedElements()) err(ParseErrorCode.MisnestedTag);
                 mode = Mode.AfterBody;
                 return false;
 
@@ -1655,9 +1746,9 @@ struct TreeBuilder
                  Tag.Dir, Tag.Div, Tag.Dl, Tag.Fieldset, Tag.Figcaption, Tag.Figure, Tag.Footer, Tag.Header, Tag.Hgroup,
                  Tag.Listing, Tag.Main, Tag.Menu, Tag.Nav, Tag.Ol, Tag.Pre, Tag.Search, Tag.Section, Tag.Select,
                  Tag.Summary, Tag.Ul:
-                if (inScope(t.tag, Category.Scope) is null) return true;
+                if (inScope(t.tag, Category.Scope) is null) { err(ParseErrorCode.UnexpectedEndTag); return true; }
                 generateImpliedEndTags();
-                popUntil(t.tag);
+                popUntilChecked(t.tag);
                 return true;
 
             case Tag.Form:
@@ -1666,38 +1757,40 @@ struct TreeBuilder
                 {
                     DomNode* node = form is null ? null : &form.node;
                     form = null;
-                    if (node is null || inScopeNode(node, Category.Scope) is null) return true;
+                    if (node is null || inScopeNode(node, Category.Scope) is null) { err(ParseErrorCode.UnexpectedEndTag); return true; }
                     generateImpliedEndTags();
+                    if (current() !is node) err(ParseErrorCode.MisnestedTag);
                     removeFromStack(node);
                     return true;
                 }
 
-                if (inScope(Tag.Form, Category.Scope) is null) return true;
+                if (inScope(Tag.Form, Category.Scope) is null) { err(ParseErrorCode.UnexpectedEndTag); return true; }
                 generateImpliedEndTags();
-                popUntil(Tag.Form);
+                popUntilChecked(Tag.Form);
                 return true;
             }
 
             case Tag.P:
-                if (inScope(Tag.P, Category.ScopeButton) is null) insertImplied(Tag.P);
+                if (inScope(Tag.P, Category.ScopeButton) is null) { err(ParseErrorCode.UnexpectedEndTag); insertImplied(Tag.P); }
                 closePElement();
                 return true;
 
             case Tag.Li:
-                if (inScope(Tag.Li, Category.ScopeListItem) is null) return true;
+                if (inScope(Tag.Li, Category.ScopeListItem) is null) { err(ParseErrorCode.UnexpectedEndTag); return true; }
                 generateImpliedEndTags(Tag.Li);
-                popUntil(Tag.Li);
+                popUntilChecked(Tag.Li);
                 return true;
 
             case Tag.Dd, Tag.Dt:
-                if (inScope(t.tag, Category.Scope) is null) return true;
+                if (inScope(t.tag, Category.Scope) is null) { err(ParseErrorCode.UnexpectedEndTag); return true; }
                 generateImpliedEndTags(t.tag);
-                popUntil(t.tag);
+                popUntilChecked(t.tag);
                 return true;
 
             case Tag.H1, Tag.H2, Tag.H3, Tag.H4, Tag.H5, Tag.H6:
-                if (headingInScope() is null) return true;
+                if (headingInScope() is null) { err(ParseErrorCode.UnexpectedEndTag); return true; }
                 generateImpliedEndTags();
+                if (!current().isHtml(t.tag)) err(ParseErrorCode.MisnestedTag);
                 popUntilHeading();
                 return true;
 
@@ -1707,14 +1800,15 @@ struct TreeBuilder
                 return true;
 
             case Tag.Applet, Tag.Marquee, Tag.Object:
-                if (inScope(t.tag, Category.Scope) is null) return true;
+                if (inScope(t.tag, Category.Scope) is null) { err(ParseErrorCode.UnexpectedEndTag); return true; }
                 generateImpliedEndTags();
-                popUntil(t.tag);
+                popUntilChecked(t.tag);
                 clearToLastMarker();
                 return true;
 
             case Tag.Br:
                 // </br> is <br>
+                err(ParseErrorCode.UnexpectedEndTag);
                 t.type = TokenType.StartTag;
                 t.attributes = null;
                 reconstructFormatting();
@@ -1736,10 +1830,11 @@ struct TreeBuilder
             if (n.isHtml(t.tag))
             {
                 generateImpliedEndTags(t.tag);
+                if (current() !is n) err(ParseErrorCode.MisnestedTag);
                 popUntilNode(n);
                 return;
             }
-            if (hasCategory(n, Category.Special)) return;
+            if (hasCategory(n, Category.Special)) { err(ParseErrorCode.UnexpectedEndTag); return; }
         }
     }
 
@@ -1769,8 +1864,9 @@ struct TreeBuilder
             if (formatting is null) return true;
 
             size_t stackIdx;
-            if (!stackIndex(formatting, stackIdx)) { removeFromAfe(formatting); return false; }
-            if (inScopeNode(formatting, Category.Scope) is null) return false;
+            if (!stackIndex(formatting, stackIdx)) { err(ParseErrorCode.UnexpectedEndTag); removeFromAfe(formatting); return false; }
+            if (inScopeNode(formatting, Category.Scope) is null) { err(ParseErrorCode.UnexpectedEndTag); return false; }
+            if (formatting !is current()) err(ParseErrorCode.MisnestedTag);
 
             // The furthest block: the topmost special element after the formatting element
             DomNode* furthestBlock = null;
@@ -1867,6 +1963,7 @@ struct TreeBuilder
                 insertText(t.data);
                 return true;
             case TokenType.Eof:
+                err(ParseErrorCode.UnclosedElementAtEof);
                 pop();
                 mode = originalMode;
                 return false;
@@ -1882,7 +1979,8 @@ struct TreeBuilder
     bool currentIsTableContext()
     {
         auto n = current();
-        return n.ns == Ns.Html && (n.name == Tag.Table || n.name == Tag.Tbody || n.name == Tag.Tfoot || n.name == Tag.Thead || n.name == Tag.Tr);
+        return n.ns == Ns.Html && (n.name == Tag.Table || n.name == Tag.Tbody || n.name == Tag.Template
+            || n.name == Tag.Tfoot || n.name == Tag.Thead || n.name == Tag.Tr);
     }
 
     bool inTable(ref Token t)
@@ -1902,7 +2000,7 @@ struct TreeBuilder
 
             case TokenType.Comment: insertComment(t); return true;
             case TokenType.ProcessingInstruction: insertProcessingInstruction(t); return true;
-            case TokenType.Doctype: return true;
+            case TokenType.Doctype: err(ParseErrorCode.UnexpectedDoctype); return true;
             case TokenType.Eof: return inBody(t);
 
             case TokenType.StartTag:
@@ -1936,6 +2034,7 @@ struct TreeBuilder
                         return false;
                     case Tag.Table:
                     {
+                        err(ParseErrorCode.UnexpectedStartTag);
                         auto n = inScope(Tag.Table, Category.ScopeTable);
                         if (n is null) return true;
                         popUntilNode(n);
@@ -1949,12 +2048,14 @@ struct TreeBuilder
                         foreach (ref a; t.attributes)
                             if (a.name == "type") { hidden = equalsCi(a.value, "hidden"); break; }
                         if (!hidden) return tableAnythingElse(t);
+                        err(ParseErrorCode.UnexpectedStartTag);
                         auto e = insertElement(t);
                         if (e !is null) popUntilNode(&e.node);
                         return true;
                     }
                     case Tag.Form:
                     {
+                        err(ParseErrorCode.UnexpectedStartTag);
                         bool inTemplate = parsingTemplateContents();
                         if (form !is null && !inTemplate) return true;
                         auto e = insertElement(t);
@@ -1972,13 +2073,14 @@ struct TreeBuilder
                     case Tag.Table:
                     {
                         auto n = inScope(Tag.Table, Category.ScopeTable);
-                        if (n is null) return true;
+                        if (n is null) { err(ParseErrorCode.UnexpectedEndTag); return true; }
                         popUntilNode(n);
                         resetInsertionMode();
                         return true;
                     }
                     case Tag.Body, Tag.Caption, Tag.Col, Tag.Colgroup, Tag.Html, Tag.Tbody, Tag.Td, Tag.Tfoot, Tag.Th,
                          Tag.Thead, Tag.Tr:
+                        err(ParseErrorCode.UnexpectedEndTag);
                         return true;
                     case Tag.Template: return inHead(t);
                     default: return tableAnythingElse(t);
@@ -1990,6 +2092,7 @@ struct TreeBuilder
 
     bool tableAnythingElse(ref Token t)
     {
+        errToken(t);
         fosterParenting = true;
         inBody(t);
         fosterParenting = false;
@@ -2009,6 +2112,7 @@ struct TreeBuilder
 
         if (pendingNonSpace)
         {
+            err(ParseErrorCode.UnexpectedText);
             fosterParenting = true;
             bodyText(pendingText[]);
             fosterParenting = false;
@@ -2029,6 +2133,7 @@ struct TreeBuilder
                 case Tag.Caption: closeCaption(); return true;
                 case Tag.Table: return !closeCaption();
                 case Tag.Body, Tag.Col, Tag.Colgroup, Tag.Html, Tag.Tbody, Tag.Td, Tag.Tfoot, Tag.Th, Tag.Thead, Tag.Tr:
+                    err(ParseErrorCode.UnexpectedEndTag);
                     return true;
                 default: return inBody(t);
             }
@@ -2050,9 +2155,9 @@ struct TreeBuilder
     // It returns true if the caption was closed
     bool closeCaption()
     {
-        if (inScope(Tag.Caption, Category.ScopeTable) is null) return false;
+        if (inScope(Tag.Caption, Category.ScopeTable) is null) { err(ParseErrorCode.UnexpectedEndTag); return false; }
         generateImpliedEndTags();
-        popUntil(Tag.Caption);
+        popUntilChecked(Tag.Caption);
         clearToLastMarker();
         mode = Mode.InTable;
         return true;
@@ -2068,7 +2173,7 @@ struct TreeBuilder
                 break;
             case TokenType.Comment: insertComment(t); return true;
             case TokenType.ProcessingInstruction: insertProcessingInstruction(t); return true;
-            case TokenType.Doctype: return true;
+            case TokenType.Doctype: err(ParseErrorCode.UnexpectedDoctype); return true;
             case TokenType.Eof: return inBody(t);
             case TokenType.StartTag:
                 switch (t.tag)
@@ -2085,11 +2190,11 @@ struct TreeBuilder
                 switch (t.tag)
                 {
                     case Tag.Colgroup:
-                        if (!current().isHtml(Tag.Colgroup)) return true;
+                        if (!current().isHtml(Tag.Colgroup)) { err(ParseErrorCode.UnexpectedEndTag); return true; }
                         pop();
                         mode = Mode.InTable;
                         return true;
-                    case Tag.Col: return true;
+                    case Tag.Col: err(ParseErrorCode.UnexpectedEndTag); return true;
                     case Tag.Template: return inHead(t);
                     default: break;
                 }
@@ -2097,7 +2202,7 @@ struct TreeBuilder
             default: break;
         }
 
-        if (!current().isHtml(Tag.Colgroup)) return true;
+        if (!current().isHtml(Tag.Colgroup)) { errToken(t); return true; }
         pop();
         mode = Mode.InTable;
         return false;
@@ -2120,7 +2225,7 @@ struct TreeBuilder
                     mode = Mode.InRow;
                     return false;
                 case Tag.Caption, Tag.Col, Tag.Colgroup, Tag.Tbody, Tag.Tfoot, Tag.Thead:
-                    if (tableSectionInScope() is null) return true;
+                    if (tableSectionInScope() is null) { err(ParseErrorCode.UnexpectedEndTag); return true; }
                     clearToTableBodyContext();
                     pop();
                     mode = Mode.InTable;
@@ -2133,18 +2238,19 @@ struct TreeBuilder
             switch (t.tag)
             {
                 case Tag.Tbody, Tag.Tfoot, Tag.Thead:
-                    if (inScope(t.tag, Category.ScopeTable) is null) return true;
+                    if (inScope(t.tag, Category.ScopeTable) is null) { err(ParseErrorCode.UnexpectedEndTag); return true; }
                     clearToTableBodyContext();
                     pop();
                     mode = Mode.InTable;
                     return true;
                 case Tag.Table:
-                    if (tableSectionInScope() is null) return true;
+                    if (tableSectionInScope() is null) { err(ParseErrorCode.UnexpectedEndTag); return true; }
                     clearToTableBodyContext();
                     pop();
                     mode = Mode.InTable;
                     return false;
                 case Tag.Body, Tag.Caption, Tag.Col, Tag.Colgroup, Tag.Html, Tag.Td, Tag.Th, Tag.Tr:
+                    err(ParseErrorCode.UnexpectedEndTag);
                     return true;
                 default: break;
             }
@@ -2166,7 +2272,7 @@ struct TreeBuilder
                     pushMarker();
                     return true;
                 case Tag.Caption, Tag.Col, Tag.Colgroup, Tag.Tbody, Tag.Tfoot, Tag.Thead, Tag.Tr:
-                    if (inScope(Tag.Tr, Category.ScopeTable) is null) return true;
+                    if (inScope(Tag.Tr, Category.ScopeTable) is null) { err(ParseErrorCode.UnexpectedEndTag); return true; }
                     clearToTableRowContext();
                     pop();
                     mode = Mode.InTableBody;
@@ -2179,25 +2285,26 @@ struct TreeBuilder
             switch (t.tag)
             {
                 case Tag.Tr:
-                    if (inScope(Tag.Tr, Category.ScopeTable) is null) return true;
+                    if (inScope(Tag.Tr, Category.ScopeTable) is null) { err(ParseErrorCode.UnexpectedEndTag); return true; }
                     clearToTableRowContext();
                     pop();
                     mode = Mode.InTableBody;
                     return true;
                 case Tag.Table:
-                    if (inScope(Tag.Tr, Category.ScopeTable) is null) return true;
+                    if (inScope(Tag.Tr, Category.ScopeTable) is null) { err(ParseErrorCode.UnexpectedEndTag); return true; }
                     clearToTableRowContext();
                     pop();
                     mode = Mode.InTableBody;
                     return false;
                 case Tag.Tbody, Tag.Tfoot, Tag.Thead:
-                    if (inScope(t.tag, Category.ScopeTable) is null) return true;
-                    if (inScope(Tag.Tr, Category.ScopeTable) is null) return true;
+                    if (inScope(t.tag, Category.ScopeTable) is null) { err(ParseErrorCode.UnexpectedEndTag); return true; }
+                    if (inScope(Tag.Tr, Category.ScopeTable) is null) { err(ParseErrorCode.UnexpectedEndTag); return true; }
                     clearToTableRowContext();
                     pop();
                     mode = Mode.InTableBody;
                     return false;
                 case Tag.Body, Tag.Caption, Tag.Col, Tag.Colgroup, Tag.Html, Tag.Td, Tag.Th:
+                    err(ParseErrorCode.UnexpectedEndTag);
                     return true;
                 default: break;
             }
@@ -2209,6 +2316,7 @@ struct TreeBuilder
     void closeCell()
     {
         generateImpliedEndTags();
+        if (!current().isHtml(Tag.Td) && !current().isHtml(Tag.Th)) err(ParseErrorCode.MisnestedTag);
         popUntilCell();
         clearToLastMarker();
         mode = Mode.InRow;
@@ -2221,16 +2329,17 @@ struct TreeBuilder
             switch (t.tag)
             {
                 case Tag.Td, Tag.Th:
-                    if (inScope(t.tag, Category.ScopeTable) is null) return true;
+                    if (inScope(t.tag, Category.ScopeTable) is null) { err(ParseErrorCode.UnexpectedEndTag); return true; }
                     generateImpliedEndTags();
-                    popUntil(t.tag);
+                    popUntilChecked(t.tag);
                     clearToLastMarker();
                     mode = Mode.InRow;
                     return true;
                 case Tag.Body, Tag.Caption, Tag.Col, Tag.Colgroup, Tag.Html:
+                    err(ParseErrorCode.UnexpectedEndTag);
                     return true;
                 case Tag.Table, Tag.Tbody, Tag.Tfoot, Tag.Thead, Tag.Tr:
-                    if (inScope(t.tag, Category.ScopeTable) is null) return true;
+                    if (inScope(t.tag, Category.ScopeTable) is null) { err(ParseErrorCode.UnexpectedEndTag); return true; }
                     closeCell();
                     return false;
                 default: return inBody(t);
@@ -2242,7 +2351,7 @@ struct TreeBuilder
             switch (t.tag)
             {
                 case Tag.Caption, Tag.Col, Tag.Colgroup, Tag.Tbody, Tag.Td, Tag.Tfoot, Tag.Th, Tag.Thead, Tag.Tr:
-                    if (cellInScope() is null) return true;
+                    if (cellInScope() is null) { err(ParseErrorCode.UnexpectedStartTag); return true; }
                     closeCell();
                     return false;
                 default: break;
@@ -2270,10 +2379,12 @@ struct TreeBuilder
 
             case TokenType.EndTag:
                 if (t.tag == Tag.Template) return inHead(t);
+                err(ParseErrorCode.UnexpectedEndTag);
                 return true;
 
             case TokenType.Eof:
                 if (findInStack(Tag.Template) is null) return true;
+                err(ParseErrorCode.UnclosedElementAtEof);
                 popUntil(Tag.Template);
                 clearToLastMarker();
                 if (templateModes.length) templateModes.removeLast();
@@ -2304,7 +2415,7 @@ struct TreeBuilder
         {
             case TokenType.Comment: insertComment(t, openElements[0]); return true;
             case TokenType.ProcessingInstruction: insertProcessingInstruction(t, openElements[0]); return true;
-            case TokenType.Doctype: return true;
+            case TokenType.Doctype: err(ParseErrorCode.UnexpectedDoctype); return true;
             case TokenType.Eof: return true;
             case TokenType.Text:
                 if (allSpace(t.data)) return inBody(t);
@@ -2322,6 +2433,7 @@ struct TreeBuilder
             default: break;
         }
 
+        errToken(t);
         mode = Mode.InBody;
         return false;
     }
@@ -2346,9 +2458,11 @@ struct TreeBuilder
         {
             case TokenType.Comment: insertComment(t); return true;
             case TokenType.ProcessingInstruction: insertProcessingInstruction(t); return true;
-            case TokenType.Doctype: return true;
-            case TokenType.Eof: return true;
-            case TokenType.Text: framesetText(t); return true;
+            case TokenType.Doctype: err(ParseErrorCode.UnexpectedDoctype); return true;
+            case TokenType.Eof:
+                if (current() !is openElements[0]) err(ParseErrorCode.UnclosedElementAtEof);
+                return true;
+            case TokenType.Text: if (!framesetText(t)) err(ParseErrorCode.UnexpectedText); return true;
             case TokenType.StartTag:
                 switch (t.tag)
                 {
@@ -2356,15 +2470,16 @@ struct TreeBuilder
                     case Tag.Frameset: insertElement(t); return true;
                     case Tag.Frame: if (insertElement(t)) pop(); return true;
                     case Tag.Noframes: return inHead(t);
-                    default: return true;
+                    default: err(ParseErrorCode.UnexpectedStartTag); return true;
                 }
             case TokenType.EndTag:
                 if (t.tag == Tag.Frameset)
                 {
-                    if (current() is openElements[0]) return true;
+                    if (current() is openElements[0]) { err(ParseErrorCode.UnexpectedEndTag); return true; }
                     pop();
                     if (context is null && !current().isHtml(Tag.Frameset)) mode = Mode.AfterFrameset;
                 }
+                else err(ParseErrorCode.UnexpectedEndTag);
                 return true;
             default: return true;
         }
@@ -2376,13 +2491,15 @@ struct TreeBuilder
         {
             case TokenType.Comment: insertComment(t); return true;
             case TokenType.ProcessingInstruction: insertProcessingInstruction(t); return true;
-            case TokenType.Text: framesetText(t); return true;
+            case TokenType.Text: if (!framesetText(t)) err(ParseErrorCode.UnexpectedText); return true;
             case TokenType.StartTag:
                 if (t.tag == Tag.Html) return inBody(t);
                 if (t.tag == Tag.Noframes) return inHead(t);
+                err(ParseErrorCode.UnexpectedStartTag);
                 return true;
             case TokenType.EndTag:
                 if (t.tag == Tag.Html) mode = Mode.AfterAfterFrameset;
+                else err(ParseErrorCode.UnexpectedEndTag);
                 return true;
             default: return true;
         }
@@ -2405,6 +2522,7 @@ struct TreeBuilder
             default: break;
         }
 
+        errToken(t);
         mode = Mode.InBody;
         return false;
     }
@@ -2419,11 +2537,14 @@ struct TreeBuilder
             case TokenType.Eof: return true;
             case TokenType.Text:
                 if (allSpace(t.data)) return inBody(t);
+                err(ParseErrorCode.UnexpectedText);
                 return true;
             case TokenType.StartTag:
                 if (t.tag == Tag.Html) return inBody(t);
                 if (t.tag == Tag.Noframes) return inHead(t);
+                err(ParseErrorCode.UnexpectedStartTag);
                 return true;
+            case TokenType.EndTag: err(ParseErrorCode.UnexpectedEndTag); return true;
             default: return true;
         }
     }
@@ -2453,7 +2574,7 @@ struct TreeBuilder
             }
             case TokenType.Comment: insertComment(t); return true;
             case TokenType.ProcessingInstruction: insertProcessingInstruction(t); return true;
-            case TokenType.Doctype: return true;
+            case TokenType.Doctype: err(ParseErrorCode.UnexpectedDoctype); return true;
 
             case TokenType.StartTag:
                 switch (t.tag)
@@ -2487,6 +2608,7 @@ struct TreeBuilder
     // Pop the foreign elements and process the token as html
     bool breakOutOfForeign(ref Token t)
     {
+        errToken(t);
         auto n = current();
         while (n !is null && !(mathTextIntegrationPoint(n) || htmlIntegrationPoint(n) || n.ns == Ns.Html))
         {
@@ -2519,6 +2641,7 @@ struct TreeBuilder
         if (openElements.length == 0) return run(mode, t);
 
         size_t idx = openElements.length - 1;
+        if (openElements[idx].name != t.tag) err(ParseErrorCode.MisnestedTag);
         while (idx != 0)
         {
             auto n = openElements[idx];

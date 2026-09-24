@@ -12,7 +12,7 @@
 +/
 module tokentest;
 
-import parserino.dom, parserino.html.tokenizer;
+import parserino.dom, parserino.html.tokenizer, parserino.html.errors;
 import std.stdio, std.file, std.path, std.algorithm, std.array, std.string, std.conv, std.json, std.utf;
 import core.stdc.stdlib : calloc, free;
 
@@ -147,7 +147,7 @@ JSONValue[] normalize(JSONValue[] tokens)
     return r;
 }
 
-JSONValue[] tokenize(string input, State state, string lastStartTag, bool oneByOne)
+JSONValue[] tokenize(string input, State state, string lastStartTag, bool oneByOne, out string[] errors)
 {
     auto doc = cast(DomDocument*) calloc(1, DomDocument.sizeof);
     doc.initialize();
@@ -161,12 +161,18 @@ JSONValue[] tokenize(string input, State state, string lastStartTag, bool oneByO
     sink.inForeignContent = &Collector.foreign;
 
     auto t = new Tokenizer(doc, sink);
+    t.collectErrors = true;
     t.switchTo(state);
     if (lastStartTag.length) t.setLastStartTag(lastStartTag);
 
     if (oneByOne) foreach (i; 0 .. input.length) t.feed(input[i .. i + 1]);
     else t.feed(input);
     t.finish();
+
+    auto found = t.errors[].dup;
+    import std.algorithm : sort, SwapStrategy;
+    found.sort!((a, b) => a.line < b.line || (a.line == b.line && a.column < b.column), SwapStrategy.stable);
+    foreach (e; found) errors ~= errorName(e.code);
     return c.tokens;
 }
 
@@ -185,7 +191,7 @@ void main(string[] args)
         foreach (l; readText(expectedFile).splitLines)
             if (l.length && l[0] != '#') known[l] = true;
 
-    size_t total, passed, skipped;
+    size_t total, passed, skipped, errorsTotal, errorsPassed;
     string[] failures, unexpected;
 
     foreach (f; dirEntries(dir, "*.test", SpanMode.shallow).map!(e => e.name).array.sort)
@@ -212,13 +218,30 @@ void main(string[] args)
                 ? test["initialStates"].array.map!(s => s.str).array : ["Data state"];
             string last = "lastStartTag" in test.object ? test["lastStartTag"].str : "";
             auto want = normalize(expected.array);
+            string[] wantErrors;
+            if ("errors" in test.object) foreach (e; test["errors"].array) wantErrors ~= e["code"].str;
 
             foreach (st; states)
                 foreach (oneByOne; [false, true])
                 {
                     string id = format("%s:%d:%s%s", f.baseName, i, st, oneByOne ? ":bytes" : "");
                     total++;
-                    auto got = tokenize(input, stateByName(st), last, oneByOne);
+                    string[] gotErrors;
+                    auto got = tokenize(input, stateByName(st), last, oneByOne, gotErrors);
+
+                    // The error codes, in any order (the positions may differ a bit)
+                    errorsTotal++;
+                    if (gotErrors.dup.sort.array == wantErrors.dup.sort.array) errorsPassed++;
+                    else
+                    {
+                        auto eid = id ~ ":errors";
+                        failures ~= eid;
+                        if (eid !in known) unexpected ~= eid;
+                        if (verbose && (!oneByOne || eid !in known))
+                            writeln("FAIL ", eid, " ", test["description"].str, "\n  input    ", JSONValue(input).toString,
+                                "\n  expected ", wantErrors, "\n  actual   ", gotErrors);
+                    }
+
                     if (JSONValue(got) == JSONValue(want)) { passed++; continue; }
 
                     failures ~= id;
@@ -234,8 +257,9 @@ void main(string[] args)
         }
     }
 
-    writefln("%d/%d tokenizer tests passed (%d skipped: lone surrogates), %d failures (%d not in expected-tokenizer-failures.txt)",
-        passed, total, skipped, failures.length, unexpected.length);
+    writefln("%d/%d tokenizer tests passed, %d/%d with the same errors (%d skipped: lone surrogates); "
+        ~ "%d failures (%d not in expected-tokenizer-failures.txt)",
+        passed, total, errorsPassed, errorsTotal, skipped, failures.length, unexpected.length);
 
     if (update)
     {

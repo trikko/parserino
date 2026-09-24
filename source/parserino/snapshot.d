@@ -11,6 +11,7 @@ module parserino.snapshot;
 import parserino.arena;
 import parserino.dom;
 import parserino.names;
+import parserino.html.errors : RawParseError;
 
 struct DomSnapshot
 {
@@ -225,6 +226,30 @@ DomSnapshot takeSnapshot(const(DomDocument)* doc) pure
         visit(c);
 
 
+    return s;
+}
+
+/++ Parse `html` and take its snapshot; the parse errors go in `errors` (it works at compile time too).
+ + Unlike `parseToSnapshot`, it collects the errors.
+ +/
+DomSnapshot parseToSnapshot(string html, bool scripting, ref RawParseError[] errors) pure
+{
+    import parserino.html.parser : newParser, freeParser;
+
+    DomDocument d;
+    d.initialize();
+    d.scripting = scripting;
+
+    auto p = newParser();
+    p.begin(&d);
+    p.tokenizer.collectErrors = true;
+    p.feed(html);
+    p.finish();
+    foreach (e; p.tokenizer.errors[]) errors ~= e;
+    freeParser(p);
+
+    auto s = takeSnapshot(&d);
+    if (!__ctfe) d.release();
     return s;
 }
 

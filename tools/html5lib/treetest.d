@@ -9,6 +9,7 @@
  Usage: treetest [--verbose] [--update] [dir with .dat files]
    --verbose  print input, expected and actual tree of each failure
    --update   rewrite expected-failures.txt with the current failures
+   --errors   list the documents where the parse errors are missing or unexpected
  The default dir is ../corpus/wpt/html/syntax/parsing/resources (see tools/corpus/fetch.sh).
  It fails if a test not listed in expected-failures.txt fails.
 +/
@@ -26,6 +27,7 @@ struct Test
     string fragment;        // context, e.g. "td" or "svg path" ("" for documents)
     int scripting = -1;     // -1: both, 0: off, 1: on
     string expected;
+    bool hasErrors;         // the test expects parse errors
 }
 
 Test[] readTests(string path)
@@ -44,6 +46,7 @@ Test[] readTests(string path)
             case "data": t.data = text; break;
             case "document": t.expected = text; break;
             case "document-fragment": t.fragment = text.strip; break;
+            case "errors", "new-errors": if (text.strip.length) t.hasErrors = true; break;
             default: break;
         }
         lines = null;
@@ -161,8 +164,8 @@ DomDocument* newDoc(bool scripting)
 
 void freeDoc(DomDocument* d) { d.release(); free(d); }
 
-// Parse and dump; chunk = 0 parses in one piece
-string run(ref const Test t, bool scripting, size_t chunk)
+// Parse and dump; chunk = 0 parses in one piece. `errors`: did the parser find errors?
+string run(ref const Test t, bool scripting, size_t chunk, out bool errors)
 {
     auto doc = newDoc(scripting);
     scope(exit) freeDoc(doc);
@@ -181,18 +184,16 @@ string run(ref const Test t, bool scripting, size_t chunk)
         return o.data;
     }
 
-    if (chunk == 0)
-    {
-        if (!parseDocument(doc, t.data)) return "PARSE FAILED";
-    }
-    else
     {
         auto p = newParser();
         scope(exit) freeParser(p);
         p.begin(doc);
-        for (size_t i = 0; i < t.data.length; i += chunk)
-            if (!p.feed(t.data[i .. min(i + chunk, t.data.length)])) return "PARSE FAILED";
+        p.tokenizer.collectErrors = true;
+        size_t step = chunk == 0 ? t.data.length + 1 : chunk;
+        for (size_t i = 0; i < t.data.length; i += step)
+            if (!p.feed(t.data[i .. min(i + step, t.data.length)])) return "PARSE FAILED";
         if (!p.finish()) return "PARSE FAILED";
+        errors = p.tokenizer.errors.length > 0;
     }
 
     dumpTree(&doc.node, 0, o);
@@ -203,6 +204,7 @@ void main(string[] args)
 {
     bool verbose = args.canFind("--verbose");
     bool update = args.canFind("--update");
+    bool listErrors = args.canFind("--errors");
     args = args.filter!(a => !a.startsWith("--")).array;
 
     string here = __FILE_FULL_PATH__.dirName;
@@ -214,7 +216,7 @@ void main(string[] args)
         foreach (l; readText(expectedFile).splitLines)
             if (l.length && l[0] != '#') known[l.split(" ")[0]] = true;
 
-    size_t total, passed;
+    size_t total, passed, errorTests, errorsAgree;
     string[] failures, unexpected;
 
     foreach (f; dirEntries(dir, "*.dat", SpanMode.shallow).map!(e => e.name).array.sort)
@@ -233,7 +235,16 @@ void main(string[] args)
                     string id = format("%s:%d:%s%s", t.file, t.index, s ? "script-on" : "script-off",
                         chunk ? ":chunk" ~ chunk.to!string : "");
                     total++;
-                    auto actual = run(t, s == 1, chunk);
+                    bool errors;
+                    auto actual = run(t, s == 1, chunk, errors);
+                    // Some newer tests don't list their errors: they can be checked only if they have a doctype
+                    bool checkable = t.hasErrors || t.data.toLower.startsWith("<!doctype");
+                    if (!t.fragment.length && chunk == 0 && checkable)
+                    {
+                        errorTests++;
+                        if (errors == t.hasErrors) errorsAgree++;
+                        else if (listErrors) writeln(errors ? "EXTRA ERRORS " : "MISSING ERRORS ", id, "\n", t.data, "\n");
+                    }
                     if (actual == t.expected) { passed++; continue; }
 
                     failures ~= id;
@@ -250,8 +261,9 @@ void main(string[] args)
         }
     }
 
-    writefln("%d/%d tree construction tests passed, %d failures (%d not in expected-failures.txt)",
-        passed, total, failures.length, unexpected.length);
+    writefln("%d/%d tree construction tests passed, %d failures (%d not in expected-failures.txt); "
+        ~ "parse errors found when expected (and only then) in %d/%d documents",
+        passed, total, failures.length, unexpected.length, errorsAgree, errorTests);
 
     if (update)
     {

@@ -135,7 +135,7 @@ struct Utf8Decoder
     void keep(scope const(char)[] s)
     {
         assert(s.length < pending.length);
-        pending[0 .. s.length] = s[];
+        foreach (i, c; s) pending[i] = c;   // not a slice copy: it needs druntime (betterC)
         pendingLength = s.length;
     }
 

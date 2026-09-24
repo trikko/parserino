@@ -12,6 +12,7 @@ import parserino.names;
 import parserino.dom : DomDocument;
 import parserino.html.entities;
 import parserino.html.decoder;
+import parserino.html.errors;
 
 @nogc nothrow pure @safe:
 
@@ -93,6 +94,7 @@ enum State : ubyte
     CharRef, NamedCharRef, NumericCharRef, HexCharRefStart, DecimalCharRefStart, HexCharRef, DecimalCharRef,
     ProcessingInstructionOpen, ProcessingInstructionTarget, AfterProcessingInstructionTarget,
     ProcessingInstructionData, ProcessingInstructionQuestionable,
+    AmbiguousAmpersand,
 }
 
 struct Tokenizer
@@ -128,6 +130,20 @@ struct Tokenizer
 
     /// The UTF-8 decoding of the input (set `decoder.stripBom` for documents)
     Utf8Decoder decoder;
+
+    /// Collect the parse errors in `errors` (off by default: then they cost nothing)
+    bool collectErrors;
+
+    /// The parse errors found so far (with `collectErrors`), in the order they were found
+    Buffer!RawParseError errors;
+
+    /// A parse error at the current position (the tree builder reports its errors here too)
+    void error(ParseErrorCode code)
+    {
+        if (!collectErrors) return;
+        countTo(pos);
+        errors.put(RawParseError(code, line, column + 1));
+    }
 
     /// Tokenize a chunk. It returns false on errors (out of memory).
     bool feed(scope const(char)[] chunk)
@@ -193,6 +209,7 @@ struct Tokenizer
 
         handleEof();
         flushText();
+        if (collectErrors) countTo(input.length);
 
         Token t;
         t.type = TokenType.Eof;
@@ -242,6 +259,10 @@ struct Tokenizer
 
     // Processing instruction
     size_t targetLen;
+
+    // The position, for the parse errors: the chars of `input` before `counted` are counted
+    uint line = 1, column;
+    size_t counted;
 
     // The "temporary buffer" of the spec and the last start tag name
     Buffer!char temp;
@@ -346,7 +367,12 @@ struct Tokenizer
         foreach (i; 0 .. attrs.length - 1)
         {
             auto o = attrs[i];
-            if (!o.drop && tokData[][o.name .. o.name + o.nameLen] == n) { a.drop = true; break; }
+            if (!o.drop && tokData[][o.name .. o.name + o.nameLen] == n)
+            {
+                a.drop = true;
+                error(ParseErrorCode.DuplicateAttribute);
+                break;
+            }
         }
     }
 
@@ -366,6 +392,12 @@ struct Tokenizer
     {
         endAttribute();
         flushText();
+
+        if (isEndTag && collectErrors)
+        {
+            if (attrs.length) error(ParseErrorCode.EndTagWithAttributes);
+            if (selfClosing) error(ParseErrorCode.EndTagWithTrailingSolidus);
+        }
 
         attrSlices.clear();
         if (!isEndTag)
@@ -464,9 +496,46 @@ struct Tokenizer
     {
         input = chunk;
         pos = 0;
+        counted = 0;
 
         while (pos < input.length && !failed)
             step();
+
+        // The chars held back are counted with the next chunk
+        if (collectErrors) countTo(input.length - carry.length);
+    }
+
+    /+ Advance the line and the column up to `at` in the input (only when collecting errors).
+     + The errors of the input stream preprocessing are found here: control characters and
+     + noncharacters (surrogates can't be in valid UTF-8).
+     +/
+    void countTo(size_t at)
+    {
+        if (at > input.length) at = input.length;
+
+        while (counted < at)
+        {
+            auto c = cast(ubyte) input[counted];
+            if (c == '\n') { line++; column = 0; counted++; continue; }
+
+            uint cp = c;
+            size_t len = 1;
+            if (c >= 0x80)
+            {
+                len = c >= 0xF0 ? 4 : c >= 0xE0 ? 3 : 2;
+                if (counted + len > input.length) break;
+                cp = c & (0x7F >> len);
+                foreach (i; 1 .. len) cp = (cp << 6) | (input[counted + i] & 0x3F);
+            }
+
+            if ((cp < 0x20 && cp != '\t' && cp != '\f' && cp != 0) || (cp >= 0x7F && cp <= 0x9F))
+                errors.put(RawParseError(ParseErrorCode.ControlCharacterInInputStream, line, column + 1));
+            else if ((cp >= 0xFDD0 && cp <= 0xFDEF) || (cp & 0xFFFE) == 0xFFFE)
+                errors.put(RawParseError(ParseErrorCode.NoncharacterInInputStream, line, column + 1));
+
+            column++;
+            counted += len;
+        }
     }
 
     // One step: consume the chars of the current state
@@ -489,7 +558,7 @@ struct Tokenizer
                 pos++;
                 if (c == '<') state = State.TagOpen;
                 else if (c == '&') { returnState = State.Data; state = State.CharRef; }
-                else emitText('\0');
+                else { error(ParseErrorCode.UnexpectedNullCharacter); emitText('\0'); }
                 return;
             }
 
@@ -503,7 +572,7 @@ struct Tokenizer
                 c = input[pos++];
                 if (c == '<') state = State.RcdataLessThan;
                 else if (c == '&') { returnState = State.Rcdata; state = State.CharRef; }
-                else emitText(Replacement);
+                else { error(ParseErrorCode.UnexpectedNullCharacter); emitText(Replacement); }
                 return;
             }
 
@@ -516,7 +585,7 @@ struct Tokenizer
                 if (pos == input.length) return;
 
                 c = input[pos++];
-                if (c == '\0') emitText(Replacement);
+                if (c == '\0') { error(ParseErrorCode.UnexpectedNullCharacter); emitText(Replacement); }
                 else state = state == State.Rawtext ? State.RawtextLessThan : State.ScriptDataLessThan;
                 return;
             }
@@ -526,13 +595,13 @@ struct Tokenizer
                 else if (c == '/') { pos++; state = State.EndTagOpen; }
                 else if (isAlpha(c)) { startTag(false); state = State.TagName; }
                 else if (c == '?') { pos++; state = State.ProcessingInstructionOpen; }
-                else { emitText('<'); state = State.Data; }
+                else { error(ParseErrorCode.InvalidFirstCharacterOfTagName); emitText('<'); state = State.Data; }
                 return;
 
             case State.EndTagOpen:
                 if (isAlpha(c)) { startTag(true); state = State.TagName; }
-                else if (c == '>') { pos++; state = State.Data; }
-                else { startComment(); state = State.BogusComment; }
+                else if (c == '>') { error(ParseErrorCode.MissingEndTagName); pos++; state = State.Data; }
+                else { error(ParseErrorCode.InvalidFirstCharacterOfTagName); startComment(); state = State.BogusComment; }
                 return;
 
             case State.TagName:
@@ -547,6 +616,7 @@ struct Tokenizer
                     if (isSpace(c)) { state = State.BeforeAttrName; return; }
                     if (c == '/') { state = State.SelfClosingStartTag; return; }
                     if (c == '>') { emitTag(); return; }
+                    error(ParseErrorCode.UnexpectedNullCharacter);
                     tagName.put(Replacement);
                 }
                 return;
@@ -626,7 +696,7 @@ struct Tokenizer
                 c = input[pos++];
                 if (c == '-') { emitText('-'); state = State.ScriptDataEscapedDash; }
                 else if (c == '<') state = State.ScriptDataEscapedLessThan;
-                else emitText(Replacement);
+                else { error(ParseErrorCode.UnexpectedNullCharacter); emitText(Replacement); }
                 return;
             }
 
@@ -634,7 +704,7 @@ struct Tokenizer
                 pos++;
                 if (c == '-') { emitText('-'); state = State.ScriptDataEscapedDashDash; }
                 else if (c == '<') state = State.ScriptDataEscapedLessThan;
-                else if (c == '\0') { emitText(Replacement); state = State.ScriptDataEscaped; }
+                else if (c == '\0') { error(ParseErrorCode.UnexpectedNullCharacter); emitText(Replacement); state = State.ScriptDataEscaped; }
                 else { emitText(c); state = State.ScriptDataEscaped; }
                 return;
 
@@ -643,7 +713,7 @@ struct Tokenizer
                 if (c == '-') emitText('-');
                 else if (c == '<') state = State.ScriptDataEscapedLessThan;
                 else if (c == '>') { emitText('>'); state = State.ScriptData; }
-                else if (c == '\0') { emitText(Replacement); state = State.ScriptDataEscaped; }
+                else if (c == '\0') { error(ParseErrorCode.UnexpectedNullCharacter); emitText(Replacement); state = State.ScriptDataEscaped; }
                 else { emitText(c); state = State.ScriptDataEscaped; }
                 return;
 
@@ -679,7 +749,7 @@ struct Tokenizer
                 c = input[pos++];
                 if (c == '-') { emitText('-'); state = State.ScriptDataDoubleEscapedDash; }
                 else if (c == '<') { emitText('<'); state = State.ScriptDataDoubleEscapedLessThan; }
-                else emitText(Replacement);
+                else { error(ParseErrorCode.UnexpectedNullCharacter); emitText(Replacement); }
                 return;
             }
 
@@ -687,7 +757,7 @@ struct Tokenizer
                 pos++;
                 if (c == '-') { emitText('-'); state = State.ScriptDataDoubleEscapedDashDash; }
                 else if (c == '<') { emitText('<'); state = State.ScriptDataDoubleEscapedLessThan; }
-                else if (c == '\0') { emitText(Replacement); state = State.ScriptDataDoubleEscaped; }
+                else if (c == '\0') { error(ParseErrorCode.UnexpectedNullCharacter); emitText(Replacement); state = State.ScriptDataDoubleEscaped; }
                 else { emitText(c); state = State.ScriptDataDoubleEscaped; }
                 return;
 
@@ -696,7 +766,7 @@ struct Tokenizer
                 if (c == '-') emitText('-');
                 else if (c == '<') { emitText('<'); state = State.ScriptDataDoubleEscapedLessThan; }
                 else if (c == '>') { emitText('>'); state = State.ScriptData; }
-                else if (c == '\0') { emitText(Replacement); state = State.ScriptDataDoubleEscaped; }
+                else if (c == '\0') { error(ParseErrorCode.UnexpectedNullCharacter); emitText(Replacement); state = State.ScriptDataDoubleEscaped; }
                 else { emitText(c); state = State.ScriptDataDoubleEscaped; }
                 return;
 
@@ -710,7 +780,7 @@ struct Tokenizer
                 if (isSpace(c)) { pos++; return; }
                 if (c == '/' || c == '>') { state = State.AfterAttrName; return; }
                 startAttribute();
-                if (c == '=') { pos++; tokData.put('='); }
+                if (c == '=') { error(ParseErrorCode.UnexpectedEqualsSignBeforeAttributeName); pos++; tokData.put('='); }
                 state = State.AttrName;
                 return;
 
@@ -719,6 +789,12 @@ struct Tokenizer
                 {
                     size_t start = pos;
                     while (pos < input.length && !(charClass[input[pos]] & EndOfAttrName)) pos++;
+                    if (collectErrors) foreach (i, ch; input[start .. pos])
+                        if (ch == '"' || ch == '\'' || ch == '<')
+                        {
+                            countTo(start + i);
+                            errors.put(RawParseError(ParseErrorCode.UnexpectedCharacterInAttributeName, line, column + 1));
+                        }
                     tokData.putLower(input[start .. pos]);
                     if (pos == input.length) return;
 
@@ -726,6 +802,7 @@ struct Tokenizer
                     if (isSpace(c) || c == '/' || c == '>') { endAttrName(); state = State.AfterAttrName; return; }
                     pos++;
                     if (c == '=') { endAttrName(); state = State.BeforeAttrValue; return; }
+                    error(ParseErrorCode.UnexpectedNullCharacter);
                     tokData.put(Replacement);
                 }
                 return;
@@ -744,7 +821,7 @@ struct Tokenizer
                 startValue();
                 if (c == '"') { pos++; state = State.AttrValueDoubleQuoted; }
                 else if (c == '\'') { pos++; state = State.AttrValueSingleQuoted; }
-                else if (c == '>') { pos++; emitTag(); }
+                else if (c == '>') { error(ParseErrorCode.MissingAttributeValue); pos++; emitTag(); }
                 else state = State.AttrValueUnquoted;
                 return;
 
@@ -761,6 +838,7 @@ struct Tokenizer
                     c = input[pos++];
                     if (c == q) { state = State.AfterAttrValueQuoted; return; }
                     if (c == '&') { returnState = state; state = State.CharRef; return; }
+                    error(ParseErrorCode.UnexpectedNullCharacter);
                     tokData.put(Replacement);
                 }
                 return;
@@ -771,6 +849,12 @@ struct Tokenizer
                 {
                     size_t start = pos;
                     while (pos < input.length && !(charClass[input[pos]] & EndOfUnquoted)) pos++;
+                    if (collectErrors) foreach (i, ch; input[start .. pos])
+                        if (ch == '"' || ch == '\'' || ch == '<' || ch == '=' || ch == '`')
+                        {
+                            countTo(start + i);
+                            errors.put(RawParseError(ParseErrorCode.UnexpectedCharacterInUnquotedAttributeValue, line, column + 1));
+                        }
                     tokData.put(input[start .. pos]);
                     if (pos == input.length) return;
 
@@ -779,7 +863,7 @@ struct Tokenizer
                     if (c == '>') { pos++; emitTag(); return; }
                     pos++;
                     if (c == '&') { returnState = State.AttrValueUnquoted; state = State.CharRef; return; }
-                    if (c == '\0') { foreach (r; Replacement) tokData.put(r); continue; }
+                    if (c == '\0') { error(ParseErrorCode.UnexpectedNullCharacter); tokData.put(Replacement); continue; }
                     tokData.put(c);
                 }
                 return;
@@ -789,12 +873,12 @@ struct Tokenizer
                 if (isSpace(c)) { pos++; state = State.BeforeAttrName; }
                 else if (c == '/') { pos++; state = State.SelfClosingStartTag; }
                 else if (c == '>') { pos++; emitTag(); }
-                else state = State.BeforeAttrName;
+                else { error(ParseErrorCode.MissingWhitespaceBetweenAttributes); state = State.BeforeAttrName; }
                 return;
 
             case State.SelfClosingStartTag:
                 if (c == '>') { pos++; selfClosing = true; emitTag(); }
-                else state = State.BeforeAttrName;
+                else { error(ParseErrorCode.UnexpectedSolidusInTag); state = State.BeforeAttrName; }
                 return;
 
             // Comments
@@ -803,7 +887,7 @@ struct Tokenizer
                 {
                     c = input[pos++];
                     if (c == '>') { emitComment(); state = State.Data; return; }
-                    if (c == '\0') { foreach (r; Replacement) tokData.put(r); continue; }
+                    if (c == '\0') { error(ParseErrorCode.UnexpectedNullCharacter); tokData.put(Replacement); continue; }
                     tokData.put(c);
                 }
                 return;
@@ -827,6 +911,7 @@ struct Tokenizer
                     if (sink.inForeignContent(sink.context)) state = State.CDataSection;
                     else
                     {
+                        error(ParseErrorCode.CDataInHtmlContent);
                         startComment();
                         foreach (ch; "[CDATA[") tokData.put(ch);
                         state = State.BogusComment;
@@ -834,6 +919,7 @@ struct Tokenizer
                     return;
                 }
 
+                error(ParseErrorCode.IncorrectlyOpenedComment);
                 startComment();
                 state = State.BogusComment;
                 return;
@@ -841,13 +927,13 @@ struct Tokenizer
 
             case State.CommentStart:
                 if (c == '-') { pos++; state = State.CommentStartDash; }
-                else if (c == '>') { pos++; emitComment(); state = State.Data; }
+                else if (c == '>') { error(ParseErrorCode.AbruptClosingOfEmptyComment); pos++; emitComment(); state = State.Data; }
                 else state = State.Comment;
                 return;
 
             case State.CommentStartDash:
                 if (c == '-') { pos++; state = State.CommentEnd; }
-                else if (c == '>') { pos++; emitComment(); state = State.Data; }
+                else if (c == '>') { error(ParseErrorCode.AbruptClosingOfEmptyComment); pos++; emitComment(); state = State.Data; }
                 else { tokData.put('-'); state = State.Comment; }
                 return;
 
@@ -862,6 +948,7 @@ struct Tokenizer
                     c = input[pos++];
                     if (c == '<') { tokData.put('<'); state = State.CommentLessThan; return; }
                     if (c == '-') { state = State.CommentEndDash; return; }
+                    error(ParseErrorCode.UnexpectedNullCharacter);
                     tokData.put(Replacement);
                 }
                 return;
@@ -883,6 +970,7 @@ struct Tokenizer
                 return;
 
             case State.CommentLessThanBangDashDash:
+                if (c != '>') error(ParseErrorCode.NestedComment);
                 state = State.CommentEnd;
                 return;
 
@@ -900,7 +988,7 @@ struct Tokenizer
 
             case State.CommentEndBang:
                 if (c == '-') { pos++; foreach (ch; "--!") tokData.put(ch); state = State.CommentEndDash; }
-                else if (c == '>') { pos++; emitComment(); state = State.Data; }
+                else if (c == '>') { error(ParseErrorCode.IncorrectlyClosedComment); pos++; emitComment(); state = State.Data; }
                 else { foreach (ch; "--!") tokData.put(ch); state = State.Comment; }
                 return;
 
@@ -908,12 +996,13 @@ struct Tokenizer
             case State.Doctype:
                 startDoctype();
                 if (isSpace(c)) pos++;
+                else if (c != '>') error(ParseErrorCode.MissingWhitespaceBeforeDoctypeName);
                 state = State.BeforeDoctypeName;
                 return;
 
             case State.BeforeDoctypeName:
                 if (isSpace(c)) { pos++; return; }
-                if (c == '>') { pos++; forceQuirks = true; emitDoctype(); state = State.Data; return; }
+                if (c == '>') { error(ParseErrorCode.MissingDoctypeName); pos++; forceQuirks = true; emitDoctype(); state = State.Data; return; }
                 hasName = true;
                 nameStart = tokData.length;
                 state = State.DoctypeName;
@@ -925,7 +1014,7 @@ struct Tokenizer
                     c = input[pos++];
                     if (isSpace(c)) { nameLen = tokData.length - nameStart; state = State.AfterDoctypeName; return; }
                     if (c == '>') { nameLen = tokData.length - nameStart; emitDoctype(); state = State.Data; return; }
-                    if (c == '\0') { foreach (r; Replacement) tokData.put(r); continue; }
+                    if (c == '\0') { error(ParseErrorCode.UnexpectedNullCharacter); tokData.put(Replacement); continue; }
                     tokData.put(lower(c));
                 }
                 return;
@@ -943,6 +1032,7 @@ struct Tokenizer
                 if (sys < 0) { holdBack(); return; }
                 if (sys > 0) { pos += 6; state = State.AfterDoctypeSystemKeyword; return; }
 
+                error(ParseErrorCode.InvalidCharacterSequenceAfterDoctypeName);
                 forceQuirks = true;
                 state = State.BogusDoctype;
                 return;
@@ -952,13 +1042,15 @@ struct Tokenizer
                 if (isSpace(c)) { pos++; state = State.BeforeDoctypePublicId; return; }
                 if (c == '"' || c == '\'')
                 {
+                    if (state == State.AfterDoctypePublicKeyword) error(ParseErrorCode.MissingWhitespaceAfterDoctypePublicKeyword);
                     pos++;
                     hasPublic = true;
                     publicStart = tokData.length;
                     state = c == '"' ? State.DoctypePublicIdDoubleQuoted : State.DoctypePublicIdSingleQuoted;
                     return;
                 }
-                if (c == '>') { pos++; forceQuirks = true; emitDoctype(); state = State.Data; return; }
+                if (c == '>') { error(ParseErrorCode.MissingDoctypePublicIdentifier); pos++; forceQuirks = true; emitDoctype(); state = State.Data; return; }
+                error(ParseErrorCode.MissingQuoteBeforeDoctypePublicIdentifier);
                 forceQuirks = true;
                 state = State.BogusDoctype;
                 return;
@@ -977,10 +1069,16 @@ struct Tokenizer
                         else systemLen = tokData.length - systemStart;
 
                         if (c == q) state = pub ? State.AfterDoctypePublicId : State.AfterDoctypeSystemId;
-                        else { forceQuirks = true; emitDoctype(); state = State.Data; }
+                        else
+                        {
+                            error(pub ? ParseErrorCode.AbruptDoctypePublicIdentifier : ParseErrorCode.AbruptDoctypeSystemIdentifier);
+                            forceQuirks = true;
+                            emitDoctype();
+                            state = State.Data;
+                        }
                         return;
                     }
-                    if (c == '\0') { foreach (r; Replacement) tokData.put(r); continue; }
+                    if (c == '\0') { error(ParseErrorCode.UnexpectedNullCharacter); tokData.put(Replacement); continue; }
                     tokData.put(c);
                 }
                 return;
@@ -991,12 +1089,14 @@ struct Tokenizer
                 if (c == '>') { pos++; emitDoctype(); state = State.Data; return; }
                 if (c == '"' || c == '\'')
                 {
+                    if (state == State.AfterDoctypePublicId) error(ParseErrorCode.MissingWhitespaceBetweenDoctypePublicAndSystemIdentifiers);
                     pos++;
                     hasSystem = true;
                     systemStart = tokData.length;
                     state = c == '"' ? State.DoctypeSystemIdDoubleQuoted : State.DoctypeSystemIdSingleQuoted;
                     return;
                 }
+                error(ParseErrorCode.MissingQuoteBeforeDoctypeSystemIdentifier);
                 forceQuirks = true;
                 state = State.BogusDoctype;
                 return;
@@ -1005,13 +1105,15 @@ struct Tokenizer
                 if (isSpace(c)) { pos++; state = State.BeforeDoctypeSystemId; return; }
                 if (c == '"' || c == '\'')
                 {
+                    if (state == State.AfterDoctypeSystemKeyword) error(ParseErrorCode.MissingWhitespaceAfterDoctypeSystemKeyword);
                     pos++;
                     hasSystem = true;
                     systemStart = tokData.length;
                     state = c == '"' ? State.DoctypeSystemIdDoubleQuoted : State.DoctypeSystemIdSingleQuoted;
                     return;
                 }
-                if (c == '>') { pos++; forceQuirks = true; emitDoctype(); state = State.Data; return; }
+                if (c == '>') { error(ParseErrorCode.MissingDoctypeSystemIdentifier); pos++; forceQuirks = true; emitDoctype(); state = State.Data; return; }
+                error(ParseErrorCode.MissingQuoteBeforeDoctypeSystemIdentifier);
                 forceQuirks = true;
                 state = State.BogusDoctype;
                 return;
@@ -1019,12 +1121,17 @@ struct Tokenizer
             case State.AfterDoctypeSystemId:
                 if (isSpace(c)) { pos++; return; }
                 if (c == '>') { pos++; emitDoctype(); state = State.Data; return; }
+                error(ParseErrorCode.UnexpectedCharacterAfterDoctypeSystemIdentifier);
                 state = State.BogusDoctype;
                 return;
 
             case State.BogusDoctype:
                 while (pos < input.length)
-                    if (input[pos++] == '>') { emitDoctype(); state = State.Data; return; }
+                {
+                    c = input[pos++];
+                    if (c == '>') { emitDoctype(); state = State.Data; return; }
+                    if (c == '\0') { pos--; error(ParseErrorCode.UnexpectedNullCharacter); pos++; }
+                }
                 return;
 
             // CDATA sections: the text is emitted as is
@@ -1077,12 +1184,12 @@ struct Tokenizer
 
             case State.HexCharRefStart:
                 if (isHex(c)) state = State.HexCharRef;
-                else { flushRef("&#"); flushRef(refBuf[]); state = returnState; }
+                else { error(ParseErrorCode.AbsenceOfDigitsInNumericCharacterReference); flushRef("&#"); flushRef(refBuf[]); state = returnState; }
                 return;
 
             case State.DecimalCharRefStart:
                 if (isDigit(c)) state = State.DecimalCharRef;
-                else { flushRef("&#"); state = returnState; }
+                else { error(ParseErrorCode.AbsenceOfDigitsInNumericCharacterReference); flushRef("&#"); state = returnState; }
                 return;
 
             case State.HexCharRef, State.DecimalCharRef:
@@ -1097,6 +1204,7 @@ struct Tokenizer
                     else
                     {
                         if (c == ';') pos++;
+                        else error(ParseErrorCode.MissingSemicolonAfterCharacterReference);
                         numericRefDone();
                         return;
                     }
@@ -1108,11 +1216,24 @@ struct Tokenizer
                 return;
             }
 
+            // After a named reference that matches nothing: an error if the name ends with ';'
+            case State.AmbiguousAmpersand:
+            {
+                size_t start = pos;
+                while (pos < input.length && isAlnum(input[pos])) pos++;
+                flushRef(input[start .. pos]);
+                if (pos == input.length) return;
+                if (input[pos] == ';') error(ParseErrorCode.UnknownNamedCharacterReference);
+                state = returnState;
+                return;
+            }
+
             // Processing instructions (`<?target data?>`)
             case State.ProcessingInstructionOpen:
                 if (isAlpha(c) || c == '_') { tokData.clear(); state = State.ProcessingInstructionTarget; }
                 else
                 {
+                    error(ParseErrorCode.InvalidFirstCharacterOfProcessingInstructionTarget);
                     startComment();
                     tokData.put('?');
                     state = State.BogusComment;
@@ -1126,12 +1247,22 @@ struct Tokenizer
                     if (isSpace(c) || c == '\r' || c == '?' || c == '>')
                     {
                         auto t = tokData[];
-                        if (equalsCi(t, "xml") || equalsCi(t, "xml-stylesheet")) { targetToComment(); return; }
+                        if (equalsCi(t, "xml") || equalsCi(t, "xml-stylesheet"))
+                        {
+                            error(ParseErrorCode.DisallowedProcessingInstructionTarget);
+                            targetToComment();
+                            return;
+                        }
                         targetLen = tokData.length;
                         state = State.AfterProcessingInstructionTarget;
                         return;
                     }
-                    if (!isAlnum(c) && c != '-' && c != '_') { targetToComment(); return; }
+                    if (!isAlnum(c) && c != '-' && c != '_')
+                    {
+                        error(ParseErrorCode.InvalidProcessingInstructionTarget);
+                        targetToComment();
+                        return;
+                    }
                     tokData.put(c);
                     pos++;
                 }
@@ -1197,10 +1328,10 @@ struct Tokenizer
 
         if (matcher.best == size_t.max)
         {
-            // No match: the chars are plain text
+            // No match: the chars are plain text, and so the alphanumerics after them
             flushRef("&");
             flushRef(consumed);
-            state = returnState;
+            state = hasNext ? State.AmbiguousAmpersand : returnState;
             return;
         }
 
@@ -1220,6 +1351,7 @@ struct Tokenizer
             }
         }
 
+        if (e.name[$ - 1] != ';') error(ParseErrorCode.MissingSemicolonAfterCharacterReference);
         flushRef(e.value);
         flushRef(rest);
         state = returnState;
@@ -1228,6 +1360,16 @@ struct Tokenizer
     void numericRefDone()
     {
         uint cp = charCodeOverflow ? 0x110000 : charCode;
+
+        if (collectErrors)
+        {
+            if (cp == 0) error(ParseErrorCode.NullCharacterReference);
+            else if (cp > 0x10FFFF) error(ParseErrorCode.CharacterReferenceOutsideUnicodeRange);
+            else if (cp >= 0xD800 && cp <= 0xDFFF) error(ParseErrorCode.SurrogateCharacterReference);
+            else if ((cp >= 0xFDD0 && cp <= 0xFDEF) || (cp & 0xFFFE) == 0xFFFE) error(ParseErrorCode.NoncharacterCharacterReference);
+            else if (cp == 0x0D || ((cp < 0x20 || (cp >= 0x7F && cp <= 0x9F)) && cp != '\t' && cp != '\n' && cp != '\f' && cp != ' '))
+                error(ParseErrorCode.ControlCharacterReference);
+        }
 
         if (cp == 0 || cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) cp = 0xFFFD;
         else if (cp >= 0x80 && cp <= 0x9F)
@@ -1261,18 +1403,26 @@ struct Tokenizer
     // What the current state does at the end of the input
     void handleEof()
     {
+        pos = input.length;
+
         while (!failed)
         {
             final switch (state)
             {
-                case State.Data, State.Rcdata, State.Rawtext, State.ScriptData, State.Plaintext,
-                     State.ScriptDataEscaped, State.ScriptDataEscapedDash, State.ScriptDataEscapedDashDash,
-                     State.ScriptDataDoubleEscaped, State.ScriptDataDoubleEscapedDash, State.ScriptDataDoubleEscapedDashDash,
-                     State.CDataSection:
+                case State.Data, State.Rcdata, State.Rawtext, State.ScriptData, State.Plaintext:
                     return;
 
-                case State.TagOpen: emitText('<'); return;
-                case State.EndTagOpen: emitText("</"); return;
+                case State.ScriptDataEscaped, State.ScriptDataEscapedDash, State.ScriptDataEscapedDashDash,
+                     State.ScriptDataDoubleEscaped, State.ScriptDataDoubleEscapedDash, State.ScriptDataDoubleEscapedDashDash:
+                    error(ParseErrorCode.EofInScriptHtmlCommentLikeText);
+                    return;
+
+                case State.CDataSection:
+                    error(ParseErrorCode.EofInCData);
+                    return;
+
+                case State.TagOpen: error(ParseErrorCode.EofBeforeTagName); emitText('<'); return;
+                case State.EndTagOpen: error(ParseErrorCode.EofBeforeTagName); emitText("</"); return;
 
                 case State.RcdataLessThan, State.RawtextLessThan, State.ScriptDataLessThan, State.ScriptDataEscapedLessThan:
                     emitText('<'); return;
@@ -1283,56 +1433,81 @@ struct Tokenizer
                 case State.RcdataEndTagName, State.RawtextEndTagName, State.ScriptDataEndTagName, State.ScriptDataEscapedEndTagName:
                     emitText("</"); emitText(temp[]); return;
 
-                case State.ScriptDataEscapeStart, State.ScriptDataEscapeStartDash,
-                     State.ScriptDataDoubleEscapeStart, State.ScriptDataDoubleEscapeEnd, State.ScriptDataDoubleEscapedLessThan:
+                case State.ScriptDataEscapeStart, State.ScriptDataEscapeStartDash:
+                    return;
+
+                case State.ScriptDataDoubleEscapeStart:
+                    error(ParseErrorCode.EofInScriptHtmlCommentLikeText);
+                    return;
+
+                case State.ScriptDataDoubleEscapeEnd, State.ScriptDataDoubleEscapedLessThan:
+                    error(ParseErrorCode.EofInScriptHtmlCommentLikeText);
                     return;
 
                 // EOF in a tag: the tag is dropped
                 case State.TagName, State.BeforeAttrName, State.AttrName, State.AfterAttrName, State.BeforeAttrValue,
                      State.AttrValueDoubleQuoted, State.AttrValueSingleQuoted, State.AttrValueUnquoted,
                      State.AfterAttrValueQuoted, State.SelfClosingStartTag:
+                    error(ParseErrorCode.EofInTag);
                     return;
 
-                case State.BogusComment, State.CommentStart, State.CommentStartDash, State.Comment, State.CommentLessThan,
+                case State.BogusComment:
+                    emitComment(); return;
+
+                case State.CommentStart, State.CommentStartDash, State.Comment, State.CommentLessThan,
                      State.CommentLessThanBang, State.CommentLessThanBangDash, State.CommentLessThanBangDashDash,
                      State.CommentEndDash, State.CommentEnd, State.CommentEndBang:
+                    error(ParseErrorCode.EofInComment);
                     emitComment(); return;
 
                 case State.MarkupDeclarationOpen:
+                    error(ParseErrorCode.IncorrectlyOpenedComment);
                     startComment(); emitComment(); return;
 
                 case State.Doctype, State.BeforeDoctypeName:
+                    error(ParseErrorCode.EofInDoctype);
                     startDoctype(); forceQuirks = true; emitDoctype(); return;
 
                 case State.DoctypeName:
+                    error(ParseErrorCode.EofInDoctype);
                     nameLen = tokData.length - nameStart; forceQuirks = true; emitDoctype(); return;
 
                 case State.DoctypePublicIdDoubleQuoted, State.DoctypePublicIdSingleQuoted:
+                    error(ParseErrorCode.EofInDoctype);
                     publicLen = tokData.length - publicStart; forceQuirks = true; emitDoctype(); return;
 
                 case State.DoctypeSystemIdDoubleQuoted, State.DoctypeSystemIdSingleQuoted:
+                    error(ParseErrorCode.EofInDoctype);
                     systemLen = tokData.length - systemStart; forceQuirks = true; emitDoctype(); return;
 
                 case State.AfterDoctypeName, State.AfterDoctypePublicKeyword, State.BeforeDoctypePublicId,
                      State.AfterDoctypePublicId, State.BetweenDoctypePublicAndSystem, State.AfterDoctypeSystemKeyword,
                      State.BeforeDoctypeSystemId, State.AfterDoctypeSystemId:
+                    error(ParseErrorCode.EofInDoctype);
                     forceQuirks = true; emitDoctype(); return;
 
                 case State.BogusDoctype: emitDoctype(); return;
 
-                case State.CDataSectionBracket: emitText(']'); return;
-                case State.CDataSectionEnd: emitText("]]"); return;
+                case State.CDataSectionBracket: error(ParseErrorCode.EofInCData); emitText(']'); return;
+                case State.CDataSectionEnd: error(ParseErrorCode.EofInCData); emitText("]]"); return;
+                case State.AmbiguousAmpersand: state = returnState; continue;
 
                 case State.CharRef: flushRef("&"); state = returnState; continue;
                 case State.NamedCharRef: namedRefDone('\0', false); continue;
-                case State.NumericCharRef: flushRef("&#"); state = returnState; continue;
-                case State.HexCharRefStart: flushRef("&#"); flushRef(refBuf[]); state = returnState; continue;
-                case State.DecimalCharRefStart: flushRef("&#"); state = returnState; continue;
-                case State.HexCharRef, State.DecimalCharRef: numericRefDone(); continue;
+                case State.NumericCharRef, State.DecimalCharRefStart:
+                    error(ParseErrorCode.AbsenceOfDigitsInNumericCharacterReference);
+                    flushRef("&#"); state = returnState; continue;
+                case State.HexCharRefStart:
+                    error(ParseErrorCode.AbsenceOfDigitsInNumericCharacterReference);
+                    flushRef("&#"); flushRef(refBuf[]); state = returnState; continue;
+                case State.HexCharRef, State.DecimalCharRef:
+                    error(ParseErrorCode.MissingSemicolonAfterCharacterReference);
+                    numericRefDone(); continue;
 
-                // EOF in a processing instruction: nothing is emitted (as lexbor does)
+                // EOF in a processing instruction: nothing is emitted
                 case State.ProcessingInstructionOpen, State.ProcessingInstructionTarget, State.AfterProcessingInstructionTarget,
                      State.ProcessingInstructionData, State.ProcessingInstructionQuestionable:
+                    error(ParseErrorCode.EofInProcessingInstruction);
                     return;
             }
         }

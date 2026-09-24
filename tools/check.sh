@@ -3,7 +3,8 @@
 #   - dump: everything the public API can observe, compared with tools/difftest/expected/dump.txt
 #   - lazytest: lazy and full parsing give the same results
 #   - snaptest: round trip of the snapshots (ctDocument)
-#   - html5lib: tree construction (WPT) and tokenizer (html5lib-tests) conformance
+#   - html5lib: tree construction (WPT) and tokenizer (html5lib-tests) conformance, parse errors
+#   - betterC: the parser core builds and runs without druntime
 #
 # Usage: tools/check.sh [--update]   (--update rewrites the reference dump instead of comparing)
 set -eo pipefail
@@ -44,3 +45,7 @@ echo "== snaptest"
 echo "== html5lib"
 "$DIR/html5lib/treetest"
 "$DIR/html5lib/tokentest"
+
+echo "== betterC"
+(cd "$DIR/../source" && ldc2 -betterC -oq -I. ../tools/betterc/app.d parserino/arena.d parserino/names.d parserino/dom.d \
+    parserino/html/*.d parserino/css/*.d -of=/tmp/parserino_betterc && /tmp/parserino_betterc > /dev/null && echo "ok")

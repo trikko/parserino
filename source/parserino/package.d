@@ -87,6 +87,9 @@ import parserino.css.selector : SelectorList, parseSelector;
 static import parserino.css.matcher;
 
 public import parserino.dom : NodeType;
+public import parserino.html.errors : ParseErrorCode;
+import parserino.html.errors : RawParseError, errorName;
+import parserino.arena : Buffer;
 
 import core.stdc.stdlib : calloc, realloc, free, malloc;
 import core.stdc.string : memchr, memcpy;
@@ -136,6 +139,32 @@ struct ParseOptions
      + Off by default, so the content of `<noscript>` is parsed as html (useful for scraping).
      +/
     bool scripting = false;
+
+    /++ Collect the parse errors (see `Document.parseErrors`). Off by default: then they cost nothing.
+     + With `ctDocument` the parse errors become compile errors.
+     +/
+    bool collectErrors = false;
+}
+
+/++ A parse error: the html is not valid (the parser recovers anyway, as a browser does).
++ The codes of the tokenizer are the ones of the HTML standard; the standard doesn't name the
++ errors of the tree construction, so they have codes in the same style (`misnested-tag`, ...).
++/
+struct ParseError
+{
+    ParseErrorCode code;    /// the error
+    size_t line;            /// 1-based
+    size_t column;          /// 1-based, in characters
+
+    /// The name of the error: `"unexpected-null-character"`, `"missing-doctype"`, ...
+    @property string name() const @safe nothrow pure @nogc { return errorName(code); }
+
+    /// `"line:column: name"`
+    string toString() const @safe pure
+    {
+        import std.conv : to;
+        return line.to!string ~ ":" ~ column.to!string ~ ": " ~ name;
+    }
 }
 
 /// The HTML5 Document
@@ -167,6 +196,7 @@ struct Document
         scope(failure) { DocImpl.release(impl); impl = null; }
 
         impl.dom.scripting = options.scripting;
+        impl.collectErrors = options.collectErrors;
         if (options.parsing == Parsing.Lazy)
             impl.beginLazy(html, options.chunkSize == 0 ? DefaultChunkSize : options.chunkSize);
         else impl.parseAll(html);
@@ -393,6 +423,51 @@ struct Document
 
     /// Complete the parsing of a lazy document. It does nothing on a fully parsed one.
     void finishParsing() { onlyValid(); impl.finish(); }
+
+    /++ The parse errors, in the order of the input (it completes the parsing). They are collected
+    + only with `ParseOptions.collectErrors`, else the list is empty. The errors of the tree
+    + construction are at the end of the token that causes them.
+    + ---
+    + ParseOptions options = { collectErrors: true };
+    + auto doc = Document("<p>unclosed <b>tags", options);
+    + foreach (e; doc.parseErrors) writeln(e);    // 1:4: missing-doctype, 1:20: unclosed-element-at-eof
+    + ---
+    +/
+    @property ParseError[] parseErrors()
+    {
+        import std.algorithm : sort, SwapStrategy;
+
+        onlyValid();
+        impl.finish();
+
+        ParseError[] r;
+        r.reserve(impl.errors.length);
+        foreach (e; impl.errors[]) r ~= ParseError(e.code, e.line, e.column);
+        r.sort!((a, b) => a.line < b.line || (a.line == b.line && a.column < b.column), SwapStrategy.stable);
+        return r;
+    }
+
+    ///
+    unittest
+    {
+        import std.algorithm : map, startsWith;
+        import std.array : array;
+
+        ParseOptions options = { collectErrors: true };
+
+        auto doc = Document("<!DOCTYPE html><p>a</b>\0<p x=1 x=2>", options);
+        assert(doc.parseErrors.map!(e => e.name).array
+            == ["unexpected-end-tag", "unexpected-null-character", "duplicate-attribute", "unexpected-null-character"]);
+        assert(doc.parseErrors[0].line == 1 && doc.parseErrors[0].toString.startsWith("1:"));
+
+        // A valid document, lazy parsing, errors not collected
+        assert(Document("<!DOCTYPE html><title>ok</title><p>fine", options).parseErrors.length == 0);
+        options.parsing = Parsing.Lazy;
+        options.chunkSize = 3;
+        assert(Document("<p>\n\n<b>", options).parseErrors.map!(e => e.toString).array
+            == ["1:4: missing-doctype", "3:4: unclosed-element-at-eof"]);
+        assert(Document("<p>x</b>").parseErrors.length == 0);
+    }
 
     /// A deep copy of the document, independent from this one
     Document dup()
@@ -2396,6 +2471,35 @@ unittest
     assert(dt.bySelector("html:first-child").walkLength == 1);
 }
 
+// Parse at compile time, with the parse errors as text (the first 20)
+private struct CheckedTree { DomSnapshot tree; string errors; }
+
+private CheckedTree parseChecked(string html, bool scripting) pure
+{
+    import std.conv : to;
+
+    RawParseError[] raw;
+    CheckedTree r;
+    r.tree = parseToSnapshot(html, scripting, raw);
+
+    // In the order of the input (insertion sort: stable, and fine in CTFE for a few errors)
+    foreach (i; 1 .. raw.length)
+        for (size_t j = i; j > 0 && (raw[j].line < raw[j - 1].line
+            || (raw[j].line == raw[j - 1].line && raw[j].column < raw[j - 1].column)); j--)
+        {
+            auto t = raw[j];
+            raw[j] = raw[j - 1];
+            raw[j - 1] = t;
+        }
+
+    foreach (i, e; raw)
+    {
+        if (i == 20) { r.errors ~= "... (" ~ (raw.length - 20).to!string ~ " more)\n"; break; }
+        r.errors ~= e.line.to!string ~ ":" ~ e.column.to!string ~ ": " ~ errorName(e.code) ~ "\n";
+    }
+    return r;
+}
+
 /// Is this a valid css selector? It works at compile time too.
 bool isValidSelector(const(char)[] css) @nogc nothrow
 {
@@ -2417,12 +2521,23 @@ private const(SelectorList)* compileAtCt(string css) pure
 + auto page = ctDocument!(import("page.html"));   // needs -J with the path of page.html
 + page.byId("title").textContent = "Hello";
 + ---
-+ Only `options.scripting` matters here. CTFE needs a lot of compiler memory: it's fine for
-+ templates of some tens of KB, not for big pages.
++ With `options.collectErrors` the html is validated at compile time: any parse error is a
++ compile error that lists them. The other options don't matter here.
++ ---
++ enum ParseOptions strict = { collectErrors: true };
++ auto page = ctDocument!(import("page.html"), strict);   // doesn't compile if page.html is not valid html
++ ---
++ CTFE needs a lot of compiler memory: it's fine for templates of some tens of KB, not for big pages.
 +/
 template ctDocument(string html, ParseOptions options = ParseOptions.init)
 {
-    private static immutable DomSnapshot tree = parseToSnapshot(html, options.scripting);
+    static if (options.collectErrors)
+    {
+        private enum checked = parseChecked(html, options.scripting);
+        static assert(checked.errors.length == 0, "Invalid html in ctDocument:\n" ~ checked.errors);
+        private static immutable DomSnapshot tree = checked.tree;
+    }
+    else private static immutable DomSnapshot tree = parseToSnapshot(html, options.scripting);
 
     Document ctDocument()
     {
@@ -2453,6 +2568,11 @@ unittest
 
     enum ParseOptions scripting = { scripting: true };
     assert(ctDocument!("<noscript><p>x</p></noscript>", scripting).byTagName("p").empty);
+
+    // Validated at compile time
+    enum ParseOptions strict = { collectErrors: true };
+    assert(ctDocument!("<!DOCTYPE html><title>ok</title><p>valid", strict).title == "ok");
+    static assert(!__traits(compiles, ctDocument!("<!DOCTYPE html><p>x</b>", strict)));
 }
 
 
@@ -2865,6 +2985,10 @@ struct DocImpl
     // The snapshot this document was restored from: the document uses its strings
     immutable(DomSnapshot)* snapshot;
 
+    // The parse errors (see `ParseOptions.collectErrors`)
+    bool collectErrors;
+    Buffer!RawParseError errors;
+
     static DocImpl* create()
     {
         auto d = cast(DocImpl*) calloc(1, DocImpl.sizeof);
@@ -2891,6 +3015,7 @@ struct DocImpl
         d.tables.dispose();
         d.formatting.dispose();
         d.selects.dispose();
+        destroy(d.errors);
         if (d.snapshot !is null)
         {
             import core.memory : GC;
@@ -2910,7 +3035,21 @@ struct DocImpl
     void parseAll(const(char)[] input)
     {
         fed = input.length;
-        if (!parseDocument(dom, input)) throw new ParserinoException("Can't parse the document (out of memory)");
+        if (!collectErrors)
+        {
+            if (!parseDocument(dom, input)) throw new ParserinoException("Can't parse the document (out of memory)");
+            return;
+        }
+
+        auto p = newParser();
+        if (p is null) throw new ParserinoException("Out of memory");
+        scope(exit) freeParser(p);
+
+        p.begin(dom);
+        p.tokenizer.collectErrors = true;
+        bool ok = p.feed(input) && p.finish();
+        errors.put(p.tokenizer.errors[]);
+        if (!ok || errors.failed) throw new ParserinoException("Can't parse the document (out of memory)");
     }
 
     void beginLazy(const(char)[] input, size_t chunk)
@@ -2918,6 +3057,7 @@ struct DocImpl
         parser = newParser();
         if (parser is null) throw new ParserinoException("Out of memory");
         parser.begin(dom);
+        parser.tokenizer.collectErrors = collectErrors;
 
         source = cast(ubyte*) malloc(input.length + 1);
         if (source is null) throw new ParserinoException("Out of memory");
@@ -2963,6 +3103,7 @@ struct DocImpl
     bool endParsing()
     {
         auto ok = parser.finish();
+        if (collectErrors) errors.put(parser.tokenizer.errors[]);
         freeParser(parser);
         parser = null;
         parsing = false;
