@@ -402,7 +402,7 @@ struct TreeBuilder
 
     // ------------------------------------------------------------ active formatting elements
 
-    void pushMarker() { activeFormatting.put(null); }
+    void pushMarker() { activeFormatting.put(cast(Node*) null); }
 
     void clearToLastMarker()
     {
@@ -434,7 +434,7 @@ struct TreeBuilder
 
     void insertAfeAt(size_t i, Node* n)
     {
-        activeFormatting.put(null);
+        activeFormatting.put(cast(Node*) null);
         foreach_reverse (j; i + 1 .. activeFormatting.length) activeFormatting[j] = activeFormatting[j - 1];
         activeFormatting[i] = n;
     }
@@ -1813,7 +1813,7 @@ struct TreeBuilder
             stackIndex(furthestBlock, furthestIdx);
 
             // Insert after the furthest block
-            openElements.put(null);
+            openElements.put(cast(Node*) null);
             foreach_reverse (j; furthestIdx + 2 .. openElements.length) openElements[j] = openElements[j - 1];
             openElements[furthestIdx + 1] = &e.node;
         }

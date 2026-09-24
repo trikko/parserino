@@ -141,6 +141,21 @@ struct Buffer(T)
         data[length++] = x;
     }
 
+    /// Append many items at once
+    void put(scope const(T)[] xs) @trusted
+    {
+        if (xs.length == 0) return;
+        while (length + xs.length > data.length) grow();
+
+        if (__ctfe) { foreach (i, x; xs) data[length + i] = cast(T) x; }
+        else
+        {
+            import core.stdc.string : memcpy;
+            memcpy(data.ptr + length, xs.ptr, xs.length * T.sizeof);
+        }
+        length += xs.length;
+    }
+
     inout(T)[] opSlice() inout { return data[0 .. length]; }
     ref inout(T) opIndex(size_t i) inout { return data[i]; }
     @property bool empty() const { return length == 0; }

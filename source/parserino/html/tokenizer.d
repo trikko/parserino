@@ -241,7 +241,7 @@ struct Tokenizer
     enum replacement = "\xEF\xBF\xBD";
 
     void emitText(char c) { text.put(c); if (c == '\0') textHasNull = true; }
-    void emitText(scope const(char)[] s) { foreach (c; s) text.put(c); }
+    void emitText(scope const(char)[] s) { text.put(s); }
 
     bool attributeState() const
     {
@@ -711,11 +711,15 @@ struct Tokenizer
                 char q = state == State.attrValueDoubleQuoted ? '"' : '\'';
                 while (pos < input.length)
                 {
+                    size_t start = pos;
+                    while (pos < input.length && input[pos] != q && input[pos] != '&' && input[pos] != '\0') pos++;
+                    tokData.put(input[start .. pos]);
+                    if (pos == input.length) return;
+
                     c = input[pos++];
                     if (c == q) { state = State.afterAttrValueQuoted; return; }
                     if (c == '&') { returnState = state; state = State.charRef; return; }
-                    if (c == '\0') { foreach (r; replacement) tokData.put(r); continue; }
-                    tokData.put(c);
+                    tokData.put(replacement);
                 }
                 return;
             }
@@ -803,11 +807,15 @@ struct Tokenizer
             case State.comment:
                 while (pos < input.length)
                 {
+                    size_t start = pos;
+                    while (pos < input.length && input[pos] != '<' && input[pos] != '-' && input[pos] != '\0') pos++;
+                    tokData.put(input[start .. pos]);
+                    if (pos == input.length) return;
+
                     c = input[pos++];
                     if (c == '<') { tokData.put('<'); state = State.commentLessThan; return; }
                     if (c == '-') { state = State.commentEndDash; return; }
-                    if (c == '\0') { foreach (r; replacement) tokData.put(r); continue; }
-                    tokData.put(c);
+                    tokData.put(replacement);
                 }
                 return;
 
