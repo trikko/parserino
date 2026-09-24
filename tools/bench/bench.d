@@ -77,6 +77,10 @@ void main(string[] args)
         foreach (p; pages) { auto d = Document(p, Parsing.Lazy); d.finishParsing(); }
     }), total);
 
+    // Many character references (1.6 MB)
+    string refs = "<p>" ~ "caf&eacute; &amp; &lt;b&gt; &nbsp;&copy;&hellip;&rarr; &NotNestedGreaterGreater; ".replicate(20000);
+    report("parse many &refs;", median(roundsOf("parse many &refs;"), { auto d = Document(refs); }), refs.length);
+
     report("ctDocument (60 KB)", median(roundsOf("ctDocument (60 KB)"), { foreach (_; 0 .. 10) { auto d = ctDocument!ctHtml; } }) / 10);
     report("parse the same 60 KB", median(roundsOf("parse the same 60 KB"), { foreach (_; 0 .. 10) { auto d = Document(ctHtml); } }) / 10);
 

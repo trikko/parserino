@@ -2258,9 +2258,31 @@ struct EntityMatcher
     size_t best = size_t.max;   /// the longest full match so far (index in `entities`)
     size_t bestLength;  /// its length
 
+    // The names that start with each char: entities[r[0] .. r[1]] (the names are sorted)
+    private static immutable ushort[2][128] firstRange = () {
+        ushort[2][128] r;
+        foreach (i, ref e; entities)
+        {
+            auto c = e.name[0];
+            if (r[c][1] == 0) r[c][0] = cast(ushort) i;
+            r[c][1] = cast(ushort) (i + 1);
+        }
+        return r;
+    }();
+
     /// Feed one char. It returns false when no name can match anymore.
     bool put(char c)
     {
+        // The first char: from a table (the widest search)
+        if (depth == 0)
+        {
+            depth = 1;
+            if (c >= 128) { lo = hi = 0; return false; }
+            lo = firstRange[c][0];
+            hi = firstRange[c][1];
+            return lo != hi;
+        }
+
         // Narrow [lo, hi) to the names with `c` at position `depth`
         size_t a = lo, b = hi;
         while (a < b)
