@@ -128,8 +128,31 @@ DomSnapshot takeSnapshot(const(DomDocument)* doc) pure
     s.compatMode = doc.compatMode;
     s.scripting = doc.scripting;
 
+    // At compile time the strings of the parsed document are used directly (nothing changes
+    // them anymore); at runtime they are copied (the arena goes away with the document).
+    size_t nodeAt, attrAt;
+
+    // Append with a doubling capacity (`~=` at compile time copies the whole array each time)
+    static void pushItem(T)(ref T[] a, ref size_t length, T x)
+    {
+        if (length == a.length)
+        {
+            auto b = new T[a.length ? a.length * 2 : 64];
+            foreach (i; 0 .. length) b[i] = a[i];
+            a = b;
+        }
+        a[length++] = x;
+    }
+
+    static string keep(scope const(char)[] x) @trusted
+    {
+        if (__ctfe) return cast(string) x;
+        return x.idup;
+    }
+
     void add(const(DomNode)* n, uint depth, bool inTemplate)
     {
+
         SnapshotNode r;
         r.type = n.type;
         r.ns = n.ns;
@@ -141,38 +164,38 @@ DomSnapshot takeSnapshot(const(DomDocument)* doc) pure
             case NodeType.Element:
                 auto e = n.as!DomElement;
                 if (n.name < Tag.Last) r.name = n.name;
-                else r.text = doc.tagName(n.name).idup;
-                r.qualifiedName = e.qualifiedName.idup;
+                else r.text = keep(doc.tagName(n.name));
+                r.qualifiedName = keep(e.qualifiedName);
 
                 for (const(DomAttribute)* a = e.firstAttr; a !is null; a = a.next)
                 {
                     SnapshotAttribute sa;
                     if (a.name < AttrName.Last) sa.name = a.name;
-                    else sa.localName = doc.attrName(a.name).idup;
+                    else sa.localName = keep(doc.attrName(a.name));
                     sa.ns = a.ns;
-                    sa.qualifiedName = a.qualifiedName.idup;
-                    sa.value = a.value.idup;
-                    s.attributes ~= sa;
+                    sa.qualifiedName = keep(a.qualifiedName);
+                    sa.value = keep(a.value);
+                    pushItem(s.attributes, attrAt, sa);
                     r.attributes++;
                 }
                 break;
 
             case NodeType.DocumentType:
                 auto d = n.as!DomDocumentType;
-                r.text = d.name.idup;
-                r.qualifiedName = d.publicId.idup;
-                r.systemId = d.systemId.idup;
+                r.text = keep(d.name);
+                r.qualifiedName = keep(d.publicId);
+                r.systemId = keep(d.systemId);
                 break;
 
             default:
                 auto cd = n.as!DomCharacterData;
                 r.name = n.name;
-                r.text = cd.data.idup;
-                r.qualifiedName = cd.target.idup;
+                r.text = keep(cd.data);
+                r.qualifiedName = keep(cd.target);
                 break;
         }
 
-        s.nodes ~= r;
+        pushItem(s.nodes, nodeAt, r);
     }
 
     // Visit `root` and its subtree in tree order, the template contents before the children.
@@ -228,6 +251,9 @@ DomSnapshot takeSnapshot(const(DomDocument)* doc) pure
 
     for (const(DomNode)* c = doc.node.firstChild; c !is null; c = c.next)
         visit(c);
+
+    s.nodes = s.nodes[0 .. nodeAt];
+    s.attributes = s.attributes[0 .. attrAt];
 
 
     return s;

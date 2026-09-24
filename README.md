@@ -148,8 +148,8 @@ doc.finishParsing();
 
 `ctDocument!html` parses the document at compile time. At runtime each call returns a new
 (mutable) document rebuilt from the stored tree, without parsing it again: useful for templates.
-Parsing in CTFE needs a lot of compiler memory: fine for templates of some tens of KB
-(about 1 s to compile), not for whole big pages (a 400 KB page needs several GB).
+Parsing in CTFE needs compiler memory and time: a template of some tens of KB takes about
+1 s; big pages work too (a 600 KB Wikipedia page: about 1 GB and 10 s with dmd).
 
 ```d
 auto page = ctDocument!(import("page.html"));   // dub: "stringImportPaths": ["views"]

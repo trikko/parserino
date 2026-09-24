@@ -44,6 +44,13 @@ void copyItems(T)(T* dst, const(T)* src, size_t n) @system
     else if (n) memcpy(dst, src, n * T.sizeof);
 }
 
+/// ditto, from mutable items (CTFE can't cast away the const of a pointer)
+void copyItems(T)(T* dst, T* src, size_t n) @system
+{
+    if (__ctfe) { foreach (i; 0 .. n) dst[i] = src[i]; }
+    else if (n) memcpy(dst, src, n * T.sizeof);
+}
+
 struct Arena
 {
 @nogc nothrow pure @safe:

@@ -2666,7 +2666,8 @@ private const(SelectorList)* compileAtCt(string css) pure
 + enum ParseOptions strict = { collectErrors: true };
 + auto page = ctDocument!(import("page.html"), strict);   // doesn't compile if page.html is not valid html
 + ---
-+ CTFE needs a lot of compiler memory: it's fine for templates of some tens of KB, not for big pages.
++ CTFE needs compiler memory and time: some tens of KB take about 1 s, a 600 KB page about
++ 1 GB and 10 s (dmd).
 +/
 template ctDocument(string html, ParseOptions options = ParseOptions.init)
 {
@@ -2693,6 +2694,8 @@ template ctDocument(string html, ParseOptions options = ParseOptions.init)
 ///
 unittest
 {
+    import std.array : replicate;
+
     enum html = "<!DOCTYPE html><title>Hi</title><p class=a>Hello <b>world</p>!<table><td>x";
 
     auto doc = ctDocument!html;
@@ -2707,6 +2710,10 @@ unittest
 
     enum ParseOptions scripting = { scripting: true };
     assert(ctDocument!("<noscript><p>x</p></noscript>", scripting).byTagName("p").empty);
+
+    // Deep trees at compile time
+    enum nested = "<div>".replicate(40) ~ "<b><i><u><s>x";
+    assert(ctDocument!nested.toString == Document(nested).toString);
 
     // Validated at compile time
     enum ParseOptions strict = { collectErrors: true };
