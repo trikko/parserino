@@ -1,0 +1,6 @@
+name "dlang_scraper"
+description "What's new in the latest version of D, read from dlang.org with lazy parsing"
+authors "Andrea Fontana"
+copyright "Copyright © 2023-2026, Andrea Fontana"
+license "MIT"
+dependency "parserino" path="../.."

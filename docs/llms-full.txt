@@ -113,25 +113,29 @@ void main() {
 }
 ```
 
-### Wikipedia Scraper (Lazy Processing)
+### Scraper (Lazy Processing): what's new in the latest D, from dlang.org
 ```d
-import std, parserino;
+import std.stdio;
+import std.net.curl : get;
+import std.range : take;
+import std.string : strip;
+import parserino;
 void main() {
-    auto data = "https://en.wikipedia.org/wiki/Special:Random".get.to!string;
-    Document doc = Document(data, Parsing.Lazy); // parse only what the queries need
+    // "Latest version: 2.113.0 – Changelog" on the home page
+    auto home = Document(get("https://dlang.org/"), Parsing.Lazy);   // parse only what the queries need
+    auto link = home.bySelector(".download .smallprint a").front.getAttribute("href");
 
-    // Get the canonical URL from <head>
-    auto canonicalUrl = doc.head.bySelector("link[rel=canonical]").frontOrThrow.getAttribute("href");
+    auto changelog = Document(get("https://dlang.org/" ~ link), Parsing.Lazy);
+    writeln(changelog.title);
 
-    // Take the first 5 internal links lazily
-    auto internalLinks = doc.byId("mw-content-text")
-        .byTagName("a")
-        .filter!(x => x.getAttribute("href").startsWith("/wiki/"))
-        .filter!(x => !x.getAttribute("href").startsWith("/wiki/File:"))
-        .take(5);
-
-    foreach(l; internalLinks)
-        writeln(l.getAttribute("title"), " => ", l.getAttribute("href"));
+    // The first changes of each section (compiler, runtime, library, dub): the rest is never parsed
+    foreach (section; changelog.byClass("bugsfixed").take(4))
+    {
+        writeln(section.byTagName("h4").front.textContent, ":");
+        foreach (change; section.bySelector("li a").take(3))
+            writeln(" - ", change.textContent.strip);
+    }
+    writeln(changelog.bytesParsed, " bytes parsed");
 }
 ```
 

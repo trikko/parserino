@@ -1,0 +1,16 @@
+.dub
+docs.json
+__dummy.html
+docs/
+/dlang_scraper
+dlang_scraper.so
+dlang_scraper.dylib
+dlang_scraper.dll
+dlang_scraper.a
+dlang_scraper.lib
+dlang_scraper-test-*
+*.exe
+*.pdb
+*.o
+*.obj
+*.lst
