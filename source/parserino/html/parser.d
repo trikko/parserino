@@ -8,14 +8,14 @@ import parserino.names;
 import parserino.html.tokenizer;
 import parserino.html.treebuilder;
 
-@nogc nothrow:
+@nogc nothrow pure:
 
 /++ A parser. It must not be moved after `begin` (the tokenizer points to the tree builder):
  + keep it in memory that doesn't move (heap, or a local variable used in place).
  +/
 struct Parser
 {
-@nogc nothrow:
+@nogc nothrow pure:
     @disable this(this);
 
     TreeBuilder tree;
@@ -80,6 +80,8 @@ Parser* newParser()
     import core.memory : pureMalloc;
     import core.lifetime : emplace;
 
+    if (__ctfe) return ctfeNewOne!Parser();
+
     auto p = cast(Parser*) pureMalloc(Parser.sizeof);
     if (p is null) return null;
     emplace(p);
@@ -89,6 +91,7 @@ Parser* newParser()
 void freeParser(Parser* p)
 {
     import core.memory : pureFree;
+    if (__ctfe) return;
     destroy(*p);
     pureFree(p);
 }
@@ -113,4 +116,4 @@ unittest
     assert(doc.body !is null && doc.head !is null);
 }
 
-import parserino.arena : Buffer;
+import parserino.arena : Buffer, ctfeNewOne;

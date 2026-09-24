@@ -12,7 +12,7 @@ import parserino.names;
 import parserino.dom : Document;
 import parserino.html.entities;
 
-@nogc nothrow:
+@nogc nothrow pure:
 
 enum TokenType : ubyte
 {
@@ -61,9 +61,9 @@ struct TokenSink
 {
     void* context;
     /// Process a token. It returns false to stop (out of memory).
-    bool function(void* context, ref Token token) @nogc nothrow process;
+    bool function(void* context, ref Token token) @nogc nothrow pure process;
     /// Is the adjusted current node an element not in the html namespace? (for CDATA sections)
-    bool function(void* context) @nogc nothrow inForeignContent;
+    bool function(void* context) @nogc nothrow pure inForeignContent;
 }
 
 /// States of the tokenizer (the ones the tree builder can set are `data`, `rcdata`, `rawtext`, `scriptData`, `plaintext`)
@@ -96,7 +96,7 @@ enum State : ubyte
 
 struct Tokenizer
 {
-@nogc nothrow:
+@nogc nothrow pure:
     @disable this(this);
 
     this(Document* document, TokenSink sink)

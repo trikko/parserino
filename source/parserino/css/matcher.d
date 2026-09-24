@@ -104,7 +104,7 @@ bool matchCompound(ref const Compound comp, Node* node)
 
 bool matchSimple(ref const Simple s, Node* node)
 {
-    auto e = cast(Element*) node;
+    auto e = node.as!Element;
 
     final switch (s.kind)
     {
@@ -178,7 +178,7 @@ bool matchSimple(ref const Simple s, Node* node)
             for (auto n = node.firstChild; n !is null; n = n.next)
             {
                 if (n.type != NodeType.text) continue;
-                auto text = (cast(CharacterData*) n).data;
+                auto text = n.as!CharacterData.data;
                 if (containsText(text, s.name, s.insensitive)) return true;
             }
             return false;
@@ -191,7 +191,7 @@ bool matchAttribute(ref const Simple s, Node* node)
     if (id == 0) return false;
 
     Attribute* attr;
-    for (attr = (cast(Element*) node).firstAttr; attr !is null; attr = attr.next)
+    for (attr = node.as!Element.firstAttr; attr !is null; attr = attr.next)
         if (attr.name == id && attrNsMatches(s.ns, attr.ns)) break;
     if (attr is null) return false;
     if (s.match == AttrMatch.exists) return true;
@@ -530,7 +530,7 @@ bool isQuirks(Node* n) { return n.document.compatMode == CompatMode.quirks; }
 
 Attribute* attrById(Node* n, uint id)
 {
-    for (auto a = (cast(Element*) n).firstAttr; a !is null; a = a.next)
+    for (auto a = n.as!Element.firstAttr; a !is null; a = a.next)
         if (a.name == id) return a;
     return null;
 }

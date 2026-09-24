@@ -10,7 +10,7 @@ import parserino.names;
 import parserino.dom;
 import parserino.html.tokenizer;
 
-@nogc nothrow:
+@nogc nothrow pure:
 
 enum Mode : ubyte
 {
@@ -28,7 +28,7 @@ enum : ubyte
 
 struct TreeBuilder
 {
-@nogc nothrow:
+@nogc nothrow pure:
     @disable this(this);
 
     Document* doc;
@@ -91,7 +91,7 @@ struct TreeBuilder
 
         // The form element pointer: the nearest form ancestor of the context
         for (auto n = context; n !is null; n = n.parent)
-            if (n.isHtml(Tag.form)) { form = cast(Element*) n; break; }
+            if (n.isHtml(Tag.form)) { form = n.as!Element; break; }
 
         return true;
     }
@@ -246,7 +246,7 @@ struct TreeBuilder
     // An element popped from the stack: <option> updates <selectedcontent>
     void popped(Node* n)
     {
-        if (n.isHtml(Tag.option)) maybeCloneToSelectedContent(cast(Element*) n);
+        if (n.isHtml(Tag.option)) maybeCloneToSelectedContent(n.as!Element);
     }
 
     static bool isHeading(uint tag) pure
@@ -461,7 +461,7 @@ struct TreeBuilder
         {
             auto n = activeFormatting[i];
             if (n is null) break;
-            if (n.name == node.name && n.ns == node.ns && sameAttributes(cast(Element*) n, cast(Element*) node))
+            if (n.name == node.name && n.ns == node.ns && sameAttributes(n.as!Element, node.as!Element))
             {
                 count++;
                 earliest = i;
@@ -506,7 +506,7 @@ struct TreeBuilder
 
         for (; i < activeFormatting.length; i++)
         {
-            auto src = cast(Element*) activeFormatting[i];
+            auto src = activeFormatting[i].as!Element;
             auto e = insertClone(src);
             if (e is null) return;
             activeFormatting[i] = &e.node;
@@ -530,7 +530,7 @@ struct TreeBuilder
             auto lastTable = findInStack(Tag.table, tbi);
 
             if (lastTemplate !is null && (lastTable is null || ti > tbi))
-                return &(cast(Element*) lastTemplate).templateContent.node;
+                return &lastTemplate.as!Element.templateContent.node;
 
             if (lastTable is null) location = openElements[0];
             else if (lastTable.parent !is null) { location = lastTable; before = true; }
@@ -541,7 +541,7 @@ struct TreeBuilder
         if (location is null) return null;
 
         if (!before && location.isHtml(Tag.template_))
-            location = &(cast(Element*) location).templateContent.node;
+            location = &location.as!Element.templateContent.node;
 
         return location;
     }
@@ -643,7 +643,7 @@ struct TreeBuilder
         Node* sibling = before ? pos.prev : pos.lastChild;
         if (sibling !is null && sibling.type == NodeType.text)
         {
-            if (!(cast(CharacterData*) sibling).appendData(data)) failed = true;
+            if (!sibling.as!CharacterData.appendData(data)) failed = true;
             return;
         }
 
@@ -726,13 +726,13 @@ struct TreeBuilder
         {
             if (auto sel = nearestSelect(n)) selectednessSetting(sel);
         }
-        else if (n.name == Tag.select) selectednessSetting(cast(Element*) n);
+        else if (n.name == Tag.select) selectednessSetting(n.as!Element);
         else if (n.name == Tag.selectedcontent)
         {
-            auto e = cast(Element*) n;
+            auto e = n.as!Element;
             if (n.parent is null || !n.parent.isHtml(Tag.select)) { e.flags |= flagContentDisabled; return; }
             e.flags &= ~flagContentDisabled;
-            selectednessSetting(cast(Element*) n.parent);
+            selectednessSetting(n.parent.as!Element);
         }
     }
 
@@ -749,7 +749,7 @@ struct TreeBuilder
                     if (optgroup !is null) return null;
                     optgroup = n;
                     break;
-                case Tag.select: return cast(Element*) n;
+                case Tag.select: return n.as!Element;
                 default: break;
             }
         }
@@ -758,14 +758,14 @@ struct TreeBuilder
 
     static bool optionDisabled(Node* option)
     {
-        if ((cast(Element*) option).attribute(AttrName.disabled) !is null) return true;
+        if (option.as!Element.attribute(AttrName.disabled) !is null) return true;
         for (auto n = option.parent; n !is null; n = n.parent)
         {
             if (n.ns != Ns.html) continue;
             switch (n.name)
             {
                 case Tag.select, Tag.datalist, Tag.hr, Tag.option: return false;
-                case Tag.optgroup: return (cast(Element*) n).attribute(AttrName.disabled) !is null;
+                case Tag.optgroup: return n.as!Element.attribute(AttrName.disabled) !is null;
                 default: break;
             }
         }
@@ -773,7 +773,7 @@ struct TreeBuilder
     }
 
     // The options of a select: its option descendants, not inside nested select/datalist/option or optgroup/optgroup
-    static void forEachOption(Element* select, scope void delegate(Element*) @nogc nothrow dg)
+    static void forEachOption(Element* select, scope void delegate(Element*) @nogc nothrow pure dg)
     {
         auto root = &select.node;
         for (auto n = root.firstChild; n !is null; )
@@ -783,7 +783,7 @@ struct TreeBuilder
             {
                 switch (n.name)
                 {
-                    case Tag.option: dg(cast(Element*) n); descend = false; break;
+                    case Tag.option: dg(n.as!Element); descend = false; break;
                     case Tag.select, Tag.datalist, Tag.hr: descend = false; break;
                     case Tag.optgroup:
                         for (auto p = n.parent; p !is root; p = p.parent)
@@ -844,7 +844,7 @@ struct TreeBuilder
 
         Element* sc = null;
         for (auto n = select.node.firstChild; n !is null; n = n.nextInTree(&select.node))
-            if (n.isHtml(Tag.selectedcontent)) { sc = cast(Element*) n; break; }
+            if (n.isHtml(Tag.selectedcontent)) { sc = n.as!Element; break; }
 
         if (sc is null || (sc.flags & flagContentDisabled)) return;
 
@@ -907,7 +907,7 @@ struct TreeBuilder
     {
         if (n.ns == Ns.math && n.name == Tag.annotation_xml)
         {
-            auto a = (cast(Element*) n).attribute("encoding");
+            auto a = n.as!Element.attribute("encoding");
             if (a is null) return false;
             return equalsCi(a.value, "text/html") || equalsCi(a.value, "application/xhtml+xml");
         }
@@ -1320,7 +1320,7 @@ struct TreeBuilder
         {
             case Tag.html:
                 if (findInStack(Tag.template_) !is null) return true;
-                mergeAttributes(cast(Element*) openElements[0], t);
+                mergeAttributes(openElements[0].as!Element, t);
                 return true;
 
             case Tag.base, Tag.basefont, Tag.bgsound, Tag.link, Tag.meta, Tag.noframes, Tag.script, Tag.style,
@@ -1333,7 +1333,7 @@ struct TreeBuilder
                 auto n = openElements[1];
                 if (!n.isHtml(Tag.body) || findInStack(Tag.template_) !is null) return true;
                 framesetOk = false;
-                mergeAttributes(cast(Element*) n, t);
+                mergeAttributes(n.as!Element, t);
                 return true;
             }
 
@@ -1628,7 +1628,7 @@ struct TreeBuilder
             {
                 if (findInStack(Tag.template_) is null)
                 {
-                    auto node = cast(Node*) form;
+                    Node* node = form is null ? null : &form.node;
                     form = null;
                     if (node is null || inScopeNode(node, Category.scope_) is null) return true;
                     generateImpliedEndTags();
@@ -1779,7 +1779,7 @@ struct TreeBuilder
                     continue;
                 }
 
-                auto e = cloneForFormatting(cast(Element*) node);
+                auto e = cloneForFormatting(node.as!Element);
                 if (e is null) return false;
                 node = &e.node;
                 activeFormatting[afeIdx] = node;
@@ -1799,7 +1799,7 @@ struct TreeBuilder
             if (pos is null) return false;
             insertAt(pos, before, last);
 
-            auto e = cloneForFormatting(cast(Element*) formatting);
+            auto e = cloneForFormatting(formatting.as!Element);
             if (e is null) return false;
 
             furthestBlock.moveChildrenTo(&e.node);

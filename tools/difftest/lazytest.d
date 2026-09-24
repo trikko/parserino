@@ -111,14 +111,14 @@ void main(string[] args)
             foreach (chunk; chunks)
             {
                 if (chunk == 1 && html.length > 20_000) continue;
-                auto d = Document.parseLazy(html, chunk);
+                auto d = Document(html, Parsing.lazy_, chunk);
                 auto got = q(d);
                 compare(fname, name, chunk, expected, got);
             }
         }
 
         // The whole lazy document, after a partial query, must serialize the same
-        auto d = Document.parseLazy(html, 7);
+        auto d = Document(html, Parsing.lazy_, 7);
         d.bySelector("p").take(2).walkLength;
         if (d.toString != eager.toString) { failures++; writeln("DIFF ", fname.baseName, " toString"); }
     }

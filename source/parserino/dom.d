@@ -3,20 +3,36 @@
 
  Every node lives in the arena of its document and is freed with it: removed
  nodes stay valid. Nodes are plain structs: `Element`, `CharacterData`, ... start
- with a `Node`, so a `Node*` can be converted to the right type after checking `type`.
+ with a `Node`: `node.as!Element` (after checking `type`) gives the struct that contains it.
 +/
 module parserino.dom;
 
 import parserino.arena;
 import parserino.names;
 import core.stdc.string : memcpy;
+import std.traits : CopyConstness;
+
+// Used by `Node.as` in CTFE (see `ctfeContainer`), they allocate: keep them outside the `@nogc:` sections
+version (D_BetterC)
+{
+    // No AAs without druntime (and no parsing at compile time, see `parserino.arena`)
+    private alias CtfeTable = void*;
+    private void* ctfeLookup(const(Node)* n) nothrow pure { assert(0, "CTFE parsing needs druntime"); }
+    private void ctfeStore(T)(T* x) nothrow pure { assert(0, "CTFE parsing needs druntime"); }
+}
+else
+{
+    private alias CtfeTable = void*[const(Node)*];
+    private void* ctfeLookup(const(Node)* n) nothrow pure @trusted { return cast(void*) n.document.ctfeContainers[n]; }
+    private void ctfeStore(T)(T* x) nothrow pure @trusted { x.node.document.ctfeContainers[&x.node] = cast(void*) x; }
+}
 
 /// The text of a node and its descendants (DOM `textContent`) written to `sink`
 void textContent(Sink)(const(Node)* node, ref Sink sink)
 {
     import std.range.primitives : put;
 
-    if (auto cd = (cast(Node*) node).asCharacterData)
+    if (auto cd = node.asCharacterData)
     {
         put(sink, cd.data);
         return;
@@ -24,7 +40,7 @@ void textContent(Sink)(const(Node)* node, ref Sink sink)
 
     for (const(Node)* n = node.firstChild; n !is null; n = n.nextInTree(node))
         if (n.type == NodeType.text || n.type == NodeType.cdataSection)
-            put(sink, (cast(CharacterData*) n).data);
+            put(sink, n.as!CharacterData.data);
 }
 
 @nogc nothrow:
@@ -63,16 +79,40 @@ struct Node
     /// Is this an element in the html namespace with this tag?
     bool isHtml(uint tag) const pure { return type == NodeType.element && name == tag && ns == Ns.html; }
 
-    inout(Element)* asElement() inout pure return { return type == NodeType.element ? cast(inout(Element)*) &this : null; }
-    inout(CharacterData)* asCharacterData() inout pure return
+    /++ The struct that contains this node: `Element`, `CharacterData`, `DocumentType`, `DocumentFragment` or `Document`.
+     + Unchecked: `type` must match.
+     +/
+    T* as(T)() pure @trusted return
     {
-        return type == NodeType.text || type == NodeType.comment || type == NodeType.processingInstruction || type == NodeType.cdataSection
-            ? cast(inout(CharacterData)*) &this : null;
+        // CTFE can't reinterpret a pointer: the document remembers the container of each node
+        if (__ctfe) return cast(T*) ctfeContainer(&this);
+        return cast(T*) &this;
+    }
+
+    /// ditto
+    const(T)* as(T)() const pure @trusted return
+    {
+        if (__ctfe) return cast(T*) ctfeContainer(&this);
+        return cast(const(T)*) &this;
+    }
+
+    /// The element / character data, or null if the node is something else
+    Element* asElement() pure return { return type == NodeType.element ? as!Element : null; }
+    const(Element)* asElement() const pure return { return type == NodeType.element ? as!Element : null; }
+
+    /// ditto
+    CharacterData* asCharacterData() pure return { return isCharacterData ? as!CharacterData : null; }
+    const(CharacterData)* asCharacterData() const pure return { return isCharacterData ? as!CharacterData : null; }
+
+    bool isCharacterData() const pure
+    {
+        return type == NodeType.text || type == NodeType.comment || type == NodeType.processingInstruction || type == NodeType.cdataSection;
     }
 
     /// Previous/next sibling that is an element
-    inout(Node)* prevElement() inout pure { inout(Node)* n = prev; while (n !is null && n.type != NodeType.element) n = n.prev; return n; }
-    inout(Node)* nextElement() inout pure { inout(Node)* n = next; while (n !is null && n.type != NodeType.element) n = n.next; return n; }
+    // These are templates on the constness of `this` (not `inout`: CTFE can't convert inout pointers)
+    auto prevElement(this This)() pure { This* n = prev; while (n !is null && n.type != NodeType.element) n = n.prev; return n; }
+    auto nextElement(this This)() pure { This* n = next; while (n !is null && n.type != NodeType.element) n = n.next; return n; }
 
     /// Append `child` as the last child (`child` must be detached)
     void appendChild(Node* child) pure
@@ -138,24 +178,25 @@ struct Node
     }
 
     /// Next node in tree order inside `root` (excluded), or null
-    inout(Node)* nextInTree(const(Node)* root) inout pure
+    auto nextInTree(this This)(const(Node)* root) pure
     {
-        if (firstChild !is null) return firstChild;
-        return nextSkippingChildren(root);
+        This* n = firstChild;
+        return n !is null ? n : nextSkippingChildren(root);
     }
 
     /// Next node in tree order after this subtree, inside `root`, or null
-    inout(Node)* nextSkippingChildren(const(Node)* root) inout pure
+    auto nextSkippingChildren(this This)(const(Node)* root) pure
     {
-        inout(Node)* n = cast(inout(Node)*) &this;
+        This* n = &this;
         while (n !is root && n.next is null) n = n.parent;
-        return n is root || n is null ? null : n.next;
+        This* r = n is root || n is null ? null : n.next;
+        return r;
     }
 
     /// Local name ("div", "#text", "!--", ...; the target for processing instructions)
     const(char)[] localName() const pure
     {
-        if (type == NodeType.processingInstruction) return (cast(const(CharacterData)*) &this).target;
+        if (type == NodeType.processingInstruction) return as!CharacterData.target;
         return document.tagName(name);
     }
 
@@ -166,7 +207,7 @@ struct Node
         {
             if (n.type == NodeType.comment) continue;
             if (n.type != NodeType.text) return false;
-            foreach (c; (cast(CharacterData*) n).data)
+            foreach (c; n.as!CharacterData.data)
                 if (c != ' ' && c != '\t' && c != '\n' && c != '\f' && c != '\r') return false;
         }
         return true;
@@ -222,18 +263,18 @@ struct Element
     const(char)[] fullName() const pure { return qualifiedName !is null ? qualifiedName : node.localName; }
 
     /// First attribute with this (lowercase) name id, any namespace
-    inout(Attribute)* attribute(uint id) inout pure
+    CopyConstness!(This, Attribute)* attribute(this This)(uint id) pure
     {
-        for (inout(Attribute)* a = firstAttr; a !is null; a = a.next)
+        for (typeof(return) a = firstAttr; a !is null; a = a.next)
             if (a.name == id) return a;
         return null;
     }
 
     /// First attribute with this name (case-insensitive for html elements)
-    inout(Attribute)* attribute(scope const(char)[] name) inout pure
+    CopyConstness!(This, Attribute)* attribute(this This)(scope const(char)[] name) pure
     {
         auto id = node.document.findAttrName(name);
-        return id == 0 ? null : attribute(id);
+        return id == 0 ? null : this.attribute(id);
     }
 
     /// Append an attribute (no duplicate check)
@@ -283,6 +324,16 @@ struct CharacterData
 
     const(char)[] data() const pure return @trusted { return ptr is null ? "" : ptr[0 .. length]; }
 
+    /++ Use `s` as the text, without copying it: `s` must outlive the document and never change
+     + (it's never written: a later change of the text reallocates it).
+     +/
+    void borrowData(return scope const(char)[] s) pure @trusted
+    {
+        ptr = cast(char*) s.ptr;
+        length = s.length;
+        capacity = 0;
+    }
+
     /// Replace the text
     bool setData(scope const(char)[] s) pure
     {
@@ -301,12 +352,12 @@ struct CharacterData
 
             auto nb = node.document.arena.alloc!char(cap);
             if (nb is null) return false;
-            if (length) memcpy(nb.ptr, ptr, length);
+            copyItems(nb.ptr, ptr, length);
             ptr = nb.ptr;
             capacity = cap;
         }
 
-        if (s.length) memcpy(ptr + length, s.ptr, s.length);
+        copyItems(ptr + length, s.ptr, s.length);
         length += s.length;
         return true;
     }
@@ -329,6 +380,20 @@ struct DocumentFragment
 }
 
 /// The document: it owns the memory of all its nodes
+// CTFE helpers for `Node.as`: they use the GC (an AA), so they are called as @nogc
+
+private void* ctfeContainer(const(Node)* n) @nogc nothrow pure @trusted
+{
+    alias F = void* function(const(Node)*) @nogc nothrow pure;
+    return (cast(F) &ctfeLookup)(n);
+}
+
+private void ctfeRegister(T)(T* x) @nogc nothrow pure @trusted
+{
+    alias F = void function(T*) @nogc nothrow pure;
+    (cast(F) &ctfeStore!T)(x);
+}
+
 struct Document
 {
 @nogc nothrow:
@@ -347,10 +412,18 @@ struct Document
     Element* body;
 
     /// The root element (`<html>`)
-    inout(Element)* documentElement() inout pure
+    Element* documentElement() pure
     {
-        for (inout(Node)* n = node.firstChild; n !is null; n = n.next)
-            if (n.type == NodeType.element) return cast(inout(Element)*) n;
+        for (Node* n = node.firstChild; n !is null; n = n.next)
+            if (n.type == NodeType.element) return n.as!Element;
+        return null;
+    }
+
+    /// ditto
+    const(Element)* documentElement() const pure
+    {
+        for (const(Node)* n = node.firstChild; n !is null; n = n.next)
+            if (n.type == NodeType.element) return n.as!Element;
         return null;
     }
 
@@ -360,10 +433,11 @@ struct Document
         node.type = NodeType.document;
         node.name = Tag._document;
         node.document = &this;
+        if (__ctfe) ctfeRegister(&this);
     }
 
     /// Free all the memory
-    void release()
+    void release() pure
     {
         arena.release();
         destroy(tags);
@@ -430,6 +504,7 @@ struct Document
         e.node.name = tag;
         e.node.ns = ns;
         e.node.document = &this;
+        if (__ctfe) ctfeRegister(e);
 
         if (tag == Tag.template_ && ns == Ns.html)
         {
@@ -458,6 +533,7 @@ struct Document
         d.node.type = NodeType.documentType;
         d.node.name = Tag._doctype;
         d.node.document = &this;
+        if (__ctfe) ctfeRegister(d);
         d.name = copy(name);
         d.publicId = copy(publicId);
         d.systemId = copy(systemId);
@@ -471,6 +547,7 @@ struct Document
         f.node.type = NodeType.documentFragment;
         f.node.name = Tag._document;
         f.node.document = &this;
+        if (__ctfe) ctfeRegister(f);
         return f;
     }
 
@@ -543,10 +620,15 @@ struct Document
         return arena.dup(s);
     }
 
+
     private:
 
     NameTable tags;
     NameTable attrs;
+
+    // Only in CTFE: node -> the struct that contains it (see `Node.as`)
+    CtfeTable ctfeContainers;
+
 
     CharacterData* createCharacterData(NodeType type, uint name, scope const(char)[] data) pure
     {
@@ -555,6 +637,7 @@ struct Document
         t.node.type = type;
         t.node.name = name;
         t.node.document = &this;
+        if (__ctfe) ctfeRegister(t);
         if (data.length && !t.setData(data)) return null;
         return t;
     }
@@ -564,7 +647,7 @@ struct Document
         final switch (src.type)
         {
             case NodeType.element:
-                auto se = cast(const(Element)*) src;
+                auto se = src.as!Element;
                 auto name = src.document is &this ? src.name : tagId(src.document.tagName(src.name));
                 auto e = createElement(name, src.ns);
                 if (e is null) return null;
@@ -591,14 +674,14 @@ struct Document
                 return &e.node;
 
             case NodeType.text, NodeType.comment, NodeType.cdataSection, NodeType.processingInstruction:
-                auto scd = cast(const(CharacterData)*) src;
+                auto scd = src.as!CharacterData;
                 auto cd = createCharacterData(src.type, src.name, scd.data);
                 if (cd is null) return null;
                 cd.target = copy(scd.target);
                 return &cd.node;
 
             case NodeType.documentType:
-                auto sd = cast(const(DocumentType)*) src;
+                auto sd = src.as!DocumentType;
                 auto d = createDocumentType(sd.name, sd.publicId, sd.systemId);
                 return d is null ? null : &d.node;
 
@@ -650,7 +733,7 @@ unittest
     assert(p.attribute("class").value == "a b");
 
     auto c = doc.importNode(&p.node, true);
-    assert(c.firstChild !is null && (cast(CharacterData*) c.firstChild).data == t.data);
+    assert(c.firstChild !is null && c.firstChild.as!CharacterData.data == t.data);
 
     p.remove();
     assert(html.firstChild is &x.node && x.prev is null);

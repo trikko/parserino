@@ -13,7 +13,7 @@ version (D_BetterC)
 {
     // Without druntime there is no GC: the compile-time features are not available.
     package T[] ctfeNew(T)(size_t n) @nogc nothrow pure { assert(0, "CTFE allocation needs druntime"); }
-    private T* ctfeNewOne(T)() @nogc nothrow pure { assert(0, "CTFE allocation needs druntime"); }
+    package T* ctfeNewOne(T)() @nogc nothrow pure { assert(0, "CTFE allocation needs druntime"); }
 }
 else
 {
@@ -28,7 +28,7 @@ else
         return (cast(F) &gcNew!T)(n);
     }
 
-    private T* ctfeNewOne(T)() @trusted @nogc nothrow pure
+    package T* ctfeNewOne(T)() @trusted @nogc nothrow pure
     {
         alias F = T* function() @nogc nothrow pure;
         return (cast(F) &gcNewOne!T)();
@@ -36,6 +36,13 @@ else
 }
 
 @nogc nothrow pure:
+
+/// Copy `n` items (memcpy, a loop in CTFE)
+void copyItems(T)(T* dst, const(T)* src, size_t n) @system
+{
+    if (__ctfe) { foreach (i; 0 .. n) dst[i] = cast(T) src[i]; }
+    else if (n) memcpy(dst, src, n * T.sizeof);
+}
 
 struct Arena
 {

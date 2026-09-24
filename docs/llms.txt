@@ -7,7 +7,7 @@ Parserino is a high-performance HTML5 parser and DOM manipulation library for th
 - **Document**: The main entry point for parsing and managing HTML content.
 - **Element**: Represents a single node in the DOM tree (tags, text, comments).
 - **Lazy Ranges**: Most search methods (`byTagName`, `bySelector`, etc.) return lazy struct ranges (forward ranges), allowing for efficient memory usage and partial document processing.
-- **Lazy Parsing**: `Document.parseLazy(html)` builds the tree only as far as the queries need (`doc.byClass("x").take(3)` stops early). Results are identical to a full parse.
+- **Lazy Parsing**: `Document(html, Parsing.lazy_)` builds the tree only as far as the queries need (`doc.byClass("x").take(3)` stops early). Results are identical to a full parse.
 - **Memory**: `Document` is reference counted; each `Element` keeps its document alive. Removed elements stay valid. Getters return `string` copies.
 
 ## Installation & Basic Usage
@@ -25,8 +25,8 @@ void main() {
 ## API Reference
 
 ### Document
-- `this(string html)`: Parses HTML string into a DOM tree.
-- `static Document parseLazy(string html, size_t chunkSize = 16 KiB)`: Incremental parsing, driven by the queries.
+- `this(string html, Parsing parsing = Parsing.eager, size_t chunkSize = 16 KiB)`: Parses HTML string into a DOM tree; `Parsing.lazy_` parses incrementally, driven by the queries.
+- `ctDocument!html`: Parsed at compile time; each call returns a new document rebuilt from the stored tree.
 - `finishParsing()`, `isParsing`, `bytesParsed`: Control and inspect lazy parsing.
 - `documentElement`: The `<html>` element.
 - `title`, `title(string)`: Get or set the document title.

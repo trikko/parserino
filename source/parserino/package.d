@@ -39,7 +39,7 @@ OTHER DEALINGS IN THE SOFTWARE.
  * so elements are always safe to use, even after the `Document` variable goes out of scope.
  * Nodes removed from the tree stay valid (they are released with their document).
  *
- * Lazy parsing: `Document.parseLazy` builds the tree only as far as your queries need.
+ * Lazy parsing: `Document(html, Parsing.lazy_)` builds the tree only as far as your queries need.
  * `doc.byClass("x").take(3)` stops parsing a little after the third match.
  */
 module parserino;
@@ -52,6 +52,7 @@ import parserino.html.treebuilder : TreeBuilder;
 static import parserino.html.serializer;
 import parserino.html.serializer : Serialize;
 import parserino.arena : Arena;
+import parserino.snapshot : Snapshot, parseToSnapshot;
 import parserino.css.selector : SelectorList, parseSelector;
 static import parserino.css.matcher;
 
@@ -74,37 +75,37 @@ class ParserinoException : Exception
     this(string msg, string file = __FILE__, size_t line = __LINE__) pure nothrow @safe { super(msg, file, line); }
 }
 
-/// Default chunk size used by `Document.parseLazy`
+/// How `Document` parses its input
+enum Parsing
+{
+    eager,  /// Parse everything at once
+    lazy_,  /// Parse chunk by chunk, only as far as queries and accessors need
+}
+
+/// Default chunk size for `Parsing.lazy_`
 enum size_t defaultChunkSize = 16 * 1024;
 
 /// The HTML5 Document
 struct Document
 {
-    /// Parse a whole document
-    this(const(char)[] html)
-    {
-        impl = DocImpl.create();
-        scope(failure) { DocImpl.release(impl); impl = null; }
-        impl.parseAll(html);
-    }
-
-    /++ Parse a document incrementally.
-    + The tree is built chunk by chunk, only when a query or an accessor needs more of it.
-    + The results are always the same as for a fully parsed document.
+    /++ Parse a document.
+    + With `Parsing.lazy_` the tree is built chunk by chunk (`chunkSize` bytes), only when a query
+    + or an accessor needs more of it. The results are always the same as for a fully parsed document.
     + ---
-    + auto doc = Document.parseLazy(hugeHtml);
+    + auto doc = Document(hugeHtml, Parsing.lazy_);
     + auto links = doc.byTagName("a").take(3).array;   // parses only the beginning of the document
     + assert(doc.bytesParsed < hugeHtml.length);
     + ---
-    + Any mutation of the document (or of one of its elements) completes the parsing first.
+    + Any mutation of a lazy document (or of one of its elements) completes the parsing first.
+    + To parse at compile time, see `ctDocument`.
     +/
-    static Document parseLazy(const(char)[] html, size_t chunkSize = defaultChunkSize)
+    this(const(char)[] html, Parsing parsing = Parsing.eager, size_t chunkSize = defaultChunkSize)
     {
-        Document d;
-        d.impl = DocImpl.create();
-        scope(failure) { DocImpl.release(d.impl); d.impl = null; }
-        d.impl.beginLazy(html, chunkSize == 0 ? defaultChunkSize : chunkSize);
-        return d;
+        impl = DocImpl.create();
+        scope(failure) { DocImpl.release(impl); impl = null; }
+
+        if (parsing == Parsing.lazy_) impl.beginLazy(html, chunkSize == 0 ? defaultChunkSize : chunkSize);
+        else impl.parseAll(html);
     }
 
     ///
@@ -115,7 +116,7 @@ struct Document
 
         string html = "<html><body>" ~ `<p class="x">hello</p>`.replicate(10_000);
 
-        auto doc = Document.parseLazy(html, 1024);
+        auto doc = Document(html, Parsing.lazy_, 1024);
         assert(doc.isParsing);
 
         auto found = doc.byClass("x").take(3).array;
@@ -138,7 +139,7 @@ struct Document
 
         // A mutation in the middle of a lazy query completes the parsing: the range goes on
         string html = "<body>" ~ `<div class="x"><b>a</b></div>`.replicate(2000);
-        auto doc = Document.parseLazy(html, 256);
+        auto doc = Document(html, Parsing.lazy_, 256);
 
         auto r = doc.byClass("x");
         r.front.setAttribute("id", "first");
@@ -150,13 +151,13 @@ struct Document
         assert(doc.byId("first").isValid);
 
         // Accessors wait for the element to be complete
-        auto doc2 = Document.parseLazy("<body><table><tr><td>1<td>2</table><p>after", 4);
+        auto doc2 = Document("<body><table><tr><td>1<td>2</table><p>after", Parsing.lazy_, 4);
         auto td = doc2.byTagName("td").front;
         assert(td.next == "<td>2</td>");
         assert(doc2.byTagName("p").front.innerText == "after");
 
         // Foster parenting: text inside an open table goes before it
-        auto doc3 = Document.parseLazy("<body><table>moved<tr><td>x</table>", 3);
+        auto doc3 = Document("<body><table>moved<tr><td>x</table>", Parsing.lazy_, 3);
         assert(doc3.body.firstChild(true).innerText == "moved");
     }
 
@@ -175,7 +176,7 @@ struct Document
             return {
                 foreach (_; 0 .. 20)
                 {
-                    auto doc = i % 2 ? Document(html) : Document.parseLazy(html, 512);
+                    auto doc = i % 2 ? Document(html) : Document(html, Parsing.lazy_, 512);
                     counts[i] += doc.bySelector("ul > li.a:nth-child(2n)").walkLength;
                 }
             };
@@ -241,7 +242,7 @@ struct Document
         assert(doc2 != docCpy);
     }
 
-    /// Is the document still being parsed? (see `parseLazy`)
+    /// Is the document still being parsed? (see `Parsing.lazy_`)
     @property bool isParsing() const @safe nothrow pure @nogc { return impl !is null && impl.parsing; }
 
     /// Number of input bytes given to the parser so far
@@ -1115,7 +1116,7 @@ struct Element
         if (node.type == NodeType.text || node.type == NodeType.comment
             || node.type == NodeType.processingInstruction)
         {
-            return (cast(CharacterData*) node).data.idup;
+            return node.as!CharacterData.data.idup;
         }
 
         if (node.type != NodeType.element && node.type != NodeType.document)
@@ -1960,6 +1961,49 @@ private const(SelectorList)* compileAtCt(string css) pure
     return parseSelector(css, a);
 }
 
+/++ A document parsed at compile time.
++ The compiler parses `html` once and stores the tree in the executable. At runtime each call
++ returns a new document (mutable, independent from the others) copied from that tree, without
++ tokenizing or building it again.
++ ---
++ auto page = ctDocument!(import("page.html"));   // needs -J with the path of page.html
++ page.byId("title").innerText = "Hello";
++ ---
++ CTFE needs a lot of compiler memory: it's fine for templates of some tens of KB, not for big pages.
++/
+template ctDocument(string html)
+{
+    private static immutable Snapshot tree = parseToSnapshot(html);
+
+    Document ctDocument()
+    {
+        Document d;
+        d.impl = DocImpl.create();
+        scope(failure) { DocImpl.release(d.impl); d.impl = null; }
+
+        if (!tree.restore(d.impl.dom)) throw new ParserinoException("Out of memory");
+        d.impl.fed = html.length;
+        return d;
+    }
+}
+
+///
+unittest
+{
+    enum html = "<!DOCTYPE html><title>Hi</title><p class=a>Hello <b>world</p>!<table><td>x";
+
+    auto doc = ctDocument!html;
+    assert(doc.toString == Document(html).toString);
+    assert(doc.title == "Hi");
+    assert(doc.body.firstChild(true).innerText == "Hello world");
+    assert(doc.bySelector!"td".front.innerText == "x");
+
+    // Each call returns a new document
+    doc.body.innerHTML = "changed";
+    assert(ctDocument!html.body.innerHTML != "changed");
+}
+
+
 import std.range.primitives : walkLength;
 
 /// Get the first element of a range or throw an exception
@@ -2247,7 +2291,7 @@ struct CommentFilter
 
         if (n.type != NodeType.comment) return false;
 
-        auto cd = cast(CharacterData*) n;
+        auto cd = n.as!CharacterData;
         auto text = cd.data;
         return (stripSpaces ? text.strip : text) == comment;
     }

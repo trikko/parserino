@@ -25,7 +25,7 @@ void serialize(Sink)(const(Node)* node, ref Sink sink, Serialize what)
     {
         case Serialize.node:
             if (node.type == NodeType.document) out_.put("<#document>");
-            else if (node.type == NodeType.element) startTag(cast(const(Element)*) node, out_);
+            else if (node.type == NodeType.element) startTag(node.as!Element, out_);
             else leaf(node, out_);
             break;
 
@@ -54,14 +54,17 @@ struct Buffered(Sink)
 
     void put(scope const(char)[] s)
     {
+        // CTFE doesn't handle the uninitialized buffer well (and doesn't need it)
+        if (__ctfe) { putToSink(s); return; }
+
         if (used + s.length > buf.length)
         {
             flush();
             if (s.length > buf.length) { putToSink(s); return; }
         }
 
-        import core.stdc.string : memcpy;
-        if (s.length) memcpy(buf.ptr + used, s.ptr, s.length);
+        import parserino.arena : copyItems;
+        () @trusted { copyItems(buf.ptr + used, s.ptr, s.length); }();
         used += s.length;
     }
 
@@ -96,7 +99,7 @@ void subtree(O)(const(Node)* root, ref O out_)
 
         if (isElement)
         {
-            auto e = cast(const(Element)*) node;
+            auto e = node.as!Element;
             startTag(e, out_);
 
             // The children of a <template> live in its content fragment
@@ -115,7 +118,7 @@ void subtree(O)(const(Node)* root, ref O out_)
         // Close the elements we are leaving
         while (true)
         {
-            if (node.type == NodeType.element && !isVoid(node)) endTag(cast(const(Element)*) node, out_);
+            if (node.type == NodeType.element && !isVoid(node)) endTag(node.as!Element, out_);
             if (node is root) return;
             if (node.next !is null) { node = node.next; break; }
             node = node.parent;
@@ -172,19 +175,19 @@ void leaf(O)(const(Node)* node, ref O out_)
     switch (node.type)
     {
         case NodeType.text:
-            auto data = (cast(const(CharacterData)*) node).data;
+            auto data = node.as!CharacterData.data;
             if (isRawTextParent(node)) out_.put(data);
             else escape!false(data, out_);
             break;
 
         case NodeType.comment:
             out_.put("<!--");
-            out_.put((cast(const(CharacterData)*) node).data);
+            out_.put(node.as!CharacterData.data);
             out_.put("-->");
             break;
 
         case NodeType.processingInstruction:
-            auto pi = cast(const(CharacterData)*) node;
+            auto pi = node.as!CharacterData;
             out_.put("<?");
             out_.put(pi.target);
             out_.put(" ");
@@ -194,7 +197,7 @@ void leaf(O)(const(Node)* node, ref O out_)
 
         case NodeType.documentType:
             out_.put("<!DOCTYPE ");
-            out_.put((cast(const(DocumentType)*) node).name);
+            out_.put(node.as!DocumentType.name);
             out_.put(">");
             break;
 

@@ -2,7 +2,7 @@
 * HTML5 parser written in pure D (tree construction derived from [Lexbor](https://github.com/lexbor/lexbor))
 * No C dependencies: no cmake, no prebuilt libraries, no DLLs
 * Super-fast parsing & dom editing
-* Lazy parsing: `Document.parseLazy(html).byClass("x").take(3)` parses only the beginning of the page
+* Lazy parsing: `Document(html, Parsing.lazy_).byClass("x").take(3)` parses only the beginning of the page
 * Lazy ranges to browse dom faster, reusable compiled css `Selector`s
 * Safe memory management: documents are reference counted, elements keep them alive
 * The parser core (`parserino.html`, `parserino.dom`, `parserino.css`) is `@nogc nothrow` and works with `-betterC`
@@ -65,12 +65,12 @@ void main()
 
 # lazy parsing
 
-`Document.parseLazy` builds the tree chunk by chunk, only as far as your queries need.
+`Document(html, Parsing.lazy_)` builds the tree chunk by chunk, only as far as your queries need.
 Results are always identical to a fully parsed document: nodes that the HTML5 algorithm
 could still move (open tables, misnested formatting tags, ...) are returned only when they are final.
 
 ```d
-auto doc = Document.parseLazy(hugeHtml);
+auto doc = Document(hugeHtml, Parsing.lazy_);
 
 // Parses only until the third link is found
 auto links = doc.byTagName("a").take(3).array;
@@ -79,6 +79,18 @@ writeln(doc.bytesParsed, " of ", hugeHtml.length, " bytes parsed");
 // Accessors wait until the element is complete, mutations complete the parsing
 writeln(links[0].innerHTML);
 doc.finishParsing();
+```
+
+# compile-time parsing
+
+`ctDocument!html` parses the document at compile time. At runtime each call returns a new
+(mutable) document rebuilt from the stored tree, without parsing it again: useful for templates.
+Parsing in CTFE needs a lot of compiler memory: fine for templates of some tens of KB
+(about 1 s to compile), not for whole big pages (a 400 KB page needs several GB).
+
+```d
+auto page = ctDocument!(import("page.html"));   // dub: "stringImportPaths": ["views"]
+page.byId("title").innerText = "Hello";
 ```
 
 # memory
