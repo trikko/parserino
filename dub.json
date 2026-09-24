@@ -1,7 +1,7 @@
 {
 	"authors": [ "Andrea Fontana" ],
 	"copyright": "Copyright © 2022-2026, Andrea Fontana",
-	"description": "A super-fast HTML (HTML5!) parser and DOM editor, for D. Pure D, based on a port of lexbor.",
+	"description": "A super-fast HTML (HTML5!) parser and DOM editor, for D. Pure D, lazy parsing, CSS selectors.",
 	"license": "MIT",
 	"name": "parserino",
 	"targetType": "library"

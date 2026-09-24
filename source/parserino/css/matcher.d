@@ -8,27 +8,17 @@ module parserino.css.matcher;
 
 import parserino.css.selector;
 
-import parserino.lexbor.dom.interfaces.node;
-import parserino.lexbor.dom.interfaces.element;
-import parserino.lexbor.dom.interfaces.attr;
-import parserino.lexbor.dom.interfaces.attr_const;
-import parserino.lexbor.dom.interfaces.document;
-import parserino.lexbor.dom.interfaces.character_data;
-import parserino.lexbor.tag.tag;
-import parserino.lexbor.tag.const_;
-import parserino.lexbor.ns.const_;
-import parserino.lexbor.core.base : uintptr_t;
+import parserino.dom;
+import parserino.names;
 
 @nogc nothrow:
-
-alias Node = lxb_dom_node_t;
 
 /++ Does the element match any selector of the list?
  + `scope` is the element matched by `:scope` (the root of the query).
  +/
 bool matches(const(SelectorList)* list, Node* node, Node* scopeElement = null)
 {
-    if (node.type != LXB_DOM_NODE_TYPE_ELEMENT) return false;
+    if (node.type != NodeType.element) return false;
     scopeNode = scopeElement;
     return matchList(*list, node);
 }
@@ -55,12 +45,12 @@ bool matchComplex(ref const Complex c, Node* node, size_t i)
     {
         case Combinator.descendant:
             for (auto p = node.parent; p !is null; p = p.parent)
-                if (p.type == LXB_DOM_NODE_TYPE_ELEMENT && matchComplex(c, p, i - 1)) return true;
+                if (p.type == NodeType.element && matchComplex(c, p, i - 1)) return true;
             return false;
 
         case Combinator.child:
             auto p = node.parent;
-            return p !is null && p.type == LXB_DOM_NODE_TYPE_ELEMENT && matchComplex(c, p, i - 1);
+            return p !is null && p.type == NodeType.element && matchComplex(c, p, i - 1);
 
         case Combinator.nextSibling:
             auto p = prevElement(node);
@@ -85,12 +75,12 @@ bool matchForward(ref const Complex c, Node* from, size_t i)
     {
         case Combinator.descendant:
             for (auto n = nextInSubtree(from, from, true); n !is null; n = nextInSubtree(n, from, true))
-                if (n.type == LXB_DOM_NODE_TYPE_ELEMENT && tryNode(n)) return true;
+                if (n.type == NodeType.element && tryNode(n)) return true;
             return false;
 
         case Combinator.child:
-            for (auto n = from.first_child; n !is null; n = n.next)
-                if (n.type == LXB_DOM_NODE_TYPE_ELEMENT && tryNode(n)) return true;
+            for (auto n = from.firstChild; n !is null; n = n.next)
+                if (n.type == NodeType.element && tryNode(n)) return true;
             return false;
 
         case Combinator.nextSibling:
@@ -114,7 +104,7 @@ bool matchCompound(ref const Compound comp, Node* node)
 
 bool matchSimple(ref const Simple s, Node* node)
 {
-    auto e = cast(lxb_dom_element_t*) node;
+    auto e = cast(Element*) node;
 
     final switch (s.kind)
     {
@@ -123,8 +113,8 @@ bool matchSimple(ref const Simple s, Node* node)
 
         case SimpleKind.type:
             if (!nsMatches(s.ns, node.ns)) return false;
-            auto id = lxb_tag_id_by_name(node.owner_document.tags, cast(const(ubyte)*) s.name.ptr, s.name.length);
-            return id != LXB_TAG__UNDEF && node.local_name == id;
+            auto id = node.document.findTagName(s.name);
+            return id != Tag._undef && node.name == id;
 
         case SimpleKind.never:
             return false;
@@ -133,12 +123,12 @@ bool matchSimple(ref const Simple s, Node* node)
             return matchLang(s.ranges, node);
 
         case SimpleKind.id:
-            if (e.attr_id is null || e.attr_id.value is null) return false;
-            return equal(value(e.attr_id), s.name, isQuirks(node));
+            if (e.idAttr is null) return false;
+            return equal(e.idAttr.value, s.name, isQuirks(node));
 
         case SimpleKind.class_:
-            if (e.attr_class is null || e.attr_class.value is null) return false;
-            return containsWord(value(e.attr_class), s.name, isQuirks(node));
+            if (e.classAttr is null) return false;
+            return containsWord(e.classAttr.value, s.name, isQuirks(node));
 
         case SimpleKind.attribute:
             return matchAttribute(s, node);
@@ -180,16 +170,15 @@ bool matchSimple(ref const Simple s, Node* node)
             size_t index = 0;
 
             for (auto n = node; n !is null; n = forward ? nextElement(n) : prevElement(n))
-                if (n.local_name == node.local_name && n.ns == node.ns) index++;
+                if (n.name == node.name && n.ns == node.ns) index++;
 
             return nth(s.a, s.b, index);
 
         case SimpleKind.contains:
-            for (auto n = node.first_child; n !is null; n = n.next)
+            for (auto n = node.firstChild; n !is null; n = n.next)
             {
-                if (n.type != LXB_DOM_NODE_TYPE_TEXT) continue;
-                auto cd = cast(lxb_dom_character_data_t*) n;
-                auto text = cast(const(char)[]) cd.data.data[0 .. cd.data.length];
+                if (n.type != NodeType.text) continue;
+                auto text = (cast(CharacterData*) n).data;
                 if (containsText(text, s.name, s.insensitive)) return true;
             }
             return false;
@@ -198,20 +187,20 @@ bool matchSimple(ref const Simple s, Node* node)
 
 bool matchAttribute(ref const Simple s, Node* node)
 {
-    auto data = lxb_dom_attr_data_by_local_name(node.owner_document.attrs, cast(const(ubyte)*) s.name.ptr, s.name.length);
-    if (data is null) return false;
+    auto id = node.document.findAttrName(s.name);
+    if (id == 0) return false;
 
-    lxb_dom_attr_t* attr;
-    for (attr = (cast(lxb_dom_element_t*) node).first_attr; attr !is null; attr = attr.next)
-        if (attr.node.local_name == data.attr_id && attrNsMatches(s.ns, attr.node.ns)) break;
+    Attribute* attr;
+    for (attr = (cast(Element*) node).firstAttr; attr !is null; attr = attr.next)
+        if (attr.name == id && attrNsMatches(s.ns, attr.ns)) break;
     if (attr is null) return false;
     if (s.match == AttrMatch.exists) return true;
 
-    const(char)[] v = attr.value is null ? "" : value(attr);
+    const(char)[] v = attr.value;
     auto want = s.value;
 
     bool ci = s.attrCase == AttrCase.insensitive
-        || (s.attrCase == AttrCase.auto_ && htmlCaseInsensitive(node, data.attr_id));
+        || (s.attrCase == AttrCase.auto_ && htmlCaseInsensitive(node, id));
 
     final switch (s.match)
     {
@@ -232,20 +221,20 @@ bool matchPseudoClass(PseudoClass p, Node* node)
     final switch (p)
     {
         case PseudoClass.anyLink, PseudoClass.link:
-            return isHtml(node, LXB_TAG_A, LXB_TAG_AREA) && hasAttr(node, LXB_DOM_ATTR_HREF);
+            return isHtml(node, Tag.a, Tag.area) && hasAttr(node, AttrName.href);
 
         case PseudoClass.blank:
-            return lxb_dom_node_is_empty(node);
+            return node.isBlank;
 
         case PseudoClass.checked:
-            if (isHtml(node, LXB_TAG_INPUT))
+            if (isHtml(node, Tag.input))
             {
-                auto t = attrById(node, LXB_DOM_ATTR_TYPE);
+                auto t = attrById(node, AttrName.type);
                 if (t is null || t.value is null) return false;
                 auto v = value(t);
-                return (equal(v, "checkbox", true) || equal(v, "radio", true)) && hasAttr(node, LXB_DOM_ATTR_CHECKED);
+                return (equal(v, "checkbox", true) || equal(v, "radio", true)) && hasAttr(node, AttrName.checked);
             }
-            return isHtml(node, LXB_TAG_OPTION) && isSelectedOption(node);
+            return isHtml(node, Tag.option) && isSelectedOption(node);
 
         case PseudoClass.disabled: return canBeDisabled(node) && isDisabled(node);
         case PseudoClass.enabled: return canBeDisabled(node) && !isDisabled(node);
@@ -253,7 +242,7 @@ bool matchPseudoClass(PseudoClass p, Node* node)
         case PseudoClass.empty:
             // Only comments inside
             for (auto n = nextInSubtree(node, node, true); n !is null; n = nextInSubtree(n, node, true))
-                if (n.local_name != LXB_TAG__EM_COMMENT) return false;
+                if (n.name != Tag._comment) return false;
             return true;
 
         case PseudoClass.firstChild: return prevElement(node) is null;
@@ -263,68 +252,68 @@ bool matchPseudoClass(PseudoClass p, Node* node)
         case PseudoClass.lastOfType: return lastOfType(node);
         case PseudoClass.onlyOfType: return firstOfType(node) && lastOfType(node);
 
-        case PseudoClass.optional: return isFormField(node) && !hasAttr(node, LXB_DOM_ATTR_REQUIRED);
-        case PseudoClass.required: return isFormField(node) && hasAttr(node, LXB_DOM_ATTR_REQUIRED);
+        case PseudoClass.optional: return isFormField(node) && !hasAttr(node, AttrName.required);
+        case PseudoClass.required: return isFormField(node) && hasAttr(node, AttrName.required);
 
         case PseudoClass.placeholderShown:
-            if (!hasAttr(node, LXB_DOM_ATTR_PLACEHOLDER)) return false;
-            if (isHtml(node, LXB_TAG_INPUT))
+            if (!hasAttr(node, AttrName.placeholder)) return false;
+            if (isHtml(node, Tag.input))
             {
                 auto v = attrByName(node, "value");
-                return v is null || v.value is null || v.value.length == 0;
+                return v is null || v.value.length == 0;
             }
-            if (isHtml(node, LXB_TAG_TEXTAREA)) return node.first_child is null;
+            if (isHtml(node, Tag.textarea)) return node.firstChild is null;
             return false;
 
         case PseudoClass.readWrite: return isReadWrite(node);
         case PseudoClass.readOnly: return !isReadWrite(node);
 
         case PseudoClass.root:
-            return node is lxb_dom_document_root(node.owner_document);
+            return node is rootElement(node);
 
         case PseudoClass.scope_:
-            if (scopeNode is null || scopeNode.type != LXB_DOM_NODE_TYPE_ELEMENT)
-                return node is lxb_dom_document_root(node.owner_document);
+            if (scopeNode is null || scopeNode.type != NodeType.element)
+                return node is rootElement(node);
             return node is scopeNode;
     }
 }
 
-bool isHtml(Node* n, lxb_tag_id_t a, lxb_tag_id_t b = LXB_TAG__UNDEF, lxb_tag_id_t c = LXB_TAG__UNDEF)
+bool isHtml(Node* n, uint a, uint b = Tag._undef, uint c = Tag._undef)
 {
-    return n.ns == LXB_NS_HTML && (n.local_name == a || (b != LXB_TAG__UNDEF && n.local_name == b) || (c != LXB_TAG__UNDEF && n.local_name == c));
+    return n.ns == Ns.html && (n.name == a || (b != Tag._undef && n.name == b) || (c != Tag._undef && n.name == c));
 }
 
-bool isFormField(Node* n) { return isHtml(n, LXB_TAG_INPUT, LXB_TAG_SELECT, LXB_TAG_TEXTAREA); }
+bool isFormField(Node* n) { return isHtml(n, Tag.input, Tag.select, Tag.textarea); }
 
 // Elements that support the disabled state
 bool canBeDisabled(Node* n)
 {
-    return isHtml(n, LXB_TAG_BUTTON, LXB_TAG_INPUT, LXB_TAG_SELECT) || isHtml(n, LXB_TAG_TEXTAREA, LXB_TAG_OPTGROUP, LXB_TAG_OPTION)
-        || isHtml(n, LXB_TAG_FIELDSET) || (n.local_name >= LXB_TAG__LAST_ENTRY && hasAttr(n, LXB_DOM_ATTR_DISABLED));
+    return isHtml(n, Tag.button, Tag.input, Tag.select) || isHtml(n, Tag.textarea, Tag.optgroup, Tag.option)
+        || isHtml(n, Tag.fieldset) || (n.name >= Tag._last && hasAttr(n, AttrName.disabled));
 }
 
 // HTML: "actually disabled"
 bool isDisabled(Node* node)
 {
-    if (hasAttr(node, LXB_DOM_ATTR_DISABLED)) return true;
+    if (hasAttr(node, AttrName.disabled)) return true;
 
-    if (isHtml(node, LXB_TAG_OPTION))
+    if (isHtml(node, Tag.option))
     {
         auto p = node.parent;
-        return p !is null && isHtml(p, LXB_TAG_OPTGROUP) && hasAttr(p, LXB_DOM_ATTR_DISABLED);
+        return p !is null && isHtml(p, Tag.optgroup) && hasAttr(p, AttrName.disabled);
     }
 
-    if (isHtml(node, LXB_TAG_OPTGROUP)) return false;
+    if (isHtml(node, Tag.optgroup)) return false;
 
     // Inside a disabled fieldset, but not inside its first legend
     Node* child = node;
     for (auto p = node.parent; p !is null; child = p, p = p.parent)
     {
-        if (!isHtml(p, LXB_TAG_FIELDSET) || !hasAttr(p, LXB_DOM_ATTR_DISABLED)) continue;
+        if (!isHtml(p, Tag.fieldset) || !hasAttr(p, AttrName.disabled)) continue;
 
         Node* legend = null;
-        for (auto c = p.first_child; c !is null; c = c.next)
-            if (c.type == LXB_DOM_NODE_TYPE_ELEMENT && isHtml(c, LXB_TAG_LEGEND)) { legend = c; break; }
+        for (auto c = p.firstChild; c !is null; c = c.next)
+            if (c.type == NodeType.element && isHtml(c, Tag.legend)) { legend = c; break; }
 
         if (child !is legend) return true;
     }
@@ -335,14 +324,14 @@ bool isDisabled(Node* node)
 // HTML: option selectedness (the first option of a single select is selected by default)
 bool isSelectedOption(Node* option)
 {
-    if (hasAttr(option, LXB_DOM_ATTR_SELECTED)) return true;
+    if (hasAttr(option, AttrName.selected)) return true;
 
     auto select = option.parent;
-    if (select !is null && isHtml(select, LXB_TAG_OPTGROUP)) select = select.parent;
-    if (select is null || !isHtml(select, LXB_TAG_SELECT)) return false;
-    if (hasAttr(select, LXB_DOM_ATTR_MULTIPLE)) return false;
+    if (select !is null && isHtml(select, Tag.optgroup)) select = select.parent;
+    if (select is null || !isHtml(select, Tag.select)) return false;
+    if (hasAttr(select, AttrName.multiple)) return false;
 
-    auto size = attrById(select, LXB_DOM_ATTR_SIZE);
+    auto size = attrById(select, AttrName.size);
     if (size !is null && size.value !is null)
     {
         long n = 0;
@@ -358,8 +347,8 @@ bool isSelectedOption(Node* option)
     Node* first = null;
     for (auto n = nextInSubtree(select, select, true); n !is null; n = nextInSubtree(n, select, true))
     {
-        if (!isHtml(n, LXB_TAG_OPTION)) continue;
-        if (hasAttr(n, LXB_DOM_ATTR_SELECTED)) return false;
+        if (!isHtml(n, Tag.option)) continue;
+        if (hasAttr(n, AttrName.selected)) return false;
         if (first is null && !isDisabled(n)) first = n;
     }
 
@@ -369,11 +358,11 @@ bool isSelectedOption(Node* option)
 // HTML: inputs and textareas that can be edited, and contenteditable elements
 bool isReadWrite(Node* n)
 {
-    if (isHtml(n, LXB_TAG_INPUT))
+    if (isHtml(n, Tag.input))
     {
-        if (hasAttr(n, LXB_DOM_ATTR_READONLY) || isDisabled(n)) return false;
+        if (hasAttr(n, AttrName.readonly) || isDisabled(n)) return false;
 
-        auto t = attrById(n, LXB_DOM_ATTR_TYPE);
+        auto t = attrById(n, AttrName.type);
         if (t is null || t.value is null) return true;
 
         static immutable string[] editable = [
@@ -392,10 +381,10 @@ bool isReadWrite(Node* n)
         return true;
     }
 
-    if (isHtml(n, LXB_TAG_TEXTAREA)) return !hasAttr(n, LXB_DOM_ATTR_READONLY) && !isDisabled(n);
+    if (isHtml(n, Tag.textarea)) return !hasAttr(n, AttrName.readonly) && !isDisabled(n);
 
     // contenteditable is inherited
-    for (auto p = n; p !is null && p.type == LXB_DOM_NODE_TYPE_ELEMENT; p = p.parent)
+    for (auto p = n; p !is null && p.type == NodeType.element; p = p.parent)
     {
         auto ce = attrByName(p, "contenteditable");
         if (ce is null) continue;
@@ -413,9 +402,9 @@ bool matchLang(const(const(char)[])[] ranges, Node* node)
     const(char)[] lang;
     bool found = false;
 
-    for (auto p = node; p !is null && p.type == LXB_DOM_NODE_TYPE_ELEMENT; p = p.parent)
+    for (auto p = node; p !is null && p.type == NodeType.element; p = p.parent)
     {
-        auto a = attrById(p, LXB_DOM_ATTR_LANG);
+        auto a = attrById(p, AttrName.lang);
         if (a is null) continue;
         lang = a.value is null ? "" : value(a);
         found = true;
@@ -437,59 +426,59 @@ bool matchLang(const(const(char)[])[] ranges, Node* node)
     return false;
 }
 
-bool nsMatches(NsMatch want, uintptr_t ns)
+bool nsMatches(NsMatch want, Ns ns)
 {
     final switch (want)
     {
         case NsMatch.any: return true;
-        case NsMatch.none: return ns == LXB_NS__UNDEF;
-        case NsMatch.html: return ns == LXB_NS_HTML;
-        case NsMatch.svg: return ns == LXB_NS_SVG;
-        case NsMatch.math: return ns == LXB_NS_MATH;
-        case NsMatch.xlink: return ns == LXB_NS_XLINK;
-        case NsMatch.xml: return ns == LXB_NS_XML;
-        case NsMatch.xmlns: return ns == LXB_NS_XMLNS;
+        case NsMatch.none: return ns == Ns.none;
+        case NsMatch.html: return ns == Ns.html;
+        case NsMatch.svg: return ns == Ns.svg;
+        case NsMatch.math: return ns == Ns.math;
+        case NsMatch.xlink: return ns == Ns.xlink;
+        case NsMatch.xml: return ns == Ns.xml;
+        case NsMatch.xmlns: return ns == Ns.xmlns;
     }
 }
 
-// Attributes of html elements have no namespace (lexbor stores them as html)
-bool attrNsMatches(NsMatch want, uintptr_t ns)
+// Attributes of html, svg and mathml elements have no namespace
+bool attrNsMatches(NsMatch want, Ns ns)
 {
-    if (want == NsMatch.none) return ns == LXB_NS__UNDEF || ns == LXB_NS_HTML;
+    if (want == NsMatch.none) return ns == Ns.none;
     return nsMatches(want, ns);
 }
 
 bool firstOfType(Node* n)
 {
     for (auto p = prevElement(n); p !is null; p = prevElement(p))
-        if (p.local_name == n.local_name && p.ns == n.ns) return false;
+        if (p.name == n.name && p.ns == n.ns) return false;
     return true;
 }
 
 bool lastOfType(Node* n)
 {
     for (auto p = nextElement(n); p !is null; p = nextElement(p))
-        if (p.local_name == n.local_name && p.ns == n.ns) return false;
+        if (p.name == n.name && p.ns == n.ns) return false;
     return true;
 }
 
 // Attribute values compared case-insensitively in html documents (as in lexbor and in the html spec)
-bool htmlCaseInsensitive(Node* node, lxb_dom_attr_id_t id)
+bool htmlCaseInsensitive(Node* node, uint id)
 {
-    if (node.ns != LXB_NS_HTML || node.owner_document.type != LXB_DOM_DOCUMENT_DTYPE_HTML) return false;
+    if (node.ns != Ns.html) return false;
 
     switch (id)
     {
-        case LXB_DOM_ATTR_ACCEPT, LXB_DOM_ATTR_ACCEPT_CHARSET, LXB_DOM_ATTR_ALIGN, LXB_DOM_ATTR_ALINK, LXB_DOM_ATTR_AXIS,
-             LXB_DOM_ATTR_BGCOLOR, LXB_DOM_ATTR_CHARSET, LXB_DOM_ATTR_CHECKED, LXB_DOM_ATTR_CLEAR, LXB_DOM_ATTR_CODETYPE,
-             LXB_DOM_ATTR_COLOR, LXB_DOM_ATTR_COMPACT, LXB_DOM_ATTR_DECLARE, LXB_DOM_ATTR_DEFER, LXB_DOM_ATTR_DIR,
-             LXB_DOM_ATTR_DIRECTION, LXB_DOM_ATTR_DISABLED, LXB_DOM_ATTR_ENCTYPE, LXB_DOM_ATTR_FACE, LXB_DOM_ATTR_FRAME,
-             LXB_DOM_ATTR_HREFLANG, LXB_DOM_ATTR_HTTP_EQUIV, LXB_DOM_ATTR_LANG, LXB_DOM_ATTR_LANGUAGE, LXB_DOM_ATTR_LINK,
-             LXB_DOM_ATTR_MEDIA, LXB_DOM_ATTR_METHOD, LXB_DOM_ATTR_MULTIPLE, LXB_DOM_ATTR_NOHREF, LXB_DOM_ATTR_NORESIZE,
-             LXB_DOM_ATTR_NOSHADE, LXB_DOM_ATTR_NOWRAP, LXB_DOM_ATTR_READONLY, LXB_DOM_ATTR_REL, LXB_DOM_ATTR_REV,
-             LXB_DOM_ATTR_RULES, LXB_DOM_ATTR_SCOPE, LXB_DOM_ATTR_SCROLLING, LXB_DOM_ATTR_SELECTED, LXB_DOM_ATTR_SHAPE,
-             LXB_DOM_ATTR_TARGET, LXB_DOM_ATTR_TEXT, LXB_DOM_ATTR_TYPE, LXB_DOM_ATTR_VALIGN, LXB_DOM_ATTR_VALUETYPE,
-             LXB_DOM_ATTR_VLINK:
+        case AttrName.accept, AttrName.accept_charset, AttrName.align_, AttrName.alink, AttrName.axis,
+             AttrName.bgcolor, AttrName.charset, AttrName.checked, AttrName.clear, AttrName.codetype,
+             AttrName.color, AttrName.compact, AttrName.declare, AttrName.defer, AttrName.dir,
+             AttrName.direction, AttrName.disabled, AttrName.enctype, AttrName.face, AttrName.frame,
+             AttrName.hreflang, AttrName.http_equiv, AttrName.lang, AttrName.language, AttrName.link,
+             AttrName.media, AttrName.method, AttrName.multiple, AttrName.nohref, AttrName.noresize,
+             AttrName.noshade, AttrName.nowrap, AttrName.readonly, AttrName.rel, AttrName.rev,
+             AttrName.rules, AttrName.scope_, AttrName.scrolling, AttrName.selected, AttrName.shape,
+             AttrName.target, AttrName.text, AttrName.type, AttrName.valign, AttrName.valuetype,
+             AttrName.vlink:
             return true;
 
         default:
@@ -511,44 +500,50 @@ bool nth(long a, long b, size_t index)
 Node* prevElement(Node* n)
 {
     for (n = n.prev; n !is null; n = n.prev)
-        if (n.type == LXB_DOM_NODE_TYPE_ELEMENT) return n;
+        if (n.type == NodeType.element) return n;
     return null;
 }
 
 Node* nextElement(Node* n)
 {
     for (n = n.next; n !is null; n = n.next)
-        if (n.type == LXB_DOM_NODE_TYPE_ELEMENT) return n;
+        if (n.type == NodeType.element) return n;
     return null;
 }
 
 // Preorder walk inside `root` (excluded)
 Node* nextInSubtree(Node* n, Node* root, bool deep)
 {
-    if (deep && n.first_child !is null) return n.first_child;
+    if (deep && n.firstChild !is null) return n.firstChild;
 
     while (n !is root && n.next is null) n = n.parent;
     return n is root ? null : n.next;
 }
 
-bool isQuirks(Node* n) { return n.owner_document.compat_mode == LXB_DOM_DOCUMENT_CMODE_QUIRKS; }
-
-lxb_dom_attr_t* attrById(Node* n, lxb_dom_attr_id_t id)
+Node* rootElement(Node* n)
 {
-    for (auto a = (cast(lxb_dom_element_t*) n).first_attr; a !is null; a = a.next)
-        if (a.node.local_name == id) return a;
+    auto e = n.document.documentElement;
+    return e is null ? null : &e.node;
+}
+
+bool isQuirks(Node* n) { return n.document.compatMode == CompatMode.quirks; }
+
+Attribute* attrById(Node* n, uint id)
+{
+    for (auto a = (cast(Element*) n).firstAttr; a !is null; a = a.next)
+        if (a.name == id) return a;
     return null;
 }
 
-bool hasAttr(Node* n, lxb_dom_attr_id_t id) { return attrById(n, id) !is null; }
+bool hasAttr(Node* n, uint id) { return attrById(n, id) !is null; }
 
-lxb_dom_attr_t* attrByName(Node* n, const(char)[] name)
+Attribute* attrByName(Node* n, const(char)[] name)
 {
-    auto data = lxb_dom_attr_data_by_local_name(n.owner_document.attrs, cast(const(ubyte)*) name.ptr, name.length);
-    return data is null ? null : attrById(n, data.attr_id);
+    auto id = n.document.findAttrName(name);
+    return id == 0 ? null : attrById(n, id);
 }
 
-const(char)[] value(lxb_dom_attr_t* a) { return cast(const(char)[]) a.value.data[0 .. a.value.length]; }
+const(char)[] value(Attribute* a) { return a.value; }
 
 char lower(char c) { return (c >= 'A' && c <= 'Z') ? cast(char) (c | 0x20) : c; }
 

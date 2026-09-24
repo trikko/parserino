@@ -1,16 +1,17 @@
 # parserino [![Build & Test](https://github.com/trikko/parserino/actions/workflows/d.yml/badge.svg)](https://github.com/trikko/parserino/actions/workflows/d.yml)
-* HTML5 parser written in pure D, based on a port of [Lexbor](https://github.com/lexbor/lexbor)
+* HTML5 parser written in pure D (tree construction derived from [Lexbor](https://github.com/lexbor/lexbor))
 * No C dependencies: no cmake, no prebuilt libraries, no DLLs
 * Super-fast parsing & dom editing
 * Lazy parsing: `Document.parseLazy(html).byClass("x").take(3)` parses only the beginning of the page
 * Lazy ranges to browse dom faster, reusable compiled css `Selector`s
 * Safe memory management: documents are reference counted, elements keep them alive
+* The parser core (`parserino.html`, `parserino.dom`, `parserino.css`) is `@nogc nothrow` and works with `-betterC`
 * Every method is unit-tested on Linux, MacOS, Windows
 
 # license
-Parserino is MIT licensed. The D port of lexbor in `source/parserino/lexbor` is
-derived from lexbor and keeps its Apache 2.0 license: see `LICENSE-lexbor` and
-`NOTICE-lexbor`.
+Parserino is MIT licensed. The HTML tree construction (`source/parserino/html/treebuilder.d`)
+and the tables of names and character references are derived from lexbor and keep its
+Apache 2.0 license: see `LICENSE-lexbor` and `NOTICE-lexbor`.
 
 # documentation
 All docs are available [here](https://trikko.github.io/parserino/)

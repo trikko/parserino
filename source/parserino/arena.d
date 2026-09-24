@@ -9,18 +9,33 @@ module parserino.arena;
 import core.memory : pureMalloc, pureFree;
 import core.stdc.string : memcpy, memset;
 
-/// Allocate `n` zeroed `T`s with the GC. Only for CTFE.
-private T[] gcNew(T)(size_t n) nothrow pure { return new T[n]; }
-private T* gcNewOne(T)() nothrow pure { return new T; }
+version (D_BetterC)
+{
+    // Without druntime there is no GC: the compile-time features are not available.
+    package T[] ctfeNew(T)(size_t n) @nogc nothrow pure { assert(0, "CTFE allocation needs druntime"); }
+    private T* ctfeNewOne(T)() @nogc nothrow pure { assert(0, "CTFE allocation needs druntime"); }
+}
+else
+{
+    /// Allocate `n` zeroed `T`s with the GC. Only for CTFE.
+    private T[] gcNew(T)(size_t n) nothrow pure { return new T[n]; }
+    private T* gcNewOne(T)() nothrow pure { return new T; }
+
+    /// Call `gcNew` from @nogc code: it is used only in `if (__ctfe)` branches.
+    package T[] ctfeNew(T)(size_t n) @trusted @nogc nothrow pure
+    {
+        alias F = T[] function(size_t) @nogc nothrow pure;
+        return (cast(F) &gcNew!T)(n);
+    }
+
+    private T* ctfeNewOne(T)() @trusted @nogc nothrow pure
+    {
+        alias F = T* function() @nogc nothrow pure;
+        return (cast(F) &gcNewOne!T)();
+    }
+}
 
 @nogc nothrow pure:
-
-/// Call `gcNew` from @nogc code: it is used only in `if (__ctfe)` branches.
-package T[] ctfeNew(T)(size_t n) @trusted
-{
-    alias F = T[] function(size_t) @nogc nothrow pure;
-    return (cast(F) &gcNew!T)(n);
-}
 
 struct Arena
 {
@@ -43,12 +58,8 @@ struct Arena
     /// Allocate a single zeroed `T`.
     T* make(T)() @trusted
     {
-        if (__ctfe)
-        {
-            // A single object (not an array element) can initialize static data
-            alias F = T* function() @nogc nothrow pure;
-            return (cast(F) &gcNewOne!T)();
-        }
+        // A single object (not an array element) can initialize static data
+        if (__ctfe) return ctfeNewOne!T();
 
         auto a = alloc!T(1);
         return a is null ? null : &a[0];

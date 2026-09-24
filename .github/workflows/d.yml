@@ -50,7 +50,9 @@ jobs:
     - uses: dlang-community/setup-dlang@v1
       with:
           compiler: ldc-latest
-    - name: 'The lexbor port builds with -betterC'
+    - name: 'The parser core builds and runs with -betterC'
       run: |
         cd source
-        ldc2 -betterC -oq -lib -I. $(find parserino/lexbor -name "*.d") -od=/tmp/bc -of=/tmp/libparserino_lexbor.a
+        CORE="parserino/arena.d parserino/names.d parserino/dom.d $(ls parserino/html/*.d parserino/css/*.d)"
+        ldc2 -betterC -oq -I. ../tools/betterc/app.d $CORE -of=/tmp/betterc_test
+        /tmp/betterc_test

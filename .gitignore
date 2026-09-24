@@ -16,3 +16,4 @@ source/app.d
 tools/difftest/lazytest
 tools/difftest/dump
 tools/difftest/selfuzz
+tools/difftest/newparse

@@ -23,7 +23,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 /** HTML5 parser and DOM manipulation library.
  *
  * Parserino is a fast html5 parser and DOM manipulation library written in pure D
- * (the parser is a D port of the lexbor library).
+ * (the tree construction is derived from the lexbor library).
  * ---
  * import parserino;
  * void main()
@@ -44,20 +44,11 @@ OTHER DEALINGS IN THE SOFTWARE.
  */
 module parserino;
 
-import parserino.lexbor.core.base;
-import parserino.lexbor.core.array;
-import parserino.lexbor.core.str;
-import parserino.lexbor.tag.tag;
-import parserino.lexbor.tag.const_;
-import parserino.lexbor.ns.const_;
-import parserino.lexbor.dom.interfaces.node;
-import parserino.lexbor.dom.interfaces.element;
-import parserino.lexbor.dom.interfaces.attr;
-import parserino.lexbor.dom.interfaces.document;
-import parserino.lexbor.dom.interfaces.character_data;
-import parserino.lexbor.html.interfaces.document;
-import parserino.lexbor.html.parser;
-import parserino.lexbor.html.tree;
+import parserino.names : Tag, Ns;
+import parserino.dom : textContent, DomNode = Node, DomElement = Element, DomAttribute = Attribute, DomDocument = Document,
+    CharacterData, NodeType;
+import parserino.html.parser : Parser, newParser, freeParser, parseDocument, parseFragment;
+import parserino.html.treebuilder : TreeBuilder;
 static import parserino.html.serializer;
 import parserino.html.serializer : Serialize;
 import parserino.arena : Arena;
@@ -273,7 +264,7 @@ struct Document
     {
         auto d = (cast() this).mutableImpl();
         d.finish();
-        serializeTo(Serialize.tree, &d.html.dom_document.node, sink);
+        serializeTo(Serialize.tree, &d.dom.node, sink);
     }
 
     /// ditto
@@ -309,7 +300,20 @@ struct Document
     {
         onlyValid();
         impl.finish();
-        check(lxb_html_document_title_set(impl.html, cast(const(ubyte)*) s.ptr, s.length), "Can't set the title");
+
+        auto dom = impl.dom;
+        if (dom.head is null) return;
+
+        auto t = findTitle();
+        if (t is null)
+        {
+            auto e = dom.createElement(Tag.title, Ns.html);
+            if (e is null) throw new ParserinoException("Out of memory");
+            dom.head.appendChild(&e.node);
+            t = &e.node;
+        }
+
+        Element(this, t).innerText = s;
     }
 
     unittest
@@ -328,7 +332,9 @@ struct Document
     Element createElement(const(char)[] tagName)
     {
         onlyValid();
-        auto e = lxb_dom_document_create_element(&impl.html.dom_document, cast(const(ubyte)*) tagName.ptr, tagName.length, null);
+        import std.uni : toLower;
+        auto id = impl.dom.tagId(tagName.toLower);
+        auto e = id == 0 ? null : impl.dom.createElement(id, Ns.html);
         if (e is null) throw new ParserinoException("Can't create element `" ~ tagName.idup ~ "`");
         return Element(this, &e.node);
     }
@@ -337,18 +343,18 @@ struct Document
     Element createText(const(char)[] text)
     {
         onlyValid();
-        auto t = lxb_dom_document_create_text_node(&impl.html.dom_document, cast(const(ubyte)*) text.ptr, text.length);
+        auto t = impl.dom.createText(text);
         if (t is null) throw new ParserinoException("Can't create text node");
-        return Element(this, cast(lxb_dom_node_t*) t);
+        return Element(this, cast(DomNode*) t);
     }
 
     /// Create a comment
     Element createComment(const(char)[] text)
     {
         onlyValid();
-        auto c = lxb_dom_document_create_comment(&impl.html.dom_document, cast(const(ubyte)*) text.ptr, text.length);
+        auto c = impl.dom.createComment(text);
         if (c is null) throw new ParserinoException("Can't create comment");
-        return Element(this, cast(lxb_dom_node_t*) c);
+        return Element(this, cast(DomNode*) c);
     }
 
     ///
@@ -380,28 +386,28 @@ struct Document
     @property Element documentElement()
     {
         onlyValid();
-        while (impl.html.dom_document.element is null && impl.advance()) {}
-        return Element(this, cast(lxb_dom_node_t*) impl.html.dom_document.element);
+        while (impl.dom.documentElement is null && impl.advance()) {}
+        return Element(this, cast(DomNode*) impl.dom.documentElement);
     }
 
     /// The `<body>` element
     @property Element body()
     {
         onlyValid();
-        while (impl.parsing && (impl.html.body is null || !impl.isStable(cast(lxb_dom_node_t*) impl.html.body)))
+        while (impl.parsing && (impl.dom.body is null || !impl.isStable(cast(DomNode*) impl.dom.body)))
             impl.advance();
 
-        return Element(this, cast(lxb_dom_node_t*) impl.html.body);
+        return Element(this, cast(DomNode*) impl.dom.body);
     }
 
     /// The `<head>` element
     @property Element head()
     {
         onlyValid();
-        while (impl.parsing && impl.html.head is null)
+        while (impl.parsing && impl.dom.head is null)
             impl.advance();
 
-        return Element(this, cast(lxb_dom_node_t*) impl.html.head);
+        return Element(this, cast(DomNode*) impl.dom.head);
     }
 
     unittest
@@ -504,10 +510,10 @@ struct Document
         onlyValid();
         impl.finish();
 
-        auto context = lxb_dom_document_create_element(&impl.html.dom_document, cast(const(ubyte)*) "div".ptr, 3, null);
-        auto node = lxb_html_document_parse_fragment(impl.html, context, cast(const(ubyte)*) html.ptr, html.length);
-        if (node is null) throw new ParserinoException("Can't parse the fragment");
-        return Element(this, node);
+        auto context = impl.dom.createElement(Tag.div, Ns.html);
+        auto root = context is null ? null : parseFragment(impl.dom, context, html);
+        if (root is null) throw new ParserinoException("Can't parse the fragment (out of memory)");
+        return Element(this, &root.node);
     }
 
     ///
@@ -532,22 +538,39 @@ struct Document
             throw new ParserinoException("Can't call `" ~ fname ~ "` for an invalid/uninitialized document");
     }
 
-    Element rootElement() { onlyValid(); return Element(this, &impl.html.dom_document.node); }
+    Element rootElement() { onlyValid(); return Element(this, &impl.dom.node); }
+
+    // The first html <title> in tree order (found lazily)
+    DomNode* findTitle()
+    {
+        foreach (t; rootElement.byTagName("title"))
+            if (t.node.ns == Ns.html) return t.node;
+        return null;
+    }
 
     string titleImpl(bool raw)
     {
         onlyValid();
 
-        // The title is the first <title> in tree order: find it lazily, then wait until it is complete.
-        auto t = rootElement.byTagName("title").frontOrInit;
-        if (t.isValid) impl.ensureClosed(t.node);
+        auto t = findTitle();
+        if (t is null) return "";
+        impl.ensureClosed(t);
 
-        size_t length;
-        const(ubyte)* res = raw
-            ? lxb_html_document_title_raw(impl.html, &length)
-            : lxb_html_document_title(impl.html, &length);
+        auto text = Element(this, t).innerText;
+        if (raw) return text;
 
-        return res is null ? "" : (cast(const(char)[]) res[0 .. length]).idup;
+        // Strip and collapse the ASCII whitespace
+        import std.array : appender;
+        auto app = appender!string;
+        bool space = false;
+        foreach (c; text)
+        {
+            if (c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r') { space = app.data.length > 0; continue; }
+            if (space) app.put(' ');
+            space = false;
+            app.put(c);
+        }
+        return app.data;
     }
 }
 
@@ -569,16 +592,16 @@ struct Element
     @property bool isValid() const @safe nothrow pure @nogc { return node !is null; }
 
     /// Is this a html element? (and not a text or a comment node)
-    @property bool isElement() const @safe nothrow pure @nogc { return node !is null && node.type == LXB_DOM_NODE_TYPE_ELEMENT; }
+    @property bool isElement() const @safe nothrow pure @nogc { return node !is null && node.type == NodeType.element; }
 
     /// Is this a text node?
-    @property bool isText() const @safe nothrow pure @nogc { return node !is null && node.type == LXB_DOM_NODE_TYPE_TEXT; }
+    @property bool isText() const @safe nothrow pure @nogc { return node !is null && node.type == NodeType.text; }
 
     /// Is this a comment?
-    @property bool isComment() const @safe nothrow pure @nogc { return node !is null && node.type == LXB_DOM_NODE_TYPE_COMMENT; }
+    @property bool isComment() const @safe nothrow pure @nogc { return node !is null && node.type == NodeType.comment; }
 
     /// Is this element empty? (no elements and no text, whitespaces excluded)
-    @property bool isEmpty() { onlyValidElements(); impl.ensureClosed(node); return lxb_dom_node_is_empty(node); }
+    @property bool isEmpty() { onlyValidElements(); impl.ensureClosed(node); return node.isBlank; }
 
     unittest
     {
@@ -593,7 +616,7 @@ struct Element
     {
         onlyRealElements();
         impl.ensureAttrs(node);
-        return AttributeRange(doc, element.first_attr);
+        return AttributeRange(doc, element.firstAttr);
     }
 
     /// Check if an attribute exists
@@ -601,7 +624,7 @@ struct Element
     {
         onlyRealElements();
         impl.ensureAttrs(node);
-        return lxb_dom_element_has_attribute(element, cast(const(ubyte)*) attr.ptr, attr.length);
+        return attributeByName(element, attr) !is null;
     }
 
     /// Remove an attribute from this element
@@ -609,7 +632,7 @@ struct Element
     {
         onlyRealElements();
         impl.finish();
-        lxb_dom_element_remove_attribute(element, cast(const(ubyte)*) attr.ptr, attr.length);
+        if (auto a = attributeByName(element, attr)) element.removeAttribute(a);
     }
 
     /// Set an attribute for this element
@@ -617,8 +640,17 @@ struct Element
     {
         onlyRealElements();
         impl.finish();
-        if (lxb_dom_element_set_attribute(element, cast(const(ubyte)*) name.ptr, name.length, cast(const(ubyte)*) value.ptr, value.length) is null)
-            throw new ParserinoException("Can't set attribute `" ~ name.idup ~ "`");
+        auto dom = impl.dom;
+        if (auto a = attributeByName(element, name))
+        {
+            a.value = dom.copy(value);
+            return;
+        }
+
+        import std.uni : toLower;
+        auto a = dom.createAttribute(name.toLower, value);
+        if (a is null) throw new ParserinoException("Can't set attribute `" ~ name.idup ~ "`");
+        element.appendAttribute(a);
     }
 
     /// Get an attribute. It returns `null` if the attribute is missing.
@@ -638,7 +670,7 @@ struct Element
         onlyRealElements();
         impl.ensureAttrs(node);
 
-        auto a = lxb_dom_element_attr_by_name(element, cast(const(ubyte)*) attr.ptr, attr.length);
+        auto a = attributeByName(element, attr);
         if (a is null) return null;
         return attrValue(a);
     }
@@ -648,8 +680,8 @@ struct Element
     {
         onlyRealElements();
         impl.ensureAttrs(node);
-        if (element.attr_id is null) return string.init;
-        return attrValue(element.attr_id).idup;
+        if (element.idAttr is null) return string.init;
+        return attrValue(element.idAttr).idup;
     }
 
     /// All the classes of this element
@@ -661,7 +693,7 @@ struct Element
         onlyRealElements();
         impl.ensureAttrs(node);
 
-        string cls = element.attr_class is null ? "" : attrValue(element.attr_class).idup;
+        string cls = element.classAttr is null ? "" : attrValue(element.classAttr).idup;
         return cls.splitter!isWhite.filter!(x => x.length > 0);
     }
 
@@ -716,9 +748,7 @@ struct Element
     @property const(char)[] nameView()
     {
         onlyValidElements();
-        size_t len;
-        auto s = lxb_dom_element_local_name(cast(lxb_dom_element_t*) node, &len);
-        return s is null ? null : cast(const(char)[]) s[0 .. len];
+        return node.localName;
     }
 
     unittest
@@ -756,7 +786,7 @@ struct Element
         onlyValidElements();
         impl.ensureClosed(node);
 
-        auto n = lxb_dom_node_clone(node, deep);
+        auto n = impl.dom.importNode(node, deep);
         if (n is null) throw new ParserinoException("Can't clone the element");
         return Element(doc, n);
     }
@@ -794,7 +824,7 @@ struct Element
         impl.finish();
 
         foreach (n; nodesToInsert(el))
-            lxb_dom_node_insert_before(node, n);
+            node.insertBefore(n);
     }
 
     /// Insert an element (or a text, or a fragment) after this one
@@ -803,10 +833,10 @@ struct Element
         onlyValidElements();
         impl.finish();
 
-        lxb_dom_node_t* after = node;
+        DomNode* after = node;
         foreach (n; nodesToInsert(el))
         {
-            lxb_dom_node_insert_after(after, n);
+            after.insertAfter(n);
             after = n;
         }
     }
@@ -817,11 +847,11 @@ struct Element
         onlyRealElements();
         impl.finish();
 
-        auto first = node.first_child;
+        auto first = node.firstChild;
         foreach (n; nodesToInsert(el))
         {
-            if (first is null) lxb_dom_node_insert_child(node, n);
-            else lxb_dom_node_insert_before(first, n);
+            if (first is null) node.appendChild(n);
+            else first.insertBefore(n);
         }
     }
 
@@ -832,7 +862,7 @@ struct Element
         impl.finish();
 
         foreach (n; nodesToInsert(el))
-            lxb_dom_node_insert_child(node, n);
+            node.appendChild(n);
     }
 
     ///
@@ -880,7 +910,7 @@ struct Element
         impl.finish();
 
         if (node.parent is null) return false;
-        lxb_dom_node_remove(node);
+        (node).remove();
         return true;
     }
 
@@ -978,25 +1008,31 @@ struct Element
 
         assert(e != this);
 
-        while (element.first_attr !is null)
-        {
-            auto a = element.first_attr;
-            size_t len;
-            auto n = lxb_dom_attr_qualified_name(a, &len);
-            lxb_dom_element_remove_attribute(element, n, len);
-        }
+        while (element.firstAttr !is null) element.removeAttribute(element.firstAttr);
 
-        check(lxb_dom_element_interface_copy(element, e.element), "Can't copy the element");
+        // The tag too
+        element.node.name = e.node.name;
+        element.node.ns = e.node.ns;
+        element.qualifiedName = e.element.qualifiedName;
+
+        auto dom = impl.dom;
+        for (auto a = e.element.firstAttr; a !is null; a = a.next)
+        {
+            auto na = dom.createAttribute(a.name, a.value, a.ns);
+            if (na is null) throw new ParserinoException("Out of memory");
+            na.qualifiedName = a.qualifiedName;
+            element.appendAttribute(na);
+        }
 
         if (deep)
         {
             removeChildren();
 
-            for (auto c = e.node.first_child; c !is null; c = c.next)
+            for (auto c = e.node.firstChild; c !is null; c = c.next)
             {
-                auto cl = lxb_dom_document_import_node(node.owner_document, c, true);
+                auto cl = dom.importNode(c, true);
                 if (cl is null) throw new ParserinoException("Can't clone the element");
-                lxb_dom_node_insert_child(node, cl);
+                node.appendChild(cl);
             }
         }
     }
@@ -1043,17 +1079,17 @@ struct Element
         onlyRealElements();
         impl.finish();
 
-        auto frag = lxb_html_document_parse_fragment(cast(lxb_html_document_t*) node.owner_document, element, cast(const(ubyte)*) html.ptr, html.length);
-        if (frag is null) throw new ParserinoException("Can't parse the fragment");
+        auto frag = parseFragment(impl.dom, element, html);
+        if (frag is null) throw new ParserinoException("Can't parse the fragment (out of memory)");
 
         // Old children are detached (not destroyed): other `Element`s may still point to them.
         removeChildren();
 
-        while (frag.first_child !is null)
+        while (frag.firstChild !is null)
         {
-            auto c = frag.first_child;
-            lxb_dom_node_remove(c);
-            lxb_dom_node_insert_child(node, c);
+            auto c = frag.firstChild;
+            (c).remove();
+            node.appendChild(c);
         }
     }
 
@@ -1076,22 +1112,19 @@ struct Element
         onlyValidElements();
         impl.ensureClosed(node);
 
-        if (node.type == LXB_DOM_NODE_TYPE_TEXT || node.type == LXB_DOM_NODE_TYPE_COMMENT
-            || node.type == LXB_DOM_NODE_TYPE_PROCESSING_INSTRUCTION)
+        if (node.type == NodeType.text || node.type == NodeType.comment
+            || node.type == NodeType.processingInstruction)
         {
-            auto cd = cast(lxb_dom_character_data_t*) node;
-            return (cast(const(char)[]) cd.data.data[0 .. cd.data.length]).idup;
+            return (cast(CharacterData*) node).data.idup;
         }
 
-        if (node.type != LXB_DOM_NODE_TYPE_ELEMENT && node.type != LXB_DOM_NODE_TYPE_DOCUMENT)
+        if (node.type != NodeType.element && node.type != NodeType.document)
             return string.init;
 
-        size_t len;
-        auto s = lxb_dom_node_text_content(node, &len);
-        if (s is null) return string.init;
-
-        scope(exit) lxb_dom_document_destroy_text(node.owner_document, s);
-        return (cast(const(char)[]) s[0 .. len]).idup;
+        import std.array : appender;
+        auto app = appender!string;
+        node.textContent(app);
+        return app.data;
     }
 
     /// Set the inner text of this element (replacing html)
@@ -1100,9 +1133,10 @@ struct Element
         onlyValidElements();
         impl.finish();
 
-        if (node.type != LXB_DOM_NODE_TYPE_ELEMENT)
+        if (node.type != NodeType.element)
         {
-            check(lxb_dom_node_text_content_set(node, cast(const(ubyte)*) text.ptr, text.length), "Can't set the text");
+            if (auto cd = node.asCharacterData)
+                if (!cd.setData(text)) throw new ParserinoException("Out of memory");
             return;
         }
 
@@ -1110,9 +1144,9 @@ struct Element
 
         if (text.length > 0)
         {
-            auto t = lxb_dom_document_create_text_node(node.owner_document, cast(const(ubyte)*) text.ptr, text.length);
+            auto t = impl.dom.createText(text);
             if (t is null) throw new ParserinoException("Can't create text node");
-            lxb_dom_node_insert_child(node, cast(lxb_dom_node_t*) t);
+            node.appendChild(cast(DomNode*) t);
         }
     }
 
@@ -1207,7 +1241,7 @@ struct Element
     {
         onlyValidElements();
         if (!selector.isValid) throw new ParserinoException("Invalid selector");
-        if (node.type != LXB_DOM_NODE_TYPE_ELEMENT) return false;
+        if (node.type != NodeType.element) return false;
 
         impl.ensureStable(node);
         if (selector.forward && node.parent !is null) impl.ensureClosed(node.parent);
@@ -1305,7 +1339,7 @@ struct Element
         impl.ensureStable(node);
 
         auto el = node.prev;
-        while (el !is null && !includeAllElements && el.type != LXB_DOM_NODE_TYPE_ELEMENT)
+        while (el !is null && !includeAllElements && el.type != NodeType.element)
             el = el.prev;
 
         return Element(doc, el);
@@ -1339,7 +1373,7 @@ struct Element
     @property Element firstChild(bool includeAllElements = false)
     {
         onlyValidElements();
-        if (node.type != LXB_DOM_NODE_TYPE_ELEMENT && node.type != LXB_DOM_NODE_TYPE_DOCUMENT) return Element.init;
+        if (node.type != NodeType.element && node.type != NodeType.document) return Element.init;
         return NodeRange!AnyFilter(doc, node, false, includeAllElements, AnyFilter.init).frontOrInit;
     }
 
@@ -1349,8 +1383,8 @@ struct Element
         onlyValidElements();
         impl.ensureClosed(node);
 
-        auto el = node.last_child;
-        while (el !is null && !includeAllElements && el.type != LXB_DOM_NODE_TYPE_ELEMENT)
+        auto el = node.lastChild;
+        while (el !is null && !includeAllElements && el.type != NodeType.element)
             el = el.prev;
 
         return Element(doc, el);
@@ -1669,9 +1703,9 @@ struct Element
     private:
 
     Document doc;
-    lxb_dom_node_t* node;
+    DomNode* node;
 
-    this(ref Document doc, lxb_dom_node_t* node)
+    this(ref Document doc, DomNode* node)
     {
         if (node is null) return;
         this.doc = doc;
@@ -1679,7 +1713,7 @@ struct Element
     }
 
     inout(DocImpl)* impl() inout { return doc.impl; }
-    lxb_dom_element_t* element() { return cast(lxb_dom_element_t*) node; }
+    DomElement* element() { return cast(DomElement*) node; }
 
     void onlyValidElements(string fname = __FUNCTION__) const
     {
@@ -1691,31 +1725,31 @@ struct Element
     {
         onlyValidElements(fname);
 
-        if (node.type != LXB_DOM_NODE_TYPE_ELEMENT)
+        if (node.type != NodeType.element)
             throw new ParserinoException("Can't call `" ~ fname ~ "` for a node with type " ~ name());
     }
 
     void onlyRealOrDocument(string fname = __FUNCTION__)
     {
         onlyValidElements(fname);
-        if (node.type != LXB_DOM_NODE_TYPE_DOCUMENT) onlyRealElements(fname);
+        if (node.type != NodeType.document) onlyRealElements(fname);
     }
 
     void removeChildren()
     {
-        while (node.first_child !is null)
-            lxb_dom_node_remove(node.first_child);
+        while (node.firstChild !is null)
+            (node.firstChild).remove();
     }
 
     // The nodes to insert for an Element, a text or a fragment.
-    lxb_dom_node_t*[] nodesToInsert(E)(auto ref E el)
+    DomNode*[] nodesToInsert(E)(auto ref E el)
     {
         static if (is(E == FragmentString))
         {
             Element root = doc.fragment(el.fragment);
-            lxb_dom_node_t*[] nodes;
-            for (auto c = root.node.first_child; c !is null; c = c.next) nodes ~= c;
-            foreach (n; nodes) lxb_dom_node_remove(n);
+            DomNode*[] nodes;
+            for (auto c = root.node.firstChild; c !is null; c = c.next) nodes ~= c;
+            foreach (n; nodes) (n).remove();
             return nodes;
         }
         else static if (isSomeString!E)
@@ -1725,13 +1759,13 @@ struct Element
         else static if (is(E == Element))
         {
             el.onlyValidElements();
-            if (el.node.owner_document !is node.owner_document)
+            if (el.node.document !is node.document)
                 throw new ParserinoException("Can't insert an element from another document (use `dup` on a fragment of this document)");
 
             for (auto p = node; p !is null; p = p.parent)
                 if (p is el.node) throw new ParserinoException("Can't insert an element inside itself");
 
-            if (el.node.parent !is null) lxb_dom_node_remove(el.node);
+            if (el.node.parent !is null) (el.node).remove();
             return [el.node];
         }
         else static assert(0, "Can't insert a " ~ E.stringof);
@@ -1748,9 +1782,7 @@ struct AttributeRange
     ///
     @property Element.Attribute front()
     {
-        size_t len;
-        auto n = lxb_dom_attr_qualified_name(current, &len);
-        return Element.Attribute((cast(const(char)[]) n[0 .. len]).idup, attrValue(current).idup);
+        return Element.Attribute(current.fullName.idup, attrValue(current).idup);
     }
 
     ///
@@ -1761,7 +1793,7 @@ struct AttributeRange
 
     private:
     Document doc;
-    lxb_dom_attr_t* current;
+    DomAttribute* current;
 }
 
 
@@ -2018,14 +2050,14 @@ struct NodeRange(Filter, VisitOrder order = VisitOrder.Normal)
     private:
 
     Document doc;
-    lxb_dom_node_t* root;
-    lxb_dom_node_t* current;
+    DomNode* root;
+    DomNode* current;
     bool deep;
     bool all;
     bool primed;
     Filter filter;
 
-    this(ref Document doc, lxb_dom_node_t* root, bool deep, bool all, Filter filter)
+    this(ref Document doc, DomNode* root, bool deep, bool all, Filter filter)
     {
         this.doc = doc;
         this.root = root;
@@ -2035,7 +2067,7 @@ struct NodeRange(Filter, VisitOrder order = VisitOrder.Normal)
     }
 
     // Start the visit after `from` instead of from the beginning.
-    void start(lxb_dom_node_t* from) { primed = true; current = seek(from); }
+    void start(DomNode* from) { primed = true; current = seek(from); }
 
     void prime()
     {
@@ -2047,7 +2079,7 @@ struct NodeRange(Filter, VisitOrder order = VisitOrder.Normal)
     }
 
     // The next node after `pos` accepted by the filter.
-    lxb_dom_node_t* seek(lxb_dom_node_t* pos)
+    DomNode* seek(DomNode* pos)
     {
         auto d = doc.impl;
 
@@ -2064,17 +2096,17 @@ struct NodeRange(Filter, VisitOrder order = VisitOrder.Normal)
 
             pos = next;
 
-            if ((all || next.type == LXB_DOM_NODE_TYPE_ELEMENT) && filter.match(d, next))
+            if ((all || next.type == NodeType.element) && filter.match(d, next))
                 return next;
         }
     }
 
     // The next node in tree order. It returns `waitSentinel` if the parser could still add it.
-    lxb_dom_node_t* stepForward(DocImpl* d, lxb_dom_node_t* pos)
+    DomNode* stepForward(DocImpl* d, DomNode* pos)
     {
         if (deep || pos is root)
         {
-            if (pos.first_child !is null) return pos.first_child;
+            if (pos.firstChild !is null) return pos.firstChild;
             if (d.parsing && d.isOpen(pos)) return waitSentinel;
             if (pos is root) return null;
         }
@@ -2091,9 +2123,9 @@ struct NodeRange(Filter, VisitOrder order = VisitOrder.Normal)
         }
     }
 
-    lxb_dom_node_t* stepBackward(lxb_dom_node_t* pos)
+    DomNode* stepBackward(DomNode* pos)
     {
-        if ((deep || pos is root) && pos.last_child !is null) return pos.last_child;
+        if ((deep || pos is root) && pos.lastChild !is null) return pos.lastChild;
         if (pos is root) return null;
 
         while (true)
@@ -2106,7 +2138,7 @@ struct NodeRange(Filter, VisitOrder order = VisitOrder.Normal)
     }
 
     // Can the walker go past this node, or could the parser still change it?
-    bool passable(DocImpl* d, lxb_dom_node_t* n)
+    bool passable(DocImpl* d, DomNode* n)
     {
         if (!d.isStable(n)) return false;
 
@@ -2129,7 +2161,7 @@ struct AnyFilter
 {
     enum attrSensitive = true;
     enum strict = false;
-    bool match(DocImpl*, lxb_dom_node_t*) { return true; }
+    bool match(DocImpl*, DomNode*) { return true; }
 }
 
 struct TagFilter
@@ -2138,19 +2170,19 @@ struct TagFilter
     enum strict = false;
 
     string name;
-    lxb_tag_id_t id = LXB_TAG__UNDEF;
+    uint id = Tag._undef;
     size_t generation = size_t.max;
 
-    bool match(DocImpl* d, lxb_dom_node_t* n)
+    bool match(DocImpl* d, DomNode* n)
     {
         // Unknown tags get an id when the parser meets them: retry after each parsed chunk
-        if (id == LXB_TAG__UNDEF && generation != d.generation)
+        if (id == Tag._undef && generation != d.generation)
         {
-            id = lxb_tag_id_by_name(d.html.dom_document.tags, cast(const(ubyte)*) name.ptr, name.length);
+            id = d.dom.findTagName(name);
             generation = d.generation;
         }
 
-        return id != LXB_TAG__UNDEF && n.local_name == id;
+        return id != Tag._undef && n.name == id;
     }
 }
 
@@ -2161,9 +2193,9 @@ struct ClassFilter
 
     string name;
 
-    bool match(DocImpl*, lxb_dom_node_t* n)
+    bool match(DocImpl*, DomNode* n)
     {
-        auto a = (cast(lxb_dom_element_t*) n).attr_class;
+        auto a = (cast(DomElement*) n).classAttr;
         if (a is null || name.length == 0) return false;
 
         auto v = attrValue(a);
@@ -2187,9 +2219,9 @@ struct IdFilter
 
     string id;
 
-    bool match(DocImpl*, lxb_dom_node_t* n)
+    bool match(DocImpl*, DomNode* n)
     {
-        auto a = (cast(lxb_dom_element_t*) n).attr_id;
+        auto a = (cast(DomElement*) n).idAttr;
         return a !is null && attrValue(a) == id;
     }
 }
@@ -2209,14 +2241,14 @@ struct CommentFilter
         this.stripSpaces = stripSpaces;
     }
 
-    bool match(DocImpl*, lxb_dom_node_t* n)
+    bool match(DocImpl*, DomNode* n)
     {
         import std.string : strip;
 
-        if (n.type != LXB_DOM_NODE_TYPE_COMMENT) return false;
+        if (n.type != NodeType.comment) return false;
 
-        auto cd = cast(lxb_dom_character_data_t*) n;
-        auto text = cast(const(char)[]) cd.data.data[0 .. cd.data.length];
+        auto cd = cast(CharacterData*) n;
+        auto text = cd.data;
         return (stripSpaces ? text.strip : text) == comment;
     }
 }
@@ -2229,24 +2261,25 @@ struct SelectorFilter
 
     @property bool strict() const { return selector.forward; }
 
-    lxb_dom_node_t* scope_;     // the root of the query, for :scope
+    DomNode* scope_;     // the root of the query, for :scope
 
-    bool match(DocImpl* d, lxb_dom_node_t* n) { return d.matches(n, selector.list, scope_); }
+    bool match(DocImpl* d, DomNode* n) { return d.matches(n, selector.list, scope_); }
 }
 
 
 // ---------------------------------------------------------------- document state
 
-__gshared lxb_dom_node_t waitSentinelNode;
-@property lxb_dom_node_t* waitSentinel() @trusted nothrow @nogc { return &waitSentinelNode; }
+__gshared DomNode waitSentinelNode;
+@property DomNode* waitSentinel() @trusted nothrow @nogc { return &waitSentinelNode; }
 
 struct DocImpl
 {
     shared size_t refs;
-    lxb_html_document_t* html;
+    DomDocument* dom;
 
     // Incremental parsing
     bool parsing;
+    Parser* parser;
     ubyte* source;          // private copy of the input (freed when the parsing ends)
     size_t sourceLength;
     size_t fed;             // bytes given to the parser
@@ -2266,8 +2299,9 @@ struct DocImpl
         *d = DocImpl.init;
         d.refs = 1;
 
-        d.html = lxb_html_document_create();
-        if (d.html is null) { free(d); throw new ParserinoException("Can't create the document"); }
+        d.dom = cast(DomDocument*) calloc(1, DomDocument.sizeof);
+        if (d.dom is null) { free(d); throw new ParserinoException("Out of memory"); }
+        d.dom.initialize();
         return d;
     }
 
@@ -2277,8 +2311,10 @@ struct DocImpl
     {
         if (atomicOp!"-="(d.refs, 1) != 0) return;
 
+        if (d.parser !is null) freeParser(d.parser);
         if (d.source !is null) free(d.source);
-        lxb_html_document_destroy(d.html);
+        d.dom.release();
+        free(d.dom);
         d.tables.dispose();
         d.formatting.dispose();
         free(d);
@@ -2287,12 +2323,14 @@ struct DocImpl
     void parseAll(const(char)[] input)
     {
         fed = input.length;
-        check(lxb_html_document_parse(html, cast(const(ubyte)*) input.ptr, input.length), "Can't parse the document");
+        if (!parseDocument(dom, input)) throw new ParserinoException("Can't parse the document (out of memory)");
     }
 
     void beginLazy(const(char)[] input, size_t chunk)
     {
-        check(lxb_html_document_parse_chunk_begin(html), "Can't parse the document");
+        parser = newParser();
+        if (parser is null) throw new ParserinoException("Out of memory");
+        parser.begin(dom);
 
         source = cast(ubyte*) malloc(input.length + 1);
         if (source is null) throw new ParserinoException("Out of memory");
@@ -2312,10 +2350,10 @@ struct DocImpl
         auto n = min(chunkSize, sourceLength - fed);
         if (n > 0)
         {
-            auto status = lxb_html_document_parse_chunk(html, source + fed, n);
+            bool ok = parser.feed(cast(const(char)[]) source[fed .. fed + n]);
             fed += n;
             generation++;
-            if (status != LXB_STATUS_OK) { endParsing(); throw new ParserinoException("Can't parse the document"); }
+            if (!ok) { endParsing(); throw new ParserinoException("Can't parse the document (out of memory)"); }
         }
 
         if (fed == sourceLength) finish();
@@ -2327,43 +2365,44 @@ struct DocImpl
     {
         if (!parsing) return;
 
-        lxb_status_t status = LXB_STATUS_OK;
-        if (fed < sourceLength) status = lxb_html_document_parse_chunk(html, source + fed, sourceLength - fed);
+        bool ok = true;
+        if (fed < sourceLength) ok = parser.feed(cast(const(char)[]) source[fed .. sourceLength]);
         fed = sourceLength;
 
-        auto endStatus = endParsing();
-        if (status == LXB_STATUS_OK) status = endStatus;
-        if (status != LXB_STATUS_OK) throw new ParserinoException("Can't parse the document");
+        ok = endParsing() && ok;
+        if (!ok) throw new ParserinoException("Can't parse the document (out of memory)");
     }
 
-    lxb_status_t endParsing()
+    bool endParsing()
     {
-        auto status = lxb_html_document_parse_chunk_end(html);
+        auto ok = parser.finish();
+        freeParser(parser);
+        parser = null;
         parsing = false;
         generation++;
         free(source);
         source = null;
         tables.clear();
         formatting.clear();
-        return status;
+        return ok;
     }
 
-    lxb_html_tree_t* tree() { return (cast(lxb_html_parser_t*) html.dom_document.parser).tree; }
+    ref TreeBuilder tree() { return parser.tree; }
 
     // Is the node still open (the parser can add children to it)?
-    bool isOpen(const(lxb_dom_node_t)* n)
+    bool isOpen(const(DomNode)* n)
     {
         if (!parsing) return false;
-        if (n.type == LXB_DOM_NODE_TYPE_DOCUMENT) return n is &html.dom_document.node;
-        if (n.type != LXB_DOM_NODE_TYPE_ELEMENT) return false;
+        if (n.type == NodeType.document) return n is &dom.node;
+        if (n.type != NodeType.element) return false;
 
         // In the "after head" insertion mode the parser puts <head> back on the stack
         // for <script>, <style>, <meta>, ...: it can get children until <body> exists.
-        if (n is cast(lxb_dom_node_t*) html.head && html.body is null) return true;
+        if (n is cast(DomNode*) dom.head && dom.body is null) return true;
 
-        auto oe = tree.open_elements;
-        foreach_reverse (i; 0 .. oe.length)
-            if (oe.list[i] is n) return true;
+        auto oe = tree.openElements[];
+        foreach_reverse (e; oe)
+            if (e is n) return true;
 
         return false;
     }
@@ -2376,19 +2415,16 @@ struct DocImpl
         tables.clear();
         formatting.clear();
 
-        auto t = tree;
-        auto oe = t.open_elements;
-        auto af = t.active_formatting;
+        auto oe = tree.openElements[];
+        auto af = tree.activeFormatting[];
 
-        foreach (i; 0 .. oe.length)
+        foreach (n; oe)
         {
-            auto n = cast(lxb_dom_node_t*) oe.list[i];
-
-            if (n.ns == LXB_NS_HTML && n.local_name == LXB_TAG_TABLE) tables.add(n);
+            if (n.ns == Ns.html && n.name == Tag.table) tables.add(n);
             else
             {
-                foreach (j; 0 .. af.length)
-                    if (af.list[j] is n) { formatting.add(n); break; }
+                foreach (f; af)
+                    if (f is n) { formatting.add(n); break; }
             }
         }
     }
@@ -2399,14 +2435,14 @@ struct DocImpl
      + - a <frameset> can still replace <body> while `frameset_ok` is set
      + - the last text node can still grow
      +/
-    bool isStable(lxb_dom_node_t* n)
+    bool isStable(DomNode* n)
     {
         if (!parsing) return true;
 
         refreshVolatile();
 
-        auto body = cast(lxb_dom_node_t*) html.body;
-        bool framesetOk = tree.frameset_ok && body !is null;
+        auto body = cast(DomNode*) dom.body;
+        bool framesetOk = tree.framesetOk && body !is null;
 
         if (tables.length || formatting.length || framesetOk)
         {
@@ -2418,7 +2454,7 @@ struct DocImpl
             }
         }
 
-        if (n.type == LXB_DOM_NODE_TYPE_TEXT)
+        if (n.type == NodeType.text)
         {
             if (n.next is null) return n.parent is null || !isOpen(n.parent);
             if (tables.contains(n.next)) return false;
@@ -2435,11 +2471,11 @@ struct DocImpl
         return fed >= rootTagsEnd;
     }
 
-    void ensureStable(lxb_dom_node_t* n) { while (parsing && !isStable(n)) advance(); }
-    void ensureClosed(lxb_dom_node_t* n) { while (parsing && (isOpen(n) || !isStable(n))) advance(); }
-    void ensureAttrs(lxb_dom_node_t* n) { if (isRootElement(n)) while (parsing && !rootAttrsFinal()) advance(); }
+    void ensureStable(DomNode* n) { while (parsing && !isStable(n)) advance(); }
+    void ensureClosed(DomNode* n) { while (parsing && (isOpen(n) || !isStable(n))) advance(); }
+    void ensureAttrs(DomNode* n) { if (isRootElement(n)) while (parsing && !rootAttrsFinal()) advance(); }
 
-    bool matches(lxb_dom_node_t* n, const(SelectorList)* list, lxb_dom_node_t* scope_)
+    bool matches(DomNode* n, const(SelectorList)* list, DomNode* scope_)
     {
         return parserino.css.matcher.matches(list, n, scope_);
     }
@@ -2448,16 +2484,16 @@ struct DocImpl
 // A small malloc'd list of nodes
 struct NodeList
 {
-    lxb_dom_node_t** ptr;
+    DomNode** ptr;
     size_t length;
     size_t capacity;
 
-    void add(lxb_dom_node_t* n)
+    void add(DomNode* n)
     {
         if (length == capacity)
         {
             auto c = capacity == 0 ? 8 : capacity * 2;
-            auto p = cast(lxb_dom_node_t**) realloc(ptr, c * (lxb_dom_node_t*).sizeof);
+            auto p = cast(DomNode**) realloc(ptr, c * (DomNode*).sizeof);
             if (p is null) throw new ParserinoException("Out of memory");
             ptr = p;
             capacity = c;
@@ -2466,7 +2502,7 @@ struct NodeList
         ptr[length++] = n;
     }
 
-    bool contains(const(lxb_dom_node_t)* n) const nothrow @nogc
+    bool contains(const(DomNode)* n) const nothrow @nogc
     {
         foreach (i; 0 .. length) if (ptr[i] is n) return true;
         return false;
@@ -2476,10 +2512,10 @@ struct NodeList
     void dispose() nothrow @nogc { free(ptr); ptr = null; length = capacity = 0; }
 }
 
-bool isRootElement(const(lxb_dom_node_t)* n) nothrow @nogc
+bool isRootElement(const(DomNode)* n) nothrow @nogc
 {
-    return n.type == LXB_DOM_NODE_TYPE_ELEMENT && n.ns == LXB_NS_HTML
-        && (n.local_name == LXB_TAG_HTML || n.local_name == LXB_TAG_BODY);
+    return n.type == NodeType.element && n.ns == Ns.html
+        && (n.name == Tag.html || n.name == Tag.body);
 }
 
 bool isHtmlSpace(char c) nothrow @nogc pure { return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f'; }
@@ -2616,19 +2652,33 @@ struct SelImpl
 
 // ---------------------------------------------------------------- helpers
 
-const(char)[] attrValue(lxb_dom_attr_t* a) nothrow @nogc
+const(char)[] attrValue(const(DomAttribute)* a) nothrow @nogc
 {
-    if (a.value is null || a.value.data is null) return "";
-    return cast(const(char)[]) a.value.data[0 .. a.value.length];
+    return a.value is null ? "" : a.value;
 }
 
-void check(lxb_status_t status, string msg)
+// The attribute with this (qualified) name, ASCII case-insensitive
+DomAttribute* attributeByName(DomElement* e, scope const(char)[] name) nothrow @nogc
 {
-    if (status != LXB_STATUS_OK) throw new ParserinoException(msg);
+    for (auto a = e.firstAttr; a !is null; a = a.next)
+    {
+        auto n = a.fullName;
+        if (n.length != name.length) continue;
+
+        bool same = true;
+        foreach (i, c; n)
+        {
+            char d = name[i];
+            if (d >= 'A' && d <= 'Z') d |= 0x20;
+            if ((c >= 'A' && c <= 'Z' ? cast(char) (c | 0x20) : c) != d) { same = false; break; }
+        }
+        if (same) return a;
+    }
+    return null;
 }
 
 // Serialize a node to a sink
-void serializeTo(Serialize what, lxb_dom_node_t* node, scope void delegate(const(char)[]) sink)
+void serializeTo(Serialize what, DomNode* node, scope void delegate(const(char)[]) sink)
 {
     parserino.html.serializer.serialize(node, sink, what);
 }
