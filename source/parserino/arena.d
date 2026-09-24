@@ -6,7 +6,7 @@
 +/
 module parserino.arena;
 
-import core.memory : pureMalloc, pureFree;
+import core.memory : pureMalloc, pureCalloc, pureFree;
 import core.stdc.string : memcpy, memset;
 
 version (D_BetterC)
@@ -55,10 +55,10 @@ struct Arena
         if (n == 0) return null;
         if (__ctfe) return ctfeNew!T(n);
 
+        // The blocks come zeroed (calloc) and are never reused: no memset here
         auto bytes = n * T.sizeof;
         auto p = allocBytes(bytes, T.alignof);
         if (p is null) return null;
-        memset(p, 0, bytes);
         return (cast(T*) p)[0 .. n];
     }
 
@@ -94,13 +94,16 @@ struct Arena
             pureFree(head);
             head = next;
         }
+        nextBlockSize = MinBlockSize;
     }
 
     ~this() { release(); }
 
     private:
 
-    enum BlockSize = 4096;
+    // The blocks start small (small documents) and double up to 16 KB: bigger blocks are not faster
+    enum MinBlockSize = 4096, MaxBlockSize = 16 * 1024;
+    size_t nextBlockSize = MinBlockSize;
 
     static struct Block
     {
@@ -123,9 +126,12 @@ struct Arena
             }
         }
 
+        // (an arena in zeroed memory, as the documents allocated with calloc, starts at 0)
+        if (nextBlockSize == 0) nextBlockSize = MinBlockSize;
         auto header = (Block.sizeof + 15) & ~15;
-        auto size = header + bytes > BlockSize ? header + bytes : BlockSize;
-        auto b = cast(Block*) pureMalloc(size);
+        auto size = header + bytes > nextBlockSize ? header + bytes : nextBlockSize;
+        if (nextBlockSize < MaxBlockSize) nextBlockSize *= 2;
+        auto b = cast(Block*) pureCalloc(1, size);
         if (b is null) return null;
 
         b.size = size;
