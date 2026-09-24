@@ -1,7 +1,7 @@
 # parserino [![Build & Test](https://github.com/trikko/parserino/actions/workflows/d.yml/badge.svg)](https://github.com/trikko/parserino/actions/workflows/d.yml)
 * HTML5 parser and DOM editor written in pure D (tree construction derived from [Lexbor](https://github.com/lexbor/lexbor))
 * No C dependencies: no cmake, no prebuilt libraries, no DLLs
-* Fast: about 380 MB/s on real pages; lazy parsing reads only what your queries need
+* Fast parsing; lazy parsing reads only what your queries need
 * CSS selectors (Selectors 4), DOM names and behaviour (`textContent`, `before`, `children`, ...)
 * HTML parsed exactly as browsers do: it passes all the tree construction tests of the
   [web-platform-tests](https://github.com/web-platform-tests/wpt/tree/master/html/syntax/parsing)
@@ -174,8 +174,8 @@ model.remove();
 assert(page.byTagName("td").map!(td => td.textContent).array == ["Apples", "Pears"]);
 ```
 
-CTFE needs compiler memory and time: a template of some tens of KB takes about 1 s; big pages
-work too (a 600 KB Wikipedia page: about 1 GB and 10 s with dmd).
+Parsing at compile time needs compiler memory and time: it's meant for templates, big pages
+make the build slower.
 
 # parsing options
 
@@ -239,45 +239,3 @@ UTF-16, windows-1252 (also as `latin1`, `iso-8859-1`), ISO-8859-2, windows-1250 
   `idView`, `classesView`, `attributesView`, `dataView`) return slices of the document memory.
 * `toString` can write to any output range or delegate, without building a string.
 * Different documents can be used from different threads.
-
-# upgrading to 1.0
-
-The API now follows the DOM names and behaviour:
-
-* `Element` was any node: now `Node` is any node and `Element` only an element.
-* The boolean parameters are gone: `children(true)` is `children!(Show.All)`, `next(true)` is
-  `nextSibling!(Show.All)`, `firstChild(true)` is `firstChild!(Show.All)`, ...;
-  `next`/`prev` are `nextSibling`/`previousSibling`.
-* `descendants!(VisitOrder.Reverse)` is `descendants.retro` (true reverse document order).
-* `byTagName("#text")`/`byTagName("!--")` are `descendants!(Show.Text)`/`descendants!(Show.Comment)`;
-  `byTagName("*")` gives all the elements; `byComment(text, false)` is `byCommentExact(text)`.
-* `prependSibling`/`appendSibling` are `before`/`after`, `prependChild` is `prepend`,
-  `appendChild` of strings and fragments is `append`.
-* `innerText` is `textContent` (`innerText` is still there, the same); `name` is `localName`
-  (`"foreignObject"`), `tagName` is uppercase for html elements, `nodeName` as in the DOM.
-* `dup(false)` is `shallowDup`, `copyFrom(e, false)` is `shallowCopyFrom`, `toString(false)` is `startTag`.
-* `contains` includes the node itself (as in the DOM); `isAncestorOf`, `isDescendantOf`, `canFind` are gone.
-* `owner` is `ownerDocument`; `Parsing.lazy_` is `Parsing.Lazy` (all the enum members are PascalCase).
-* `fragment(html)` returns a `DocumentFragment` node, parsed in the context of `<body>` (or of the
-  given element); inserting it moves its children. Fragments given to `append`, `before`, ... are
-  parsed in the context of their parent.
-* `doc.body` of a frameset document is the `<frameset>` (as in the DOM).
-* `isEmpty` is `:empty` (whitespace text counts), `isBlank` is `:blank`.
-* `innerHTML` of a `<template>` is its content.
-* Selectors: names of SVG/MathML elements and attributes are case-sensitive (`clipPath`, `viewBox`).
-
-# upgrading from 0.x
-
-* `byId` returns an invalid element (`== null`) instead of throwing.
-* `getAttribute` returns `null` for missing attributes.
-* Ranges are structs; `bySelector` returns each element once.
-* Elements can't be moved between documents.
-* CSS selectors follow the standard (Selectors 4 and HTML) for a static document:
-  * `:hover`, `:focus`, `:active`, `:visited`, `:target`, ... are valid but never match
-    (before they matched elements with a `hover`/`focus`/`active` attribute);
-  * pseudo-elements (`::before`) are valid but never match;
-  * `:lang()`, `:dir()`, `:scope` and namespace prefixes (`svg|rect`, `[xlink|href]`, `*|*`) are supported;
-  * `:disabled`, `:enabled`, `:checked`, `:read-write`, `:placeholder-shown`, `:link` follow the HTML spec;
-  * `:is()`/`:where()` are forgiving, `:has()` is not (and can't be nested), extra tokens after `An+B` are an error;
-  * `:first-child`, `:nth-child()`, ... count elements only.
-* Selectors can be parsed at compile time: `doc.bySelector!"div > a"` or `ctSelector!"div > a"`.
