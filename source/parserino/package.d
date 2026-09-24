@@ -186,11 +186,25 @@ struct Document
         ParseOptions options;
         options.parsing = parsing;
         options.chunkSize = chunkSize;
-        this(html, options);
+        start(html, options, false);
     }
 
     /// ditto
-    this(const(char)[] html, ParseOptions options)
+    this(const(char)[] html, ParseOptions options) { start(html, options, false); }
+
+    // An immutable string doesn't need a copy for the lazy parsing
+    this(string html, Parsing parsing = Parsing.Eager, size_t chunkSize = DefaultChunkSize)
+    {
+        ParseOptions options;
+        options.parsing = parsing;
+        options.chunkSize = chunkSize;
+        start(html, options, true);
+    }
+
+    /// ditto
+    this(string html, ParseOptions options) { start(html, options, true); }
+
+    private void start(const(char)[] html, ParseOptions options, bool immutableInput)
     {
         impl = DocImpl.create();
         scope(failure) { DocImpl.release(impl); impl = null; }
@@ -198,7 +212,7 @@ struct Document
         impl.dom.scripting = options.scripting;
         impl.collectErrors = options.collectErrors;
         if (options.parsing == Parsing.Lazy)
-            impl.beginLazy(html, options.chunkSize == 0 ? DefaultChunkSize : options.chunkSize);
+            impl.beginLazy(html, options.chunkSize == 0 ? DefaultChunkSize : options.chunkSize, immutableInput);
         else impl.parseAll(html);
     }
 
@@ -345,6 +359,24 @@ struct Document
         }
 
         assert(page.byClass("item").front.textContent == "template");
+    }
+
+    unittest
+    {
+        import core.memory : GC;
+        import std.array : replicate;
+
+        // A lazy document keeps its (immutable, not copied) input alive
+        Document make()
+        {
+            string html = ("<p class=x>" ~ "y".replicate(100) ~ "</p>").replicate(2000);
+            return Document(html, Parsing.Lazy, 64);
+        }
+        auto d = make();
+        d.byClass("x").front;
+        foreach (_; 0 .. 3) { GC.collect(); auto garbage = new char[](1_000_000); garbage[] = 'z'; }
+        assert(d.byClass("x").walkLength == 2000);
+        assert(d.byClass("x").back.textContent == "y".replicate(100));
     }
 
     unittest
@@ -3250,7 +3282,8 @@ struct DocImpl
     // Incremental parsing
     bool parsing;
     Parser* parser;
-    ubyte* source;          // private copy of the input (freed when the parsing ends)
+    ubyte* source;          // the input (a private copy, freed when the parsing ends, unless borrowed)
+    bool borrowed;          // the input is an immutable string, kept alive for the GC
     size_t sourceLength;
     size_t fed;             // bytes given to the parser
     size_t chunkSize;
@@ -3295,7 +3328,7 @@ struct DocImpl
         if (atomicOp!"-="(d.refs, 1) != 0) return;
 
         if (d.parser !is null) freeParser(d.parser);
-        if (d.source !is null) free(d.source);
+        d.releaseSource();
         d.dom.release();
         free(d.dom);
         d.tables.dispose();
@@ -3339,20 +3372,44 @@ struct DocImpl
         if (!ok || errors.failed) throw new ParserinoException("Can't parse the document (out of memory)");
     }
 
-    void beginLazy(const(char)[] input, size_t chunk)
+    // `immutableInput`: the input can't change, it's used without a copy (kept alive for the GC)
+    void beginLazy(const(char)[] input, size_t chunk, bool immutableInput)
     {
         parser = newParser();
         if (parser is null) throw new ParserinoException("Out of memory");
         parser.begin(dom);
         parser.tokenizer.collectErrors = collectErrors;
 
-        source = cast(ubyte*) malloc(input.length + 1);
-        if (source is null) throw new ParserinoException("Out of memory");
-        memcpy(source, input.ptr, input.length);
+        if (immutableInput && input.length)
+        {
+            import core.memory : GC;
+            source = cast(ubyte*) input.ptr;
+            GC.addRoot(source);
+            borrowed = true;
+        }
+        else
+        {
+            source = cast(ubyte*) malloc(input.length + 1);
+            if (source is null) throw new ParserinoException("Out of memory");
+            memcpy(source, input.ptr, input.length);
+        }
 
         sourceLength = input.length;
         chunkSize = chunk;
         parsing = true;
+    }
+
+    void releaseSource()
+    {
+        if (source is null) return;
+        if (borrowed)
+        {
+            import core.memory : GC;
+            GC.removeRoot(source);
+        }
+        else free(source);
+        source = null;
+        borrowed = false;
     }
 
     // Before a change of the tree: the parsing ends, the index of the ids is no longer valid
@@ -3387,6 +3444,7 @@ struct DocImpl
 
         import std.algorithm : min;
         auto n = min(chunkSize, sourceLength - fed);
+
         if (n > 0)
         {
             bool ok = parser.feed(cast(const(char)[]) source[fed .. fed + n]);
@@ -3420,8 +3478,7 @@ struct DocImpl
         parser = null;
         parsing = false;
         generation++;
-        free(source);
-        source = null;
+        releaseSource();
         tables.clear();
         formatting.clear();
         selects.clear();
