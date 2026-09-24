@@ -28,7 +28,7 @@ struct Collector
         return true;
     }
 
-    static bool foreign(void*) @nogc nothrow pure { return false; }
+    static bool foreign(void*) @nogc nothrow pure @safe { return false; }
 
     void put(ref Token t)
     {
@@ -157,7 +157,7 @@ JSONValue[] tokenize(string input, State state, string lastStartTag, bool oneByO
     TokenSink sink;
     sink.context = &c;
     // The sink must be @nogc nothrow pure for the tokenizer; the test doesn't care
-    sink.process = cast(bool function(void*, ref Token) @nogc nothrow pure) &Collector.add;
+    sink.process = cast(bool function(void*, ref Token) @nogc nothrow pure @safe) &Collector.add;
     sink.inForeignContent = &Collector.foreign;
 
     auto t = new Tokenizer(doc, sink);

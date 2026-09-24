@@ -9,7 +9,7 @@ module parserino.names;
 
 import parserino.arena;
 
-@nogc nothrow pure:
+@nogc nothrow pure @safe:
 
 /// Namespaces
 enum Ns : ubyte
@@ -817,7 +817,7 @@ unittest
  +/
 struct NameTable
 {
-@nogc nothrow pure:
+@nogc nothrow pure @safe:
     @disable this(this);
 
     /// Id of `name`, adding it if needed. It returns 0 if out of memory.
@@ -825,13 +825,15 @@ struct NameTable
     {
         if (auto id = find(name, first)) return id;
 
-        auto copy = arena.dup(name);
-        if (copy is null && name.length) return 0;
+        // A null name marks the empty slots: the empty name is a non-null ""
+        const(char)[] copy = name.length ? arena.dup(name) : "";
+        if (copy is null) return 0;
 
         if ((count + 1) * 2 > slots.length && !grow()) return 0;
 
-        insert(Entry(copy, first + cast(uint) count), hash(name));
         names.put(copy);
+        if (names.failed) return 0;
+        insert(Entry(copy, first + cast(uint) count), hash(name));
         count++;
         return first + cast(uint) count - 1;
     }

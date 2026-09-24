@@ -35,7 +35,8 @@ struct Snapshot
 
         foreach (ref r; nodes)
         {
-            parents.length = r.depth + 1;
+            if (parents.failed) return false;
+            parents.shrinkTo(r.depth + 1);
             DomNode* parent = parents[r.depth];
             if (r.inTemplate) parent = &parent.as!DomElement.templateContent.node;
 
@@ -90,7 +91,7 @@ struct Snapshot
             parents.put(n);
         }
 
-        return true;
+        return !parents.failed;
     }
 }
 
@@ -126,7 +127,7 @@ Snapshot takeSnapshot(const(DomDocument)* doc) pure
     s.compatMode = doc.compatMode;
     s.scripting = doc.scripting;
 
-    void add(const(DomNode)* n, uint depth, bool inTemplate, bool detached = false)
+    void add(const(DomNode)* n, uint depth, bool inTemplate, bool detached)
     {
         SnapshotNode r;
         r.type = n.type;
@@ -174,22 +175,65 @@ Snapshot takeSnapshot(const(DomDocument)* doc) pure
         }
 
         s.nodes ~= r;
+    }
 
-        if (auto e = n.asElement)
-            if (e.templateContent !is null)
-                for (const(DomNode)* c = e.templateContent.node.firstChild; c !is null; c = c.next)
-                    add(c, depth + 1, true);
+    // Visit `root` and its subtree in tree order, the template contents before the children.
+    // It's iterative, so deep trees don't overflow the stack.
+    void visit(const(DomNode)* root, bool detached)
+    {
+        const(DomNode)* n = root;
+        uint depth = 0;
+        bool inTemplate = false;
 
-        for (const(DomNode)* c = n.firstChild; c !is null; c = c.next)
-            add(c, depth + 1, false);
+        while (true)
+        {
+            add(n, depth, inTemplate, detached && n is root);
+
+            // Down: the template content, else the children
+            if (auto first = n.firstChildOrContent)
+            {
+                inTemplate = first.parent !is n;
+                n = first;
+                depth++;
+                continue;
+            }
+            if (n.firstChild !is null)
+            {
+                inTemplate = false;
+                n = n.firstChild;
+                depth++;
+                continue;
+            }
+
+            // Next: a sibling, the children of a template after its content, or up
+            while (true)
+            {
+                if (n is root) return;
+                if (n.next !is null) { n = n.next; break; }
+
+                auto host = n.parentOrHost;
+                depth--;
+                if (host !is n.parent && host.firstChild !is null)
+                {
+                    // The end of a template content: then the children of the template
+                    n = host.firstChild;
+                    inTemplate = false;
+                    depth++;
+                    break;
+                }
+
+                n = host;
+                inTemplate = n.parent !is null && n.parent.type == NodeType.DocumentFragment;
+            }
+        }
     }
 
     for (const(DomNode)* c = doc.node.firstChild; c !is null; c = c.next)
-        add(c, 0, false);
+        visit(c, false);
 
     // A frameset removes the body from the tree, but the document still points to it
     if (doc.body !is null && doc.body.node.parent is null)
-        add(&doc.body.node, 0, false, true);
+        visit(&doc.body.node, true);
 
     return s;
 }

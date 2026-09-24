@@ -12,7 +12,7 @@ module parserino.css.selector;
 import parserino.arena;
 import parserino.css.tokenizer;
 
-@nogc nothrow pure:
+@nogc nothrow pure @safe:
 
 /// How a compound selector is related to the previous one
 enum Combinator : ubyte
@@ -149,7 +149,7 @@ struct SelectorList
 
 /// Parse a selector list. It returns `null` on syntax errors or if out of memory.
 /// All the memory comes from `arena`.
-const(SelectorList)* parseSelector(const(char)[] input, ref Arena arena)
+const(SelectorList)* parseSelector(const(char)[] input, ref Arena arena) @trusted // the parser keeps &arena only here
 {
     auto p = Parser(input, &arena);
     auto list = p.parseList(ListKind.Complex, false);
@@ -200,7 +200,7 @@ enum ListKind { Complex, Relative }
 
 struct Parser
 {
-@nogc nothrow pure:
+@nogc nothrow pure @safe:
     @disable this(this);
 
     this(const(char)[] input, Arena* arena)
@@ -215,7 +215,7 @@ struct Parser
     // Nesting of function arguments: EOF closes them all
     int depth;
 
-    ref const(Token) tok() { return tokens.front; }
+    ref const(Token) tok() return { return tokens.front; }
     void next() { tokens.popFront(); }
 
     bool isEnd()
@@ -261,6 +261,7 @@ struct Parser
 
         auto list = arena.make!SelectorList;
         if (list is null) return null;
+        if (items.failed) { tokens.failed = true; return null; }
         list.items = arena.dup(items[]);
         return list;
     }
@@ -330,6 +331,7 @@ struct Parser
             compounds.put(comp);
         }
 
+        if (compounds.failed) { tokens.failed = true; return false; }
         c.compounds = arena.dup(compounds[]);
         return c.compounds !is null;
     }
@@ -386,6 +388,7 @@ struct Parser
         }
 
         if (simples.empty) return false;
+        if (simples.failed) { tokens.failed = true; return false; }
         comp.simples = arena.dup(simples[]);
         return comp.simples !is null;
     }
@@ -647,6 +650,7 @@ struct Parser
             next();
         }
 
+        if (ranges.failed) { tokens.failed = true; return false; }
         s.ranges = arena.dup(ranges[]);
         return s.ranges !is null;
     }

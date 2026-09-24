@@ -11,7 +11,7 @@ import parserino.css.selector;
 import parserino.dom;
 import parserino.names;
 
-@nogc nothrow:
+@nogc nothrow pure @safe:
 
 /++ Does the element match any selector of the list?
  + `scope` is the element matched by `:scope` (the root of the query).
@@ -19,263 +19,269 @@ import parserino.names;
 bool matches(const(SelectorList)* list, DomNode* node, DomNode* scopeElement = null)
 {
     if (node.type != NodeType.Element) return false;
-    scopeNode = scopeElement;
-    return matchList(*list, node);
+    return Matcher(scopeElement).matchList(*list, node);
 }
 
 private:
 
-// The element matched by :scope during the current match
-DomNode* scopeNode;
-
-bool matchList(ref const SelectorList list, DomNode* node)
+// The state of a match
+struct Matcher
 {
-    foreach (ref c; list.items)
-        if (matchComplex(c, node, c.compounds.length - 1)) return true;
+@nogc nothrow pure @safe:
 
-    return false;
-}
+    // The element matched by :scope
+    DomNode* scopeNode;
 
-bool matchComplex(ref const Complex c, DomNode* node, size_t i)
-{
-    if (!matchCompound(c.compounds[i], node)) return false;
-    if (i == 0) return true;
-
-    final switch (c.compounds[i].combinator)
+    bool matchList(ref const SelectorList list, DomNode* node)
     {
-        case Combinator.Descendant:
-            for (auto p = node.parent; p !is null; p = p.parent)
-                if (p.type == NodeType.Element && matchComplex(c, p, i - 1)) return true;
-            return false;
+        foreach (ref c; list.items)
+            if (matchComplex(c, node, c.compounds.length - 1)) return true;
 
-        case Combinator.Child:
-            auto p = node.parent;
-            return p !is null && p.type == NodeType.Element && matchComplex(c, p, i - 1);
-
-        case Combinator.NextSibling:
-            auto p = prevElement(node);
-            return p !is null && matchComplex(c, p, i - 1);
-
-        case Combinator.SubsequentSibling:
-            for (auto p = prevElement(node); p !is null; p = prevElement(p))
-                if (matchComplex(c, p, i - 1)) return true;
-            return false;
-    }
-}
-
-// :has(): the relative selector is matched left to right, starting from the anchor
-bool matchForward(ref const Complex c, DomNode* from, size_t i)
-{
-    bool tryNode(DomNode* n)
-    {
-        return matchCompound(c.compounds[i], n) && (i + 1 == c.compounds.length || matchForward(c, n, i + 1));
+        return false;
     }
 
-    final switch (c.compounds[i].combinator)
+    bool matchComplex(ref const Complex c, DomNode* node, size_t i)
     {
-        case Combinator.Descendant:
-            for (auto n = nextInSubtree(from, from, true); n !is null; n = nextInSubtree(n, from, true))
-                if (n.type == NodeType.Element && tryNode(n)) return true;
-            return false;
+        if (!matchCompound(c.compounds[i], node)) return false;
+        if (i == 0) return true;
 
-        case Combinator.Child:
-            for (auto n = from.firstChild; n !is null; n = n.next)
-                if (n.type == NodeType.Element && tryNode(n)) return true;
-            return false;
+        final switch (c.compounds[i].combinator)
+        {
+            case Combinator.Descendant:
+                for (auto p = node.parent; p !is null; p = p.parent)
+                    if (p.type == NodeType.Element && matchComplex(c, p, i - 1)) return true;
+                return false;
 
-        case Combinator.NextSibling:
-            auto n = nextElement(from);
-            return n !is null && tryNode(n);
+            case Combinator.Child:
+                auto p = node.parent;
+                return p !is null && p.type == NodeType.Element && matchComplex(c, p, i - 1);
 
-        case Combinator.SubsequentSibling:
-            for (auto n = nextElement(from); n !is null; n = nextElement(n))
-                if (tryNode(n)) return true;
-            return false;
+            case Combinator.NextSibling:
+                auto p = prevElement(node);
+                return p !is null && matchComplex(c, p, i - 1);
+
+            case Combinator.SubsequentSibling:
+                for (auto p = prevElement(node); p !is null; p = prevElement(p))
+                    if (matchComplex(c, p, i - 1)) return true;
+                return false;
+        }
     }
-}
 
-bool matchCompound(ref const Compound comp, DomNode* node)
-{
-    foreach (ref s; comp.simples)
-        if (!matchSimple(s, node)) return false;
-
-    return true;
-}
-
-bool matchSimple(ref const Simple s, DomNode* node)
-{
-    auto e = node.as!DomElement;
-
-    final switch (s.kind)
+    // :has(): the relative selector is matched left to right, starting from the anchor
+    bool matchForward(ref const Complex c, DomNode* from, size_t i)
     {
-        case SimpleKind.Universal:
-            return nsMatches(s.ns, node.ns);
+        bool tryNode(DomNode* n)
+        {
+            return matchCompound(c.compounds[i], n) && (i + 1 == c.compounds.length || matchForward(c, n, i + 1));
+        }
 
-        case SimpleKind.Type:
-            if (!nsMatches(s.ns, node.ns)) return false;
-            auto id = node.document.findTagName(s.name);
-            return id != Tag.Undef && node.name == id;
+        final switch (c.compounds[i].combinator)
+        {
+            case Combinator.Descendant:
+                for (auto n = nextInSubtree(from, from, true); n !is null; n = nextInSubtree(n, from, true))
+                    if (n.type == NodeType.Element && tryNode(n)) return true;
+                return false;
 
-        case SimpleKind.Never:
-            return false;
+            case Combinator.Child:
+                for (auto n = from.firstChild; n !is null; n = n.next)
+                    if (n.type == NodeType.Element && tryNode(n)) return true;
+                return false;
 
-        case SimpleKind.Lang:
-            return matchLang(s.ranges, node);
+            case Combinator.NextSibling:
+                auto n = nextElement(from);
+                return n !is null && tryNode(n);
 
-        case SimpleKind.Id:
-            if (e.idAttr is null) return false;
-            return equal(e.idAttr.value, s.name, isQuirks(node));
+            case Combinator.SubsequentSibling:
+                for (auto n = nextElement(from); n !is null; n = nextElement(n))
+                    if (tryNode(n)) return true;
+                return false;
+        }
+    }
 
-        case SimpleKind.Class:
-            if (e.classAttr is null) return false;
-            return containsWord(e.classAttr.value, s.name, isQuirks(node));
+    bool matchCompound(ref const Compound comp, DomNode* node)
+    {
+        foreach (ref s; comp.simples)
+            if (!matchSimple(s, node)) return false;
 
-        case SimpleKind.Attribute:
-            return matchAttribute(s, node);
+        return true;
+    }
 
-        case SimpleKind.PseudoClass:
-            return matchPseudoClass(s.pseudo, node);
+    bool matchSimple(ref const Simple s, DomNode* node)
+    {
+        auto e = node.as!DomElement;
 
-        case SimpleKind.Not:
-            return !matchList(*s.list, node);
+        final switch (s.kind)
+        {
+            case SimpleKind.Universal:
+                return nsMatches(s.ns, node.ns);
 
-        case SimpleKind.Is:
-            return matchList(*s.list, node);
+            case SimpleKind.Type:
+                if (!nsMatches(s.ns, node.ns)) return false;
+                auto id = node.document.findTagName(s.name);
+                return id != Tag.Undef && node.name == id;
 
-        case SimpleKind.Has:
-            foreach (ref c; s.list.items)
-                if (matchForward(c, node, 0)) return true;
-            return false;
+            case SimpleKind.Never:
+                return false;
 
-        case SimpleKind.NthChild, SimpleKind.NthLastChild:
-            bool forward = s.kind == SimpleKind.NthLastChild;
-            size_t index = 0;
+            case SimpleKind.Lang:
+                return matchLang(s.ranges, node);
 
-            if (s.list !is null)
-            {
-                // `of S`: count the siblings matching S (the element itself must match)
-                if (!matchList(*s.list, node)) return false;
+            case SimpleKind.Id:
+                if (e.idAttr is null) return false;
+                return equal(e.idAttr.value, s.name, isQuirks(node));
+
+            case SimpleKind.Class:
+                if (e.classAttr is null) return false;
+                return containsWord(e.classAttr.value, s.name, isQuirks(node));
+
+            case SimpleKind.Attribute:
+                return matchAttribute(s, node);
+
+            case SimpleKind.PseudoClass:
+                return matchPseudoClass(s.pseudo, node);
+
+            case SimpleKind.Not:
+                return !matchList(*s.list, node);
+
+            case SimpleKind.Is:
+                return matchList(*s.list, node);
+
+            case SimpleKind.Has:
+                foreach (ref c; s.list.items)
+                    if (matchForward(c, node, 0)) return true;
+                return false;
+
+            case SimpleKind.NthChild, SimpleKind.NthLastChild:
+                bool forward = s.kind == SimpleKind.NthLastChild;
+                size_t index = 0;
+
+                if (s.list !is null)
+                {
+                    // `of S`: count the siblings matching S (the element itself must match)
+                    if (!matchList(*s.list, node)) return false;
+                    for (auto n = node; n !is null; n = forward ? nextElement(n) : prevElement(n))
+                        if (matchList(*s.list, n)) index++;
+                }
+                else
+                {
+                    for (auto n = node; n !is null; n = forward ? nextElement(n) : prevElement(n)) index++;
+                }
+
+                return nth(s.a, s.b, index);
+
+            case SimpleKind.NthOfType, SimpleKind.NthLastOfType:
+                bool forward = s.kind == SimpleKind.NthLastOfType;
+                size_t index = 0;
+
                 for (auto n = node; n !is null; n = forward ? nextElement(n) : prevElement(n))
-                    if (matchList(*s.list, n)) index++;
-            }
-            else
-            {
-                for (auto n = node; n !is null; n = forward ? nextElement(n) : prevElement(n)) index++;
-            }
+                    if (n.name == node.name && n.ns == node.ns) index++;
 
-            return nth(s.a, s.b, index);
+                return nth(s.a, s.b, index);
 
-        case SimpleKind.NthOfType, SimpleKind.NthLastOfType:
-            bool forward = s.kind == SimpleKind.NthLastOfType;
-            size_t index = 0;
-
-            for (auto n = node; n !is null; n = forward ? nextElement(n) : prevElement(n))
-                if (n.name == node.name && n.ns == node.ns) index++;
-
-            return nth(s.a, s.b, index);
-
-        case SimpleKind.Contains:
-            for (auto n = node.firstChild; n !is null; n = n.next)
-            {
-                if (n.type != NodeType.Text) continue;
-                auto text = n.as!DomCharacterData.data;
-                if (containsText(text, s.name, s.insensitive)) return true;
-            }
-            return false;
+            case SimpleKind.Contains:
+                for (auto n = node.firstChild; n !is null; n = n.next)
+                {
+                    if (n.type != NodeType.Text) continue;
+                    auto text = n.as!DomCharacterData.data;
+                    if (containsText(text, s.name, s.insensitive)) return true;
+                }
+                return false;
+        }
     }
-}
 
-bool matchAttribute(ref const Simple s, DomNode* node)
-{
-    auto id = node.document.findAttrName(s.name);
-    if (id == 0) return false;
-
-    DomAttribute* attr;
-    for (attr = node.as!DomElement.firstAttr; attr !is null; attr = attr.next)
-        if (attr.name == id && attrNsMatches(s.ns, attr.ns)) break;
-    if (attr is null) return false;
-    if (s.match == AttrMatch.Exists) return true;
-
-    const(char)[] v = attr.value;
-    auto want = s.value;
-
-    bool ci = s.attrCase == AttrCase.Insensitive
-        || (s.attrCase == AttrCase.Auto && htmlCaseInsensitive(node, id));
-
-    final switch (s.match)
+    bool matchAttribute(ref const Simple s, DomNode* node)
     {
-        case AttrMatch.Exists: return true;
-        case AttrMatch.Equal: return equal(v, want, ci);
-        case AttrMatch.Includes: return containsWord(v, want, ci);
-        case AttrMatch.Dash:
-            if (v.length == want.length) return equal(v, want, ci);
-            return v.length > want.length && equal(v[0 .. want.length], want, ci) && v[want.length] == '-';
-        case AttrMatch.Prefix: return want.length && v.length >= want.length && equal(v[0 .. want.length], want, ci);
-        case AttrMatch.Suffix: return want.length && v.length >= want.length && equal(v[$ - want.length .. $], want, ci);
-        case AttrMatch.Substring: return want.length && containsText(v, want, ci);
+        auto id = node.document.findAttrName(s.name);
+        if (id == 0) return false;
+
+        DomAttribute* attr;
+        for (attr = node.as!DomElement.firstAttr; attr !is null; attr = attr.next)
+            if (attr.name == id && attrNsMatches(s.ns, attr.ns)) break;
+        if (attr is null) return false;
+        if (s.match == AttrMatch.Exists) return true;
+
+        const(char)[] v = attr.value;
+        auto want = s.value;
+
+        bool ci = s.attrCase == AttrCase.Insensitive
+            || (s.attrCase == AttrCase.Auto && htmlCaseInsensitive(node, id));
+
+        final switch (s.match)
+        {
+            case AttrMatch.Exists: return true;
+            case AttrMatch.Equal: return equal(v, want, ci);
+            case AttrMatch.Includes: return containsWord(v, want, ci);
+            case AttrMatch.Dash:
+                if (v.length == want.length) return equal(v, want, ci);
+                return v.length > want.length && equal(v[0 .. want.length], want, ci) && v[want.length] == '-';
+            case AttrMatch.Prefix: return want.length && v.length >= want.length && equal(v[0 .. want.length], want, ci);
+            case AttrMatch.Suffix: return want.length && v.length >= want.length && equal(v[$ - want.length .. $], want, ci);
+            case AttrMatch.Substring: return want.length && containsText(v, want, ci);
+        }
     }
-}
 
-bool matchPseudoClass(PseudoClass p, DomNode* node)
-{
-    final switch (p)
+    bool matchPseudoClass(PseudoClass p, DomNode* node)
     {
-        case PseudoClass.AnyLink, PseudoClass.Link:
-            return isHtml(node, Tag.A, Tag.Area) && hasAttr(node, AttrName.Href);
+        final switch (p)
+        {
+            case PseudoClass.AnyLink, PseudoClass.Link:
+                return isHtml(node, Tag.A, Tag.Area) && hasAttr(node, AttrName.Href);
 
-        case PseudoClass.Blank:
-            return node.isBlank;
+            case PseudoClass.Blank:
+                return node.isBlank;
 
-        case PseudoClass.Checked:
-            if (isHtml(node, Tag.Input))
-            {
-                auto t = attrById(node, AttrName.Type);
-                if (t is null || t.value is null) return false;
-                auto v = value(t);
-                return (equal(v, "checkbox", true) || equal(v, "radio", true)) && hasAttr(node, AttrName.Checked);
-            }
-            return isHtml(node, Tag.Option) && isSelectedOption(node);
+            case PseudoClass.Checked:
+                if (isHtml(node, Tag.Input))
+                {
+                    auto t = attrById(node, AttrName.Type);
+                    if (t is null || t.value is null) return false;
+                    auto v = value(t);
+                    return (equal(v, "checkbox", true) || equal(v, "radio", true)) && hasAttr(node, AttrName.Checked);
+                }
+                return isHtml(node, Tag.Option) && isSelectedOption(node);
 
-        case PseudoClass.Disabled: return canBeDisabled(node) && isDisabled(node);
-        case PseudoClass.Enabled: return canBeDisabled(node) && !isDisabled(node);
+            case PseudoClass.Disabled: return canBeDisabled(node) && isDisabled(node);
+            case PseudoClass.Enabled: return canBeDisabled(node) && !isDisabled(node);
 
-        case PseudoClass.Empty:
-            // Only comments inside
-            for (auto n = nextInSubtree(node, node, true); n !is null; n = nextInSubtree(n, node, true))
-                if (n.name != Tag.CommentNode) return false;
-            return true;
+            case PseudoClass.Empty:
+                // Only comments inside
+                for (auto n = nextInSubtree(node, node, true); n !is null; n = nextInSubtree(n, node, true))
+                    if (n.name != Tag.CommentNode) return false;
+                return true;
 
-        case PseudoClass.FirstChild: return prevElement(node) is null;
-        case PseudoClass.LastChild: return nextElement(node) is null;
-        case PseudoClass.OnlyChild: return prevElement(node) is null && nextElement(node) is null;
-        case PseudoClass.FirstOfType: return firstOfType(node);
-        case PseudoClass.LastOfType: return lastOfType(node);
-        case PseudoClass.OnlyOfType: return firstOfType(node) && lastOfType(node);
+            case PseudoClass.FirstChild: return prevElement(node) is null;
+            case PseudoClass.LastChild: return nextElement(node) is null;
+            case PseudoClass.OnlyChild: return prevElement(node) is null && nextElement(node) is null;
+            case PseudoClass.FirstOfType: return firstOfType(node);
+            case PseudoClass.LastOfType: return lastOfType(node);
+            case PseudoClass.OnlyOfType: return firstOfType(node) && lastOfType(node);
 
-        case PseudoClass.Optional: return isFormField(node) && !hasAttr(node, AttrName.Required);
-        case PseudoClass.Required: return isFormField(node) && hasAttr(node, AttrName.Required);
+            case PseudoClass.Optional: return isFormField(node) && !hasAttr(node, AttrName.Required);
+            case PseudoClass.Required: return isFormField(node) && hasAttr(node, AttrName.Required);
 
-        case PseudoClass.PlaceholderShown:
-            if (!hasAttr(node, AttrName.Placeholder)) return false;
-            if (isHtml(node, Tag.Input))
-            {
-                auto v = attrByName(node, "value");
-                return v is null || v.value.length == 0;
-            }
-            if (isHtml(node, Tag.Textarea)) return node.firstChild is null;
-            return false;
+            case PseudoClass.PlaceholderShown:
+                if (!hasAttr(node, AttrName.Placeholder)) return false;
+                if (isHtml(node, Tag.Input))
+                {
+                    auto v = attrByName(node, "value");
+                    return v is null || v.value.length == 0;
+                }
+                if (isHtml(node, Tag.Textarea)) return node.firstChild is null;
+                return false;
 
-        case PseudoClass.ReadWrite: return isReadWrite(node);
-        case PseudoClass.ReadOnly: return !isReadWrite(node);
+            case PseudoClass.ReadWrite: return isReadWrite(node);
+            case PseudoClass.ReadOnly: return !isReadWrite(node);
 
-        case PseudoClass.Root:
-            return node is rootElement(node);
-
-        case PseudoClass.Scope:
-            if (scopeNode is null || scopeNode.type != NodeType.Element)
+            case PseudoClass.Root:
                 return node is rootElement(node);
-            return node is scopeNode;
+
+            case PseudoClass.Scope:
+                if (scopeNode is null || scopeNode.type != NodeType.Element)
+                    return node is rootElement(node);
+                return node is scopeNode;
+        }
     }
+
 }
 
 bool isHtml(DomNode* n, uint a, uint b = Tag.Undef, uint c = Tag.Undef)

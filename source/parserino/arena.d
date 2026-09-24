@@ -35,7 +35,7 @@ else
     }
 }
 
-@nogc nothrow pure:
+@nogc nothrow pure @safe:
 
 /// Copy `n` items (memcpy, a loop in CTFE)
 void copyItems(T)(T* dst, const(T)* src, size_t n) @system
@@ -46,7 +46,7 @@ void copyItems(T)(T* dst, const(T)* src, size_t n) @system
 
 struct Arena
 {
-@nogc nothrow pure:
+@nogc nothrow pure @safe:
     @disable this(this);
 
     /// Allocate `n` zeroed `T`s. It returns `null` if out of memory.
@@ -136,61 +136,92 @@ struct Arena
     }
 }
 
-/// A growable array for temporary data (malloc'd, GC in CTFE).
+/++ A growable array for temporary data (malloc'd, GC in CTFE).
+ + If memory runs out, the items are not added and `failed` becomes true (and stays true):
+ + the owner checks it at the end of its work, as it checks the results of the `Arena`.
+ +/
 struct Buffer(T)
 {
-@nogc nothrow pure:
+@nogc nothrow pure @safe:
     @disable this(this);
 
+    pragma(inline, true)
     void put(T x) @trusted
     {
-        if (length == data.length) grow();
-        data[length++] = x;
+        if (length_ == data.length && !grow(length_ + 1)) return;
+        data[length_++] = x;
     }
 
     /// Append many items at once
+    pragma(inline, true)
     void put(scope const(T)[] xs) @trusted
     {
         if (xs.length == 0) return;
-        while (length + xs.length > data.length) grow();
+        if (length_ + xs.length > data.length && !grow(length_ + xs.length)) return;
 
-        if (__ctfe) { foreach (i, x; xs) data[length + i] = cast(T) x; }
-        else
-        {
-            import core.stdc.string : memcpy;
-            memcpy(data.ptr + length, xs.ptr, xs.length * T.sizeof);
-        }
-        length += xs.length;
+        if (__ctfe) { foreach (i, x; xs) data[length_ + i] = cast(T) x; }
+        else memcpy(data.ptr + length_, xs.ptr, xs.length * T.sizeof);
+        length_ += xs.length;
     }
 
-    inout(T)[] opSlice() inout { return data[0 .. length]; }
-    ref inout(T) opIndex(size_t i) inout { return data[i]; }
-    @property bool empty() const { return length == 0; }
-    void clear() { length = 0; }
+    static if (is(T == char))
+    {
+        /// Append `s` in ASCII lowercase
+        pragma(inline, true)
+        void putLower(scope const(char)[] s) @trusted
+        {
+            auto at = length_;
+            put(s);
+            if (length_ == at) return;
+            foreach (ref c; data[at .. length_])
+                if (c >= 'A' && c <= 'Z') c |= 0x20;
+        }
+    }
+
+    // Forced inlining: these are in the hot loops of the parser
+    pragma(inline, true) inout(T)[] opSlice() inout { return data[0 .. length_]; }
+    pragma(inline, true) ref inout(T) opIndex(size_t i) inout { return data[i]; }
+    pragma(inline, true) @property size_t length() const { return length_; }
+    pragma(inline, true) @property bool empty() const { return length_ == 0; }
+    pragma(inline, true) void clear() { length_ = 0; }
+
+    /// Remove the last item
+    pragma(inline, true) void removeLast() { assert(length_ > 0); length_--; }
+
+    /// Keep only the first `n` items
+    pragma(inline, true) void shrinkTo(size_t n) { assert(n <= length_); length_ = n; }
 
     ~this() @trusted { if (!__ctfe && data.ptr !is null) pureFree(data.ptr); }
 
-    size_t length;
-
-    package T[] data;
+    /// Memory ran out: some items were not added
+    bool failed;
 
     private:
 
-    void grow() @trusted
+    T[] data;
+    size_t length_;
+
+    pragma(inline, false)
+    bool grow(size_t needed) @trusted
     {
+        if (failed) return false;
+
         auto n = data.length == 0 ? 8 : data.length * 2;
+        if (n < needed) n = needed;
+
         T[] nd;
         if (__ctfe) nd = ctfeNew!T(n);
         else
         {
             auto p = cast(T*) pureMalloc(n * T.sizeof);
-            if (p is null) assert(0, "Out of memory");
+            if (p is null) { failed = true; return false; }
             nd = p[0 .. n];
         }
 
-        foreach (i; 0 .. length) nd[i] = data[i];
+        copyItems(nd.ptr, data.ptr, length_);
         if (!__ctfe && data.ptr !is null) pureFree(data.ptr);
         data = nd;
+        return true;
     }
 }
 

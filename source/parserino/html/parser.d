@@ -8,14 +8,14 @@ import parserino.names;
 import parserino.html.tokenizer;
 import parserino.html.treebuilder;
 
-@nogc nothrow pure:
+@nogc nothrow pure @safe:
 
 /++ A parser. It must not be moved after `begin` (the tokenizer points to the tree builder):
  + keep it in memory that doesn't move (heap, or a local variable used in place).
  +/
 struct Parser
 {
-@nogc nothrow pure:
+@nogc nothrow pure @safe:
     @disable this(this);
 
     TreeBuilder tree;
@@ -46,7 +46,6 @@ struct Parser
 /// Parse a whole document into `doc` (an empty document)
 bool parseDocument(DomDocument* doc, scope const(char)[] html)
 {
-    import core.memory : pureCalloc, pureFree;
 
     auto p = newParser();
     if (p is null) return false;
@@ -61,7 +60,6 @@ bool parseDocument(DomDocument* doc, scope const(char)[] html)
  +/
 DomElement* parseFragment(DomDocument* doc, DomElement* context, scope const(char)[] html)
 {
-    import core.memory : pureCalloc, pureFree;
 
     auto p = newParser();
     if (p is null) return null;
@@ -75,7 +73,7 @@ DomElement* parseFragment(DomDocument* doc, DomElement* context, scope const(cha
 }
 
 /// A parser on the heap (it must not move), initialized
-Parser* newParser()
+Parser* newParser() @trusted
 {
     import core.memory : pureMalloc;
     import core.lifetime : emplace;
@@ -88,7 +86,7 @@ Parser* newParser()
     return p;
 }
 
-void freeParser(Parser* p)
+void freeParser(Parser* p) @trusted
 {
     import core.memory : pureFree;
     if (__ctfe) return;
@@ -96,7 +94,7 @@ void freeParser(Parser* p)
     pureFree(p);
 }
 
-unittest
+@system unittest
 {
     import core.memory : pureCalloc, pureFree;
     import parserino.html.serializer;

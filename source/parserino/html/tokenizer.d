@@ -12,7 +12,7 @@ import parserino.names;
 import parserino.dom : DomDocument;
 import parserino.html.entities;
 
-@nogc nothrow pure:
+@nogc nothrow pure @safe:
 
 enum TokenType : ubyte
 {
@@ -61,9 +61,9 @@ struct TokenSink
 {
     void* context;
     /// Process a token. It returns false to stop (out of memory).
-    bool function(void* context, ref Token token) @nogc nothrow pure process;
+    bool function(void* context, ref Token token) @nogc nothrow pure @safe process;
     /// Is the adjusted current node an element not in the html namespace? (for CDATA sections)
-    bool function(void* context) @nogc nothrow pure inForeignContent;
+    bool function(void* context) @nogc nothrow pure @safe inForeignContent;
 }
 
 /// States of the tokenizer (the ones the tree builder can set are `data`, `rcdata`, `rawtext`, `scriptData`, `plaintext`)
@@ -96,7 +96,7 @@ enum State : ubyte
 
 struct Tokenizer
 {
-@nogc nothrow pure:
+@nogc nothrow pure @safe:
     @disable this(this);
 
     this(DomDocument* document, TokenSink sink)
@@ -141,7 +141,7 @@ struct Tokenizer
         if (hasCR || carry.length)
         {
             work.clear();
-            foreach (c; carry[]) work.put(c);
+            work.put(carry[]);
             carry.clear();
 
             foreach (i, c; input)
@@ -160,6 +160,7 @@ struct Tokenizer
         }
         else run(input);
 
+        if (buffersFailed()) failed = true;
         return !failed;
     }
 
@@ -172,7 +173,7 @@ struct Tokenizer
         if (carry.length)
         {
             work.clear();
-            foreach (c; carry[]) work.put(c);
+            work.put(carry[]);
             carry.clear();
             run(work[]);
         }
@@ -183,6 +184,7 @@ struct Tokenizer
         Token t;
         t.type = TokenType.Eof;
         emit(t);
+        if (buffersFailed()) failed = true;
         return !failed;
     }
 
@@ -261,13 +263,11 @@ struct Tokenizer
         return t;
     }();
 
-    // Append ASCII-lowercased
-    static void putLower(ref Buffer!char buf, scope const(char)[] s)
+    // Did a buffer run out of memory?
+    bool buffersFailed() const
     {
-        auto at = buf.length;
-        buf.put(s);
-        foreach (ref c; buf.data[at .. buf.length])
-            if (c >= 'A' && c <= 'Z') c |= 0x20;
+        return carry.failed || work.failed || text.failed || tagName.failed || tokData.failed || attrs.failed
+            || attrSlices.failed || temp.failed || lastStartTag.failed || refBuf.failed;
     }
 
     void emitText(char c) { text.put(c); if (c == '\0') textHasNull = true; }
@@ -288,7 +288,7 @@ struct Tokenizer
     void emit(ref Token t)
     {
         if (failed) return;
-        if (!sink.process(sink.context, t)) failed = true;
+        if (buffersFailed() || !sink.process(sink.context, t)) failed = true;
     }
 
     void flushText()
@@ -527,7 +527,7 @@ struct Tokenizer
                 {
                     size_t start = pos;
                     while (pos < input.length && !(charClass[input[pos]] & EndOfName)) pos++;
-                    putLower(tagName, input[start .. pos]);
+                    tagName.putLower(input[start .. pos]);
                     if (pos == input.length) return;
 
                     c = input[pos++];
@@ -706,7 +706,7 @@ struct Tokenizer
                 {
                     size_t start = pos;
                     while (pos < input.length && !(charClass[input[pos]] & EndOfAttrName)) pos++;
-                    putLower(tokData, input[start .. pos]);
+                    tokData.putLower(input[start .. pos]);
                     if (pos == input.length) return;
 
                     c = input[pos];

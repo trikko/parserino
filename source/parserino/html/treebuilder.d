@@ -10,7 +10,7 @@ import parserino.names;
 import parserino.dom;
 import parserino.html.tokenizer;
 
-@nogc nothrow pure:
+@nogc nothrow pure @safe:
 
 enum Mode : ubyte
 {
@@ -28,7 +28,7 @@ enum : ubyte
 
 struct TreeBuilder
 {
-@nogc nothrow pure:
+@nogc nothrow pure @safe:
     @disable this(this);
 
     DomDocument* doc;
@@ -112,7 +112,15 @@ struct TreeBuilder
         }
 
         while (!failed && !dispatch(t)) {}
+        if (buffersFailed()) failed = true;
         return !failed;
+    }
+
+    // Did a buffer run out of memory?
+    bool buffersFailed() const
+    {
+        return openElements.failed || activeFormatting.failed || templateModes.failed || pendingText.failed
+            || scratch.failed;
     }
 
     /// The end of the input: pop everything
@@ -149,9 +157,9 @@ struct TreeBuilder
     enum Adjust : ubyte { None, Svg, Math }
     Adjust adjust;
 
-    static bool processCallback(void* ctx, ref Token t) { return (cast(TreeBuilder*) ctx).process(t); }
+    static bool processCallback(void* ctx, ref Token t) @trusted { return (cast(TreeBuilder*) ctx).process(t); }
 
-    static bool foreignCallback(void* ctx)
+    static bool foreignCallback(void* ctx) @trusted
     {
         auto tb = cast(TreeBuilder*) ctx;
         auto n = tb.adjustedCurrent();
@@ -174,7 +182,7 @@ struct TreeBuilder
     {
         if (openElements.length == 0) return null;
         auto n = openElements[openElements.length - 1];
-        openElements.length--;
+        openElements.removeLast();
         popped(n);
         return n;
     }
@@ -218,7 +226,7 @@ struct TreeBuilder
             if (openElements[i] is n)
             {
                 foreach (j; i .. openElements.length - 1) openElements[j] = openElements[j + 1];
-                openElements.length--;
+                openElements.removeLast();
                 return;
             }
         }
@@ -408,7 +416,7 @@ struct TreeBuilder
     {
         while (activeFormatting.length)
         {
-            activeFormatting.length--;
+            activeFormatting.removeLast();
             if (activeFormatting[activeFormatting.length] is null) return;
         }
     }
@@ -429,7 +437,7 @@ struct TreeBuilder
     void removeAfeAt(size_t i)
     {
         foreach (j; i .. activeFormatting.length - 1) activeFormatting[j] = activeFormatting[j + 1];
-        activeFormatting.length--;
+        activeFormatting.removeLast();
     }
 
     void insertAfeAt(size_t i, DomNode* n)
@@ -773,7 +781,7 @@ struct TreeBuilder
     }
 
     // The options of a select: its option descendants, not inside nested select/datalist/option or optgroup/optgroup
-    static void forEachOption(DomElement* select, scope void delegate(DomElement*) @nogc nothrow pure dg)
+    static void forEachOption(DomElement* select, scope void delegate(DomElement*) @nogc nothrow pure @safe dg)
     {
         auto root = &select.node;
         for (auto n = root.firstChild; n !is null; )
@@ -1200,7 +1208,7 @@ struct TreeBuilder
         generateImpliedEndTagsThoroughly();
         popUntil(Tag.Template);
         clearToLastMarker();
-        if (templateModes.length) templateModes.length--;
+        if (templateModes.length) templateModes.removeLast();
         resetInsertionMode();
     }
 
@@ -2219,7 +2227,7 @@ struct TreeBuilder
 
     void switchTemplateMode(Mode m)
     {
-        if (templateModes.length) templateModes.length--;
+        if (templateModes.length) templateModes.removeLast();
         templateModes.put(m);
         mode = m;
     }
@@ -2239,7 +2247,7 @@ struct TreeBuilder
                 if (findInStack(Tag.Template) is null) return true;
                 popUntil(Tag.Template);
                 clearToLastMarker();
-                if (templateModes.length) templateModes.length--;
+                if (templateModes.length) templateModes.removeLast();
                 resetInsertionMode();
                 return false;
 

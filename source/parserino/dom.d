@@ -43,7 +43,7 @@ void textContent(Sink)(const(DomNode)* node, ref Sink sink)
             put(sink, n.as!DomCharacterData.data);
 }
 
-@nogc nothrow:
+@nogc nothrow pure @safe:
 
 enum NodeType : ubyte
 {
@@ -62,7 +62,7 @@ enum CompatMode : ubyte { NoQuirks, LimitedQuirks, Quirks }
 /// The common part of all the nodes
 struct DomNode
 {
-@nogc nothrow:
+@nogc nothrow pure @safe:
 
     NodeType type;
     Ns ns;
@@ -79,11 +79,13 @@ struct DomNode
     /// Is this an element in the html namespace with this tag?
     bool isHtml(uint tag) const pure { return type == NodeType.Element && name == tag && ns == Ns.Html; }
 
-    /++ The struct that contains this node: `Element`, `CharacterData`, `DocumentType`, `DocumentFragment` or `Document`.
-     + Unchecked: `type` must match.
+    /++ The struct that contains this node: `DomElement`, `DomCharacterData`, `DomDocumentType`,
+     + `DomDocumentFragment` or `DomDocument`. `type` must match (checked only by an assert).
      +/
     T* as(T)() pure @trusted return
     {
+        assert(isA!T(type), "Wrong node type for " ~ T.stringof);
+
         // CTFE can't reinterpret a pointer: the document remembers the container of each node
         if (__ctfe) return cast(T*) ctfeContainer(&this);
         return cast(T*) &this;
@@ -92,6 +94,8 @@ struct DomNode
     /// ditto
     const(T)* as(T)() const pure @trusted return
     {
+        assert(isA!T(type), "Wrong node type for " ~ T.stringof);
+
         if (__ctfe) return cast(T*) ctfeContainer(&this);
         return cast(const(T)*) &this;
     }
@@ -169,6 +173,23 @@ struct DomNode
         }
     }
 
+    /// The parent, or the `<template>` for the nodes of a template content
+    auto parentOrHost(this This)() pure
+    {
+        This* p = parent;
+        if (p !is null && p.type == NodeType.DocumentFragment)
+            if (auto h = p.as!DomDocumentFragment.host) return cast(This*) &h.node;
+        return p;
+    }
+
+    /// The first node of the template content for a `<template>`, else the first child
+    auto firstChildOrContent(this This)() pure
+    {
+        if (type == NodeType.Element)
+            if (auto c = as!DomElement.templateContent) return cast(This*) c.node.firstChild;
+        return firstChild;
+    }
+
     /// Is `other` this node or one of its descendants?
     bool contains(const(DomNode)* other) const pure
     {
@@ -217,7 +238,7 @@ struct DomNode
 /// An attribute
 struct DomAttribute
 {
-@nogc nothrow:
+@nogc nothrow pure @safe:
 
     /// Local name, lowercase (an `AttrName` or an id from the document names)
     uint name;
@@ -240,7 +261,7 @@ struct DomAttribute
 /// An element
 struct DomElement
 {
-@nogc nothrow:
+@nogc nothrow pure @safe:
 
     DomNode node;
     alias node this;
@@ -310,7 +331,7 @@ struct DomElement
 /// Text, comments, processing instructions, CDATA sections
 struct DomCharacterData
 {
-@nogc nothrow:
+@nogc nothrow pure @safe:
 
     DomNode node;
     alias node this;
@@ -377,6 +398,21 @@ struct DomDocumentFragment
 {
     DomNode node;
     alias node this;
+
+    /// The `<template>` of a template content, else null
+    DomElement* host;
+}
+
+// Is `T` the struct of the nodes of this type?
+private bool isA(T)(NodeType t) @nogc nothrow pure
+{
+    static if (is(T == DomElement)) return t == NodeType.Element;
+    else static if (is(T == DomCharacterData))
+        return t == NodeType.Text || t == NodeType.Comment || t == NodeType.ProcessingInstruction || t == NodeType.CDataSection;
+    else static if (is(T == DomDocumentType)) return t == NodeType.DocumentType;
+    else static if (is(T == DomDocumentFragment)) return t == NodeType.DocumentFragment;
+    else static if (is(T == DomDocument)) return t == NodeType.Document;
+    else static assert(0, T.stringof ~ " is not a node");
 }
 
 /// The document: it owns the memory of all its nodes
@@ -396,7 +432,7 @@ private void ctfeRegister(T)(T* x) @nogc nothrow pure @trusted
 
 struct DomDocument
 {
-@nogc nothrow:
+@nogc nothrow pure @safe:
 
     DomNode node;
     alias node this;
@@ -458,7 +494,8 @@ struct DomDocument
     uint findTagName(scope const(char)[] name) const pure
     {
         char[64] buf = void;
-        auto lower = toLower(name, buf);
+        Buffer!char big;
+        auto lower = toLower(name, buf, big);
         if (lower is null) return 0;
         auto t = knownTag(lower);
         if (t != Tag.Undef) return t;
@@ -482,7 +519,8 @@ struct DomDocument
     uint findAttrName(scope const(char)[] name) const pure
     {
         char[64] buf = void;
-        auto lower = toLower(name, buf);
+        Buffer!char big;
+        auto lower = toLower(name, buf, big);
         if (lower is null) return 0;
         auto a = knownAttr(lower);
         if (a != AttrName.Undef) return a;
@@ -510,6 +548,7 @@ struct DomDocument
         {
             e.templateContent = createFragment();
             if (e.templateContent is null) return null;
+            e.templateContent.host = e;
         }
 
         return e;
@@ -574,13 +613,9 @@ struct DomDocument
     DomAttribute* setAttribute(DomElement* e, scope const(char)[] name, scope const(char)[] value) pure
     {
         char[64] buf = void;
-        const(char)[] lower = toLower(name, buf);
         Buffer!char big;
-        if (lower is null)
-        {
-            foreach (c; name) big.put(c >= 'A' && c <= 'Z' ? cast(char) (c | 0x20) : c);
-            lower = big[];
-        }
+        auto lower = toLower(name, buf, big);
+        if (lower is null) return null;
 
         auto id = attrId(lower);
         if (id == 0) return null;
@@ -597,20 +632,86 @@ struct DomDocument
         return a;
     }
 
-    /// A copy of `src` owned by this document (deep: with all the descendants)
+    /++ A copy of `src` owned by this document. Deep: with all the descendants and the template
+     + contents; else only the node (and the attributes). It returns null if out of memory.
+     + The visit is iterative, so deep trees don't overflow the stack.
+     +/
     DomNode* importNode(const(DomNode)* src, bool deep) pure
     {
-        auto copy = cloneNode(src);
-        if (copy is null || !deep) return copy;
+        auto root = cloneNode(src);
+        if (root is null || !deep) return root;
 
-        for (const(DomNode)* c = src.firstChild; c !is null; c = c.next)
+        // `s` walks the source (template contents first, then children), `c` is its copy
+        const(DomNode)* s = src;
+        DomNode* c = root;
+
+        while (true)
         {
-            auto cc = importNode(c, true);
-            if (cc is null) return null;
-            copy.appendChild(cc);
-        }
+            const(DomNode)* down = null;
+            DomNode* container;
+            if (s.type == NodeType.Element && s.as!DomElement.templateContent !is null
+                && s.as!DomElement.templateContent.node.firstChild !is null)
+            {
+                down = s.as!DomElement.templateContent.node.firstChild;
+                container = &c.as!DomElement.templateContent.node;
+            }
+            else if (s.firstChild !is null)
+            {
+                down = s.firstChild;
+                container = c;
+            }
 
-        return copy;
+            if (down !is null)
+            {
+                auto n = cloneNode(down);
+                if (n is null) return null;
+                container.appendChild(n);
+                s = down;
+                c = n;
+                continue;
+            }
+
+            // Go on with a sibling, the children after a template content, or go up
+            while (true)
+            {
+                if (s is src) return root;
+
+                if (s.next !is null)
+                {
+                    auto n = cloneNode(s.next);
+                    if (n is null) return null;
+                    c.parent.appendChild(n);
+                    s = s.next;
+                    c = n;
+                    break;
+                }
+
+                auto p = s.parent;
+                if (p is src) return root;
+
+                if (p.type == NodeType.DocumentFragment && p.as!DomDocumentFragment.host !is null)
+                {
+                    // The end of a template content: then the children of the template
+                    const(DomNode)* host = &p.as!DomDocumentFragment.host.node;
+                    DomNode* hostCopy = &c.parent.as!DomDocumentFragment.host.node;
+                    if (host.firstChild !is null)
+                    {
+                        auto n = cloneNode(host.firstChild);
+                        if (n is null) return null;
+                        hostCopy.appendChild(n);
+                        s = host.firstChild;
+                        c = n;
+                        break;
+                    }
+                    s = host;
+                    c = hostCopy;
+                    continue;
+                }
+
+                s = p;
+                c = c.parent;
+            }
+        }
     }
 
     /// A string owned by the document
@@ -626,7 +727,8 @@ struct DomDocument
     NameTable tags;
     NameTable attrs;
 
-    // Only in CTFE: node -> the struct that contains it (see `Node.as`)
+    // Only in CTFE: node -> the struct that contains it (see `DomNode.as`). At runtime it's
+    // always null, but it takes 8 bytes of each document (not of each node): that's fine.
     CtfeTable ctfeContainers;
 
 
@@ -642,6 +744,7 @@ struct DomDocument
         return t;
     }
 
+    // A copy of the node alone (a template gets an empty content)
     DomNode* cloneNode(const(DomNode)* src) pure
     {
         final switch (src.type)
@@ -660,16 +763,6 @@ struct DomDocument
                     if (na is null) return null;
                     na.qualifiedName = copy(a.qualifiedName);
                     e.appendAttribute(na);
-                }
-
-                if (se.templateContent !is null)
-                {
-                    for (const(DomNode)* c = se.templateContent.node.firstChild; c !is null; c = c.next)
-                    {
-                        auto cc = importNode(c, true);
-                        if (cc is null) return null;
-                        e.templateContent.node.appendChild(cc);
-                    }
                 }
                 return &e.node;
 
@@ -692,19 +785,26 @@ struct DomDocument
     }
 }
 
-/// ASCII lowercase into `buf`, or `s` itself if already lowercase; null if longer than `buf`
-const(char)[] toLower(return scope const(char)[] s, return ref char[64] buf) pure
+/++ ASCII lowercase: `s` itself if already lowercase, else a copy in `buf`, or in `big`
+ + for long names. It returns null only if out of memory.
+ +/
+const(char)[] toLower(return scope const(char)[] s, return ref char[64] buf, return ref Buffer!char big) pure @trusted
 {
     bool upper = false;
     foreach (c; s) if (c >= 'A' && c <= 'Z') { upper = true; break; }
     if (!upper) return s;
-    if (s.length > buf.length) return null;
+
+    if (s.length > buf.length)
+    {
+        big.putLower(s);
+        return big.failed ? null : big[];
+    }
 
     foreach (i, c; s) buf[i] = c >= 'A' && c <= 'Z' ? cast(char) (c | 0x20) : c;
     return buf[0 .. s.length];
 }
 
-unittest
+@system unittest
 {
     import core.memory : pureCalloc, pureFree;
 
@@ -723,6 +823,13 @@ unittest
     assert(x.localName == "x-custom");
     assert(doc.findTagName("X-CUSTOM") == x.name);
 
+    // Long names with uppercase letters, the empty name
+    enum long_ = "x-a-very-long-custom-element-name-longer-than-sixty-four-characters-in-total";
+    auto l = doc.createElement(doc.tagId(long_), Ns.Html);
+    assert(doc.findTagName("X-A-VERY-LONG-CUSTOM-ELEMENT-NAME-LONGER-THAN-SIXTY-FOUR-CHARACTERS-IN-TOTAL") == l.name);
+    auto empty = doc.attrId("");
+    assert(empty != 0 && doc.attrId("") == empty && doc.findAttrName("") == empty && doc.attrName(empty) == "");
+
     auto t = doc.createText("hello");
     p.appendChild(&t.node);
     t.appendData(" world, this is longer than sixteen chars");
@@ -737,4 +844,40 @@ unittest
 
     p.remove();
     assert(html.firstChild is &x.node && x.prev is null);
+}
+
+@system unittest
+{
+    import core.memory : pureCalloc, pureFree;
+
+    auto doc = cast(DomDocument*) pureCalloc(1, DomDocument.sizeof);
+    scope(exit) { doc.release(); pureFree(doc); }
+    doc.initialize();
+
+    // A very deep tree: the copy is iterative, so the stack doesn't overflow
+    auto root = doc.createElement(Tag.Div, Ns.Html);
+    DomNode* last = &root.node;
+    foreach (i; 0 .. 200_000)
+    {
+        auto e = doc.createElement(i % 1000 == 0 ? Tag.Template : Tag.B, Ns.Html);
+        auto parent = last.type == NodeType.Element && last.as!DomElement.templateContent !is null
+            ? &last.as!DomElement.templateContent.node : last;
+        parent.appendChild(&e.node);
+        last = &e.node;
+    }
+    last.appendChild(&doc.createText("deep").node);
+
+    auto copy = doc.importNode(&root.node, true);
+    size_t depth = 0;
+    const(DomNode)* n = copy;
+    while (n.firstChildOrContent !is null) { n = n.firstChildOrContent; depth++; }
+    assert(depth == 200_001 && n.as!DomCharacterData.data == "deep");
+    assert(n.parentOrHost.parentOrHost !is null);
+
+    // A shallow copy of a template has an empty content
+    auto t = doc.createElement(Tag.Template, Ns.Html);
+    t.templateContent.node.appendChild(&doc.createText("x").node);
+    auto shallow = doc.importNode(&t.node, false);
+    assert(shallow.as!DomElement.templateContent.node.firstChild is null);
+    assert(doc.importNode(&t.node, true).as!DomElement.templateContent.node.firstChild.as!DomCharacterData.data == "x");
 }

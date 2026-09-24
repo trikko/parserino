@@ -84,11 +84,12 @@ struct Buffered(Sink)
 
 void children(O)(const(DomNode)* parent, ref O out_)
 {
-    for (const(DomNode)* c = parent.firstChild; c !is null; c = c.next)
+    for (const(DomNode)* c = parent.firstChildOrContent; c !is null; c = c.next)
         subtree(c, out_);
 }
 
-// Iterative preorder, so deep trees don't overflow the stack
+// Iterative preorder, so deep trees don't overflow the stack.
+// For a <template> the content is serialized instead of the children (as in the standard).
 void subtree(O)(const(DomNode)* root, ref O out_)
 {
     const(DomNode)* node = root;
@@ -97,23 +98,15 @@ void subtree(O)(const(DomNode)* root, ref O out_)
     {
         bool isElement = node.type == NodeType.Element;
 
-        if (isElement)
-        {
-            auto e = node.as!DomElement;
-            startTag(e, out_);
-
-            // The children of a <template> live in its content fragment
-            if (e.templateContent !is null)
-                for (const(DomNode)* c = e.templateContent.node.firstChild; c !is null; c = c.next)
-                    subtree(c, out_);
-        }
+        if (isElement) startTag(node.as!DomElement, out_);
         else leaf(node, out_);
 
-        if (isElement && !isVoid(node) && node.firstChild !is null)
-        {
-            node = node.firstChild;
-            continue;
-        }
+        if (isElement && !isVoid(node))
+            if (auto first = node.firstChildOrContent)
+            {
+                node = first;
+                continue;
+            }
 
         // Close the elements we are leaving
         while (true)
@@ -121,7 +114,7 @@ void subtree(O)(const(DomNode)* root, ref O out_)
             if (node.type == NodeType.Element && !isVoid(node)) endTag(node.as!DomElement, out_);
             if (node is root) return;
             if (node.next !is null) { node = node.next; break; }
-            node = node.parent;
+            node = node.parentOrHost;
         }
     }
 }

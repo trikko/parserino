@@ -6,7 +6,7 @@ module parserino.css.tokenizer;
 
 import parserino.arena;
 
-@nogc nothrow pure:
+@nogc nothrow pure @safe:
 
 enum TokenType : ubyte
 {
@@ -47,7 +47,7 @@ struct Token
 
 struct Tokenizer
 {
-@nogc nothrow pure:
+@nogc nothrow pure @safe:
     @disable this(this);
 
     this(const(char)[] input, Arena* arena)
@@ -57,7 +57,7 @@ struct Tokenizer
     }
 
     /// Current token (not consumed)
-    ref const(Token) front()
+    ref const(Token) front() return
     {
         if (!ready) { current = read(); ready = true; }
         return current;
@@ -71,7 +71,7 @@ struct Tokenizer
     }
 
     /// Current token, skipping one whitespace token
-    ref const(Token) frontSkipSpace()
+    ref const(Token) frontSkipSpace() return
     {
         if (front.type == TokenType.Whitespace) popFront();
         return front;
@@ -284,6 +284,7 @@ struct Tokenizer
             else break;
         }
 
+        if (buf.failed) failed = true;
         return keep(buf[]);
     }
 
@@ -367,6 +368,7 @@ struct Tokenizer
         }
 
         t.type = TokenType.String;
+        if (buf.failed) failed = true;
         t.text = keep(buf[]);
         return t;
     }
