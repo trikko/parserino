@@ -117,6 +117,8 @@ struct Matcher
 
             case SimpleKind.Type:
                 if (!nsMatches(s.ns, node.ns)) return false;
+                // HTML elements: the selector in lowercase; the others: as written (`clipPath`)
+                if (node.ns != Ns.Html) return e.fullName == s.rawName;
                 auto id = node.document.findTagName(s.name);
                 return id != Tag.Undef && node.name == id;
 
@@ -125,6 +127,9 @@ struct Matcher
 
             case SimpleKind.Lang:
                 return matchLang(s.ranges, node);
+
+            case SimpleKind.Dir:
+                return s.name == (isRtl(node) ? "rtl" : "ltr");
 
             case SimpleKind.Id:
                 if (e.idAttr is null) return false;
@@ -194,9 +199,14 @@ struct Matcher
         auto id = node.document.findAttrName(s.name);
         if (id == 0) return false;
 
+        // The names of the attributes of HTML elements are lowercase; for the other elements, and
+        // for the attributes with a namespace, the name is compared as written (`viewBox`)
         DomAttribute* attr;
         for (attr = node.as!DomElement.firstAttr; attr !is null; attr = attr.next)
-            if (attr.name == id && attrNsMatches(s.ns, attr.ns)) break;
+        {
+            if (attr.name != id || !attrNsMatches(s.ns, attr.ns)) continue;
+            if ((node.ns == Ns.Html && attr.ns == Ns.None) || localPart(attr.fullName) == s.rawName) break;
+        }
         if (attr is null) return false;
         if (s.match == AttrMatch.Exists) return true;
 
@@ -204,7 +214,7 @@ struct Matcher
         auto want = s.value;
 
         bool ci = s.attrCase == AttrCase.Insensitive
-            || (s.attrCase == AttrCase.Auto && htmlCaseInsensitive(node, id));
+            || (s.attrCase == AttrCase.Auto && attr.ns == Ns.None && htmlCaseInsensitive(node, id));
 
         final switch (s.match)
         {
@@ -403,30 +413,206 @@ bool isReadWrite(DomNode* n)
 bool matchLang(const(const(char)[])[] ranges, DomNode* node)
 {
     const(char)[] lang;
-    bool found = false;
-
-    for (auto p = node; p !is null && p.type == NodeType.Element; p = p.parent)
-    {
-        auto a = attrById(p, AttrName.Lang);
-        if (a is null) continue;
-        lang = a.value is null ? "" : value(a);
-        found = true;
-        break;
-    }
-
-    if (!found) return false;
+    if (!language(node, lang)) return false;
 
     foreach (range; ranges)
-    {
-        const(char)[] r = range;
-        if (r == "*") { if (lang.length) return true; continue; }
-        if (r.length > 2 && r[0 .. 2] == "*-") r = r[2 .. $];
-
-        if (lang.length == r.length && equal(lang, r, true)) return true;
-        if (lang.length > r.length && equal(lang[0 .. r.length], r, true) && lang[r.length] == '-') return true;
-    }
+        if (extendedFilter(range, lang)) return true;
 
     return false;
+}
+
+/+ The language of an element (HTML "the language of a node"): the nearest `xml:lang` (it wins
+ + over `lang` on the same element) or `lang`, else the default language of the document
+ + (`<meta http-equiv="content-language">`). False if unknown.
+ +/
+bool language(DomNode* node, out const(char)[] lang)
+{
+    for (auto p = node; p !is null && p.type == NodeType.Element; p = p.parent)
+    {
+        DomAttribute* plain = null;
+        for (auto a = p.as!DomElement.firstAttr; a !is null; a = a.next)
+        {
+            if (a.name != AttrName.Lang) continue;
+            if (a.ns == Ns.Xml) { lang = a.value is null ? "" : a.value; return true; }
+            if (a.ns == Ns.None && (p.ns == Ns.Html || p.ns == Ns.Svg)) plain = a;
+        }
+        if (plain !is null) { lang = plain.value is null ? "" : plain.value; return true; }
+    }
+
+    return defaultLanguage(node.document, lang);
+}
+
+// The "pragma-set default language": the last valid <meta http-equiv="content-language">
+bool defaultLanguage(DomDocument* doc, out const(char)[] lang)
+{
+    bool found = false;
+    for (auto n = doc.node.firstChild; n !is null; n = n.nextInTree(&doc.node))
+    {
+        if (!n.isHtml(Tag.Meta)) continue;
+        auto equiv = attrById(n, AttrName.HttpEquiv);
+        auto content = attrById(n, AttrName.Content);
+        if (equiv is null || content is null || !equal(value(equiv), "content-language", true)) continue;
+
+        auto v = value(content);
+        bool comma = false;
+        foreach (c; v) if (c == ',') { comma = true; break; }
+        if (comma) continue;
+
+        // Strip the whitespace
+        size_t a = 0, b = v.length;
+        while (a < b && isSpace(v[a])) a++;
+        while (b > a && isSpace(v[b - 1])) b--;
+        if (a == b) continue;
+
+        lang = v[a .. b];
+        found = true;
+    }
+    return found;
+}
+
+bool isSpace(char c) { return c == ' ' || c == '\t' || c == '\n' || c == '\f' || c == '\r'; }
+
+/+ The "extended filtering" of RFC 4647 (3.3.2), used by :lang() in Selectors 4:
+ + `de-DE` matches `de-DE`, `de-Latn-DE`, `de-DE-1996`; `*-CH` matches `fr-CH`, `de-CH`.
+ + An empty language matches nothing (and `*` matches any non-empty language).
+ +/
+bool extendedFilter(const(char)[] range, const(char)[] tag)
+{
+    if (tag.length == 0 || range.length == 0) return false;
+
+    // The next subtag of `s` from `i` (and `i` after its '-')
+    static const(char)[] subtag(const(char)[] s, ref size_t i)
+    {
+        size_t start = i;
+        while (i < s.length && s[i] != '-') i++;
+        auto r = s[start .. i];
+        if (i < s.length) i++;
+        return r;
+    }
+
+    size_t ri = 0, ti = 0;
+    auto r = subtag(range, ri);
+    auto t = subtag(tag, ti);
+    if (r != "*" && !equal(r, t, true)) return false;
+
+    while (ri < range.length)
+    {
+        r = subtag(range, ri);
+        if (r == "*") continue;
+        while (true)
+        {
+            if (ti >= tag.length) return false;
+            t = subtag(tag, ti);
+            if (equal(r, t, true)) break;
+            if (t.length == 1) return false;    // a singleton (`x`, `u`, ...) ends the search
+        }
+    }
+
+    return true;
+}
+
+/+ Is the directionality of the element "rtl"? (HTML "directionality"): the `dir` attribute
+ + (`auto`: from the first strong character of the text), else `<bdi>` is auto, else the parent's.
+ +/
+bool isRtl(DomNode* node)
+{
+    for (auto n = node; n !is null && n.type == NodeType.Element; n = n.parent)
+    {
+        auto dir = n.ns == Ns.Html ? attrById(n, AttrName.Dir) : null;
+        auto v = dir is null ? null : value(dir);
+
+        if (dir !is null && equal(v, "ltr", true)) return false;
+        if (dir !is null && equal(v, "rtl", true)) return true;
+        if ((dir !is null && equal(v, "auto", true)) || (dir is null && n.isHtml(Tag.Bdi)))
+        {
+            int strong = autoDirection(n);
+            return strong == 0 ? false : strong > 0;
+        }
+        if (n.isHtml(Tag.Input) && dir is null)
+        {
+            auto type = attrById(n, AttrName.Type);
+            if (type !is null && equal(value(type), "tel", true)) return false;
+        }
+    }
+    return false;
+}
+
+// The first strong character of the text of an element with dir=auto: 1 rtl, -1 ltr, 0 none.
+// The text of <bdi>, <script>, <style>, <textarea> and of the elements with a valid dir is skipped.
+int autoDirection(DomNode* element)
+{
+    for (auto n = element.firstChild; n !is null; )
+    {
+        if (n.type == NodeType.Element)
+        {
+            bool skip = false;
+            if (n.ns == Ns.Html)
+            {
+                switch (n.name)
+                {
+                    case Tag.Bdi, Tag.Script, Tag.Style, Tag.Textarea: skip = true; break;
+                    default:
+                        auto d = attrById(n, AttrName.Dir);
+                        if (d !is null)
+                        {
+                            auto v = value(d);
+                            skip = equal(v, "ltr", true) || equal(v, "rtl", true) || equal(v, "auto", true);
+                        }
+                        break;
+                }
+            }
+            n = skip ? n.nextSkippingChildren(element) : n.nextInTree(element);
+            continue;
+        }
+
+        if (n.type == NodeType.Text || n.type == NodeType.CDataSection)
+            if (auto d = strongDirection(n.as!DomCharacterData.data)) return d;
+
+        n = n.nextInTree(element);
+    }
+    return 0;
+}
+
+// The first strong character of the text: 1 rtl (bidi class R or AL), -1 ltr (L), 0 none.
+// The classes come from the Unicode blocks: an approximation of the Unicode data, good for text.
+int strongDirection(const(char)[] s)
+{
+    size_t i = 0;
+    while (i < s.length)
+    {
+        uint c = cast(ubyte) s[i];
+        size_t len = 1;
+        if (c >= 0x80)
+        {
+            len = c >= 0xF0 ? 4 : c >= 0xE0 ? 3 : 2;
+            if (i + len > s.length) break;
+            c &= 0x7F >> len;
+            foreach (k; 1 .. len) c = (c << 6) | (s[i + k] & 0x3F);
+        }
+        i += len;
+
+        if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z')) return -1;
+        if (c < 0xC0 || c == 0xD7 || c == 0xF7) continue;
+
+        // Hebrew, Arabic, Syriac, Thaana, NKo, Samaritan, Mandaic, Arabic extended, the presentation
+        // forms and the right-to-left scripts of the other planes (the Arabic digits are not strong)
+        if ((c >= 0x0590 && c <= 0x08FF) || (c >= 0xFB1D && c <= 0xFDFF) || (c >= 0xFE70 && c <= 0xFEFF)
+            || (c >= 0x10800 && c <= 0x10FFF) || (c >= 0x1E800 && c <= 0x1EFFF))
+        {
+            if ((c >= 0x0660 && c <= 0x0669) || (c >= 0x06F0 && c <= 0x06F9) || (c >= 0x0600 && c <= 0x0605)) continue;
+            if ((c >= 0x0591 && c <= 0x05BD) || (c >= 0x064B && c <= 0x065F)) continue;   // combining marks
+            return 1;
+        }
+
+        // Punctuation, symbols, combining marks, spaces: not strong
+        if ((c >= 0x0300 && c <= 0x036F) || (c >= 0x2000 && c <= 0x2BFF) || (c >= 0x3000 && c <= 0x303F)
+            || (c >= 0xFE00 && c <= 0xFE6F) || (c >= 0xFF00 && c <= 0xFF20) || (c >= 0xFFF0 && c <= 0xFFFF)
+            || (c >= 0x1F000 && c <= 0x1FFFF))
+            continue;
+
+        return -1;
+    }
+    return 0;
 }
 
 bool nsMatches(NsMatch want, Ns ns)
@@ -466,6 +652,13 @@ bool lastOfType(DomNode* n)
 }
 
 // Attribute values compared case-insensitively in html documents (as in lexbor and in the html spec)
+// The local part of a qualified name: `href` for `xlink:href`
+const(char)[] localPart(const(char)[] name)
+{
+    foreach (i, c; name) if (c == ':') return name[i + 1 .. $];
+    return name;
+}
+
 bool htmlCaseInsensitive(DomNode* node, uint id)
 {
     if (node.ns != Ns.Html) return false;

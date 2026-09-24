@@ -2141,6 +2141,7 @@ struct Element
         onlyValid();
         if (!selector.isValid) throw new ParserinoException("Invalid selector");
 
+        if (selector.whole) impl.finish();
         impl.ensureStable(raw);
         if (selector.forward && raw.parent !is null) impl.ensureClosed(raw.parent);
         return impl.matches(raw, selector.list, raw);
@@ -2336,7 +2337,9 @@ struct Selector
         owner = cast(SelImpl*) calloc(1, SelImpl.sizeof);
         if (owner is null) throw new ParserinoException("Out of memory");
 
-        list = parseSelector(selector, owner.arena);
+        // The compiled selector keeps slices of its text: a copy in the arena outlives the argument
+        auto text = owner.arena.dup(selector);
+        list = text is null && selector.length ? null : parseSelector(text, owner.arena);
         if (list is null)
         {
             owner.arena.release();
@@ -2347,6 +2350,7 @@ struct Selector
 
         owner.refs = 1;
         forward = list.looksForward;
+        whole = list.needsDocument;
     }
 
     this(this) { if (owner !is null) atomicOp!"+="(owner.refs, 1); }
@@ -2368,6 +2372,7 @@ struct Selector
         swap(owner, rhs.owner);
         list = rhs.list;
         forward = rhs.forward;
+        whole = rhs.whole;
         return this;
     }
 
@@ -2388,6 +2393,7 @@ struct Selector
     SelImpl* owner;                 // null for selectors compiled at compile time
     const(SelectorList)* list;
     bool forward;                   // does it look at following siblings or at children? (:last-child, :has, ...)
+    bool whole;                     // does it need the whole document? (:lang, :dir)
 }
 
 /++ A selector parsed at compile time: syntax errors are compile errors.
@@ -2407,6 +2413,7 @@ template ctSelector(string css)
         Selector s;
         s.list = list;
         s.forward = list.looksForward;
+        s.whole = list.needsDocument;
         return s;
     }
 }
@@ -2469,6 +2476,55 @@ unittest
     // :first-child counts elements only (the doctype is not an element)
     Document dt = "<!doctype html><html><body>";
     assert(dt.bySelector("html:first-child").walkLength == 1);
+
+    // :lang(): extended filtering (RFC 4647), xml:lang wins over lang, the <meta> default language
+    Document l = `<html lang=de-Latn-DE><meta http-equiv=content-language content=it><body>
+        <p id=a>x</p><p id=b lang=de-DE-1996>y</p><div lang=""><p id=c>z</p></div>
+        <svg><text id=s xml:lang=fr lang=en>t</text></svg></body></html>`;
+    assert(ids(l, "p:lang(de-DE)") == ["a", "b"]);
+    assert(ids(l, "p:lang('*-DE')") == ["a", "b"]);
+    assert(ids(l, "p:lang(de-x-DE)").length == 0);
+    assert(ids(l, "text:lang(fr)") == ["s"]);
+    assert(ids(l, "p:lang(it)").length == 0);
+    assert(ids(l, "p:lang('*')") == ["a", "b"]);
+    Document m = `<meta http-equiv="Content-Language" content="it"><p id=x>`;
+    assert(ids(m, "p:lang(it)") == ["x"]);
+
+    // :dir(): the dir attribute, dir=auto and <bdi> from the text, inherited
+    Document dirs = "<body><p id=l>abc</p><div dir=rtl><p id=r>x</p><p id=l2 dir=ltr>y</p></div>"
+        ~ "<p id=a1 dir=auto>\u05E9\u05DC\u05D5\u05DD</p><p id=a2 dir=auto>123 hello</p>"
+        ~ "<bdi id=b1>\u0645\u0631\u062D\u0628\u0627</bdi><div dir=rtl><input id=t type=tel></div>";
+    assert(ids(dirs, "p:dir(rtl), bdi:dir(rtl), input:dir(rtl)") == ["r", "a1", "b1"]);
+    assert(ids(dirs, "p:dir(ltr), input:dir(ltr)") == ["l", "l2", "a2", "t"]);
+    assert(ids(dirs, ":dir(up)").length == 0);
+
+    // Names of foreign elements and attributes are case-sensitive; some html values are not
+    Document cs = `<svg><clipPath id=cp viewBox="0 0 1 1"/><a id=q xlink:href=A></a></svg><p ID=x TYPE=Text>`;
+    assert(ids(cs, "clipPath") == ["cp"]);
+    assert(ids(cs, "clippath").length == 0);
+    assert(ids(cs, "[viewBox]") == ["cp"]);
+    assert(ids(cs, "[viewbox]").length == 0);
+    assert(ids(cs, "P[TYPE=text]") == ["x"]);
+    assert(ids(cs, "[*|href=A]") == ["q"]);
+    assert(ids(cs, "[*|href=a]").length == 0);
+}
+
+unittest
+{
+    import core.memory : GC;
+
+    // A selector doesn't depend on the memory of its text
+    char[] text = "p.x".dup;
+    auto sel = Selector(text);
+    text[] = 'z';
+    GC.collect();
+    assert(Document("<p class=x>").bySelector(sel).walkLength == 1);
+
+    // :lang() and :dir() give the same results with lazy parsing
+    string html = `<p id=a>x</p><p id=b dir=auto>` ~ "\u05D0" ~ `</p><meta http-equiv=content-language content=fr>`;
+    auto lazyDoc = Document(html, Parsing.Lazy, 4);
+    assert(lazyDoc.bySelector("p:lang(fr)").walkLength == 2);
+    assert(Document(html, Parsing.Lazy, 4).bySelector("p:dir(rtl)").front.id == "b");
 }
 
 // Parse at compile time, with the parse errors as text (the first 20)
@@ -2717,6 +2773,7 @@ struct NodeRange(Filter, Show show)
     {
         if (primed) return;
         primed = true;
+        if (filter.wholeDocument) doc.impl.finish();
         current = seek(root);
     }
 
@@ -2848,6 +2905,7 @@ struct AnyFilter
 {
     enum attrSensitive = true;
     enum strict = false;
+    enum wholeDocument = false;
     bool match(DocImpl*, DomNode*) { return true; }
 }
 
@@ -2855,6 +2913,7 @@ struct TagFilter
 {
     enum attrSensitive = false;
     enum strict = false;
+    enum wholeDocument = false;
 
     string name;
     uint id = Tag.Undef;
@@ -2879,6 +2938,7 @@ struct ClassFilter
 {
     enum attrSensitive = true;
     enum strict = false;
+    enum wholeDocument = false;
 
     string name;
 
@@ -2905,6 +2965,7 @@ struct IdFilter
 {
     enum attrSensitive = true;
     enum strict = false;
+    enum wholeDocument = false;
 
     const(char)[] id;
 
@@ -2919,6 +2980,7 @@ struct CommentFilter
 {
     enum attrSensitive = false;
     enum strict = false;
+    enum wholeDocument = false;
 
     string comment;
     bool stripSpaces;
@@ -2949,6 +3011,7 @@ struct SelectorFilter
     Selector selector;
 
     @property bool strict() const { return selector.forward; }
+    @property bool wholeDocument() const { return selector.whole; }
 
     DomNode* scope_;     // the root of the query, for :scope
 

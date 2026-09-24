@@ -40,6 +40,7 @@ enum SimpleKind : ubyte
     NthLastOfType,
     Contains,       /// `:lexbor-contains(text [i])`
     Lang,           /// `:lang(en, "fr-CH")`
+    Dir,            /// `:dir(ltr)`, `:dir(rtl)`: `name` is the direction (lowercase)
     Never,          /// states of a live document (`:hover`), pseudo-elements (`::before`)
 }
 
@@ -91,6 +92,7 @@ struct Simple
     bool insensitive;               /// `:lexbor-contains(x i)`
     NsMatch ns;                     /// type, universal and attribute selectors
     const(char)[] name;             /// type (lowercase), id, class, attribute (lowercase) or contains text
+    const(char)[] rawName;          /// type and attribute: the name as written (for the non-html elements)
     const(char)[] value;            /// attribute value
     long a, b;                      /// an+b
     const(SelectorList)* list;      /// argument of :not, :is, :has, :nth-*(... of list)
@@ -141,6 +143,21 @@ struct SelectorList
                     }
 
                     if (s.list !is null && s.list.looksForward) return true;
+                }
+
+        return false;
+    }
+
+    /// Does any selector depend on the whole document? (`:lang()` on the `<meta>` default
+    /// language, `:dir()` on the text of the ancestors with `dir=auto`)
+    bool needsDocument() const @nogc nothrow pure
+    {
+        foreach (ref c; items)
+            foreach (ref comp; c.compounds)
+                foreach (ref s; comp.simples)
+                {
+                    if (s.kind == SimpleKind.Lang || s.kind == SimpleKind.Dir) return true;
+                    if (s.list !is null && s.list.needsDocument) return true;
                 }
 
         return false;
@@ -411,6 +428,7 @@ struct Parser
             }
 
             s.kind = SimpleKind.Type;
+            s.rawName = name;
             s.name = lower(name);
             return true;
         }
@@ -434,6 +452,7 @@ struct Parser
         if (tok.type == TokenType.Ident)
         {
             s.kind = SimpleKind.Type;
+            s.rawName = tok.text;
             s.name = lower(tok.text);
             next();
             return true;
@@ -470,6 +489,7 @@ struct Parser
 
             next();
             if (tok.type != TokenType.Ident) return false;
+            s.rawName = tok.text;
             s.name = lower(tok.text);
             next();
             skipSpace();
@@ -485,6 +505,7 @@ struct Parser
                 if (tok.type != TokenType.Ident)
                 {
                     // `[x|=y]`
+                    s.rawName = name;
                     s.name = lower(name);
                     s.match = AttrMatch.Dash;
                     return parseAttributeValue(s);
@@ -492,10 +513,15 @@ struct Parser
 
                 // `[ns|x]`
                 if (!nsByPrefix(name, s.ns)) return false;
+                s.rawName = tok.text;
                 s.name = lower(tok.text);
                 next();
             }
-            else s.name = lower(name);
+            else
+            {
+                s.rawName = name;
+                s.name = lower(name);
+            }
 
             skipSpace();
         }
@@ -625,6 +651,7 @@ struct Parser
         else if (eq(name, "nth-last-of-type")) { s.kind = SimpleKind.NthLastOfType; ok = parseNth(s, false); }
         else if (eq(name, "lexbor-contains")) { s.kind = SimpleKind.Contains; ok = parseContains(s); }
         else if (eq(name, "lang")) { s.kind = SimpleKind.Lang; ok = parseLang(s); }
+        else if (eq(name, "dir")) { s.kind = SimpleKind.Dir; ok = parseDir(s); }
         else return false;
 
         if (!ok) return false;
@@ -653,6 +680,17 @@ struct Parser
         if (ranges.failed) { tokens.failed = true; return false; }
         s.ranges = arena.dup(ranges[]);
         return s.ranges !is null;
+    }
+
+    // :dir(): an ident (only ltr and rtl can match)
+    bool parseDir(ref Simple s)
+    {
+        skipSpace();
+        if (tok.type != TokenType.Ident) return false;
+        s.name = lower(tok.text);
+        next();
+        skipSpace();
+        return true;
     }
 
     // At the end of the arguments: ')' or EOF
