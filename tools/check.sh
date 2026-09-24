@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 # Run all the tests of tools/ on the corpus (see tools/corpus/fetch.sh):
 #   - dump: everything the public API can observe, compared with tools/difftest/expected/dump.txt
 #   - lazytest: lazy and full parsing give the same results
@@ -6,7 +6,7 @@
 #   - html5lib: tree construction (WPT) and tokenizer (html5lib-tests) conformance
 #
 # Usage: tools/check.sh [--update]   (--update rewrites the reference dump instead of comparing)
-set -e
+set -eo pipefail
 
 DIR=$(cd "$(dirname "$0")" && pwd)
 DC=${DC:-ldc2}

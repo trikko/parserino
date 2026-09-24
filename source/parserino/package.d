@@ -2845,6 +2845,7 @@ struct DocImpl
     size_t volatileGeneration = size_t.max;
     NodeList tables;        // open tables: foster parenting inserts before them
     NodeList formatting;    // open formatting elements: the adoption agency moves their descendants
+    NodeList selects;       // open selects: they can fill their <selectedcontent>
 
     // The snapshot this document was restored from: the document uses its strings
     immutable(DomSnapshot)* snapshot;
@@ -2874,6 +2875,7 @@ struct DocImpl
         free(d.dom);
         d.tables.dispose();
         d.formatting.dispose();
+        d.selects.dispose();
         if (d.snapshot !is null)
         {
             import core.memory : GC;
@@ -2954,6 +2956,7 @@ struct DocImpl
         source = null;
         tables.clear();
         formatting.clear();
+        selects.clear();
         return ok;
     }
 
@@ -2975,6 +2978,13 @@ struct DocImpl
         foreach_reverse (e; oe)
             if (e is n) return true;
 
+        // A <selectedcontent> gets a copy of the selected option when the options end
+        if (n.ns == Ns.Html && n.name == Tag.Selectedcontent)
+        {
+            refreshVolatile();
+            if (selects.length) return true;
+        }
+
         return false;
     }
 
@@ -2985,6 +2995,7 @@ struct DocImpl
 
         tables.clear();
         formatting.clear();
+        selects.clear();
 
         auto oe = tree.openElements[];
         auto af = tree.activeFormatting[];
@@ -2992,6 +3003,7 @@ struct DocImpl
         foreach (n; oe)
         {
             if (n.ns == Ns.Html && n.name == Tag.Table) tables.add(n);
+            else if (n.ns == Ns.Html && n.name == Tag.Select) selects.add(n);
             else
             {
                 foreach (f; af)
@@ -3005,6 +3017,7 @@ struct DocImpl
      + - the adoption agency moves the descendants of the open formatting elements
      + - a <frameset> can still replace <body> while `frameset_ok` is set
      + - the last text node can still grow
+     + - the content of a <selectedcontent> is replaced while its select is open
      +/
     bool isStable(DomNode* n)
     {
@@ -3016,13 +3029,15 @@ struct DocImpl
         auto body = b is null ? null : &b.node;
         bool framesetOk = tree.framesetOk && body !is null;
 
-        if (tables.length || formatting.length || framesetOk)
+        if (tables.length || formatting.length || framesetOk || selects.length)
         {
             for (auto a = n; a !is null; a = a.parent)
             {
                 if (tables.contains(a)) return false;
                 if (a !is n && formatting.contains(a)) return false;
                 if (framesetOk && a is body) return false;
+                // The content of a <selectedcontent> is replaced when an option is selected
+                if (a !is n && selects.length && a.ns == Ns.Html && a.name == Tag.Selectedcontent) return false;
             }
         }
 
