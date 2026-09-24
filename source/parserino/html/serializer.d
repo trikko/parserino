@@ -234,31 +234,67 @@ bool isVoid(const(DomNode)* n) @nogc nothrow pure
 void escape(bool attribute, O)(scope const(char)[] s, ref O out_)
 {
     size_t start = 0;
+    size_t i = 0;
 
-    foreach (i; 0 .. s.length)
+    while (true)
     {
+        i = nextSpecial!attribute(s, i);
+        if (i >= s.length) break;
+
         string rep;
         switch (s[i])
         {
             case '&': rep = "&amp;"; break;
             case '<': rep = "&lt;"; break;
             case '>': rep = "&gt;"; break;
-            case '"': static if (attribute) { rep = "&quot;"; break; } else continue;
-            case '\xC2':
+            case '"': rep = "&quot;"; break;
+            default:
+                // U+00A0 (\xC2\xA0) is &nbsp;
                 if (i + 1 < s.length && s[i + 1] == '\xA0')
                 {
                     out_.put(s[start .. i]);
                     out_.put("&nbsp;");
-                    start = i + 2;
+                    i += 2;
+                    start = i;
                 }
+                else i++;
                 continue;
-            default: continue;
         }
 
         out_.put(s[start .. i]);
         out_.put(rep);
-        start = i + 1;
+        i++;
+        start = i;
     }
 
     if (start < s.length) out_.put(s[start .. $]);
+}
+
+// The next char to escape from `i` (`&`, `<`, `>`, `\xC2`, and `"` in attributes), or s.length.
+// 8 bytes at a time: a byte equal to `c` is a zero byte of `w ^ c...c`.
+size_t nextSpecial(bool attribute)(scope const(char)[] s, size_t i) @trusted
+{
+    enum ulong ones = 0x0101_0101_0101_0101, high = 0x8080_8080_8080_8080;
+    static ulong zeroByte(ulong x) { return (x - ones) & ~x; }
+
+    if (!__ctfe)
+    {
+        while (i + 8 <= s.length)
+        {
+            ulong w = *cast(const(ulong)*) (s.ptr + i);
+            ulong m = zeroByte(w ^ (ones * '&')) | zeroByte(w ^ (ones * '<')) | zeroByte(w ^ (ones * '>'))
+                | zeroByte(w ^ (ones * 0xC2));
+            static if (attribute) m |= zeroByte(w ^ (ones * '"'));
+            if (m & high) break;
+            i += 8;
+        }
+    }
+
+    for (; i < s.length; i++)
+    {
+        auto c = s[i];
+        if (c == '&' || c == '<' || c == '>' || c == '\xC2') return i;
+        static if (attribute) if (c == '"') return i;
+    }
+    return i;
 }
