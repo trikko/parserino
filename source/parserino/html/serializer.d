@@ -43,7 +43,246 @@ void serialize(Sink)(const(DomNode)* node, ref Sink sink, Serialize what)
     out_.flush();
 }
 
+/++ Serialize `node` indented, to read it: each block element on its own line, two spaces for
+ + each level; an element with only text and inline elements (`<li>Milk <b>2</b></li>`) stays
+ + on one line. Whitespace between the nodes is changed (runs of spaces become one, the
+ + whitespace between blocks is dropped), except in `<pre>`, `<textarea>`, `<script>`, `<style>`, ...
+ +/
+void serializePretty(Sink)(const(DomNode)* node, ref Sink sink)
+{
+    auto out_ = Buffered!Sink(&sink);
+    auto p = Pretty!(typeof(out_))(&out_);
+    p.run(node);
+    out_.flush();
+}
+
 private:
+
+struct Pretty(O)
+{
+    O* out_;
+    bool firstLine = true;
+    bool atStart;           // nothing written yet on this line, after the start tag
+    bool pendingSpace;      // a run of whitespace, written only if something follows it
+
+    this(O* o) { out_ = o; }
+
+    // Iterative, so deep trees don't overflow the stack: the stack holds the expanded elements
+    void run(const(DomNode)* root)
+    {
+        const(DomNode)*[] parents, nexts;
+        size_t hidden = 0;      // 1 if the root itself is not written (a document, a fragment)
+
+        if (root.type == NodeType.Document || root.type == NodeType.DocumentFragment) hidden = 1;
+        else if (!unit(root, 0)) return;
+
+        parents ~= root;
+        nexts ~= root.firstChildOrContent;
+
+        while (parents.length)
+        {
+            auto c = nexts[$ - 1];
+            if (c is null)
+            {
+                auto p = parents[$ - 1];
+                parents = parents[0 .. $ - 1];
+                nexts = nexts[0 .. $ - 1];
+                if (p.type == NodeType.Element)
+                {
+                    newLine(parents.length - hidden);
+                    endTag(p.as!DomElement, *out_);
+                }
+                continue;
+            }
+
+            nexts[$ - 1] = c.next;
+            if (unit(c, parents.length - hidden))
+            {
+                parents ~= c;
+                nexts ~= c.firstChildOrContent;
+            }
+        }
+    }
+
+    // Write a child of an expanded element on its own line. True if it's an element to expand.
+    bool unit(const(DomNode)* n, size_t depth)
+    {
+        switch (n.type)
+        {
+            case NodeType.Text:
+                auto data = n.as!DomCharacterData.data;
+                if (isBlank(data)) return false;
+                newLine(depth);
+                if (isRawTextParent(n)) out_.put(data);
+                else text(data);
+                return false;
+
+            case NodeType.Element:
+                newLine(depth);
+                if (isCompact(n)) { flat(n); return false; }
+                startTag(n.as!DomElement, *out_);
+                return true;
+
+            default:
+                newLine(depth);
+                leaf(n, *out_);
+                return false;
+        }
+    }
+
+    void newLine(size_t depth)
+    {
+        if (!firstLine) out_.put("\n");
+        firstLine = false;
+        foreach (_; 0 .. depth) out_.put("  ");
+        atStart = true;
+        pendingSpace = false;
+    }
+
+    // An element on one line: as `subtree`, with the whitespace of the texts collapsed
+    void flat(const(DomNode)* root)
+    {
+        const(DomNode)* node = root;
+
+        while (true)
+        {
+            bool isElement = node.type == NodeType.Element;
+
+            if (isElement) { flushSpace(); startTag(node.as!DomElement, *out_); atStart = node is root; }
+            else if (node.type == NodeType.Text)
+            {
+                auto data = node.as!DomCharacterData.data;
+                if (isRawTextParent(node)) { flushSpace(); out_.put(data); }
+                else if (verbatim(node, root)) { flushSpace(); escape!false(data, *out_); }
+                else text(data);
+            }
+            else { flushSpace(); leaf(node, *out_); }
+
+            if (isElement && !isVoid(node))
+                if (auto first = node.firstChildOrContent)
+                {
+                    node = first;
+                    continue;
+                }
+
+            while (true)
+            {
+                if (node.type == NodeType.Element && !isVoid(node))
+                {
+                    if (node is root) pendingSpace = false;     // no space before the last end tag
+                    else flushSpace();
+                    endTag(node.as!DomElement, *out_);
+                }
+                if (node is root) return;
+                if (node.next !is null) { node = node.next; break; }
+                node = node.parentOrHost;
+            }
+        }
+    }
+
+    // A text with its runs of whitespace collapsed; no space at the start of the line
+    void text(scope const(char)[] data)
+    {
+        size_t i = 0;
+        while (i < data.length)
+        {
+            if (isSpace(data[i]))
+            {
+                while (i < data.length && isSpace(data[i])) i++;
+                pendingSpace = true;
+                continue;
+            }
+            size_t start = i;
+            while (i < data.length && !isSpace(data[i])) i++;
+            flushSpace();
+            escape!false(data[start .. i], *out_);
+            atStart = false;
+        }
+    }
+
+    void flushSpace()
+    {
+        if (pendingSpace && !atStart) out_.put(" ");
+        pendingSpace = false;
+        atStart = false;
+    }
+}
+
+bool isSpace(char c) @nogc nothrow pure { return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f'; }
+
+bool isBlank(scope const(char)[] s) @nogc nothrow pure
+{
+    foreach (c; s) if (!isSpace(c)) return false;
+    return true;
+}
+
+// Is the text inside an element that keeps its whitespace (up to `root`)?
+bool verbatim(const(DomNode)* text, const(DomNode)* root) @nogc nothrow pure
+{
+    for (auto p = text.parentOrHost; p !is null; p = p.parentOrHost)
+    {
+        if (p.type == NodeType.Element && p.ns == Ns.Html)
+            switch (p.name)
+            {
+                case Tag.Pre, Tag.Textarea, Tag.Listing, Tag.Plaintext: return true;
+                default: break;
+            }
+        if (p is root) break;
+    }
+    return false;
+}
+
+// Can the element stay on one line? Yes if it keeps its whitespace, or if it has only texts,
+// comments and inline elements inside
+bool isCompact(const(DomNode)* e) @nogc nothrow pure
+{
+    if (e.ns == Ns.Html)
+        switch (e.name)
+        {
+            case Tag.Pre, Tag.Textarea, Tag.Listing, Tag.Plaintext, Tag.Script, Tag.Style, Tag.Xmp,
+                 Tag.Iframe, Tag.Noembed, Tag.Noframes, Tag.Title:
+                return true;
+            default: break;
+        }
+
+    const(DomNode)* node = e.firstChildOrContent;
+    if (node is null) return true;
+
+    while (true)
+    {
+        if (node.type == NodeType.Element)
+        {
+            if (!isInline(node)) return false;
+            if (auto first = node.firstChildOrContent) { node = first; continue; }
+        }
+        while (node.next is null)
+        {
+            node = node.parentOrHost;
+            if (node is e) return true;
+        }
+        node = node.next;
+    }
+}
+
+// The html elements that are inline content ("phrasing content" in the standard)
+bool isInline(const(DomNode)* n) @nogc nothrow pure
+{
+    if (n.ns != Ns.Html) return false;
+
+    switch (n.name)
+    {
+        case Tag.A, Tag.Abbr, Tag.Area, Tag.Audio, Tag.B, Tag.Bdi, Tag.Bdo, Tag.Big, Tag.Br, Tag.Button,
+             Tag.Canvas, Tag.Cite, Tag.Code, Tag.Data, Tag.Datalist, Tag.Del, Tag.Dfn, Tag.Em, Tag.Embed,
+             Tag.Font, Tag.I, Tag.Iframe, Tag.Img, Tag.Input, Tag.Ins, Tag.Kbd, Tag.Label, Tag.Map,
+             Tag.Mark, Tag.Meter, Tag.Nobr, Tag.Noscript, Tag.Object, Tag.Output, Tag.Picture,
+             Tag.Progress, Tag.Q, Tag.Rp, Tag.Rt, Tag.Ruby, Tag.S, Tag.Samp, Tag.Script, Tag.Select,
+             Tag.Slot, Tag.Small, Tag.Span, Tag.Strike, Tag.Strong, Tag.Sub, Tag.Sup, Tag.Template,
+             Tag.Textarea, Tag.Time, Tag.Tt, Tag.U, Tag.Var, Tag.Video, Tag.Wbr:
+            return true;
+        default:
+            return false;
+    }
+}
 
 struct Buffered(Sink)
 {

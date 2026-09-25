@@ -63,6 +63,9 @@ document.getElementById('symbolSearchPane').style.display = 'block';</script>
 				<li class="tree-view collapsed">
 					<a class="toLower(to!string(Function))" href="../../parserino/html/serializer/serialize.html">serialize</a>
 				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../../parserino/html/serializer/serializePretty.html">serializePretty</a>
+				</li>
 				</ul>
 					</li>
 					<li>
@@ -121,6 +124,18 @@ document.getElementById('symbolSearchPane').style.display = 'block';</script>
 								</code>
 							</td>
 							<td>Serialize <code class="lang-d"><a href="../../parserino/html/serializer/serialize.html#node"><span class="pln">node</span></a></code> to <code class="lang-d"><a href="../../parserino/html/serializer/serialize.html#sink"><span class="pln">sink</span></a></code> (an output range of <code class="lang-d"><span class="kwd">const</span><span class="pun">(</span><span class="typ">char</span><span class="pun">)[]</span></code>)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<code>
+									<a id="serializePretty" class="public" href="../../parserino/html/serializer/serializePretty.html">serializePretty</a><span class="tableEntryAnnotation">(node, sink)</span>
+								</code>
+							</td>
+							<td>Serialize <code class="lang-d"><a href="../../parserino/html/serializer/serializePretty.html#node"><span class="pln">node</span></a></code> indented, to read it: each block element on its own line, two spaces for
+ each level; an element with only text and inline elements (<code class="lang-d"><span class="pun">&lt;</span><span class="pln">li</span><span class="pun">&gt;</span><span class="typ">Milk </span><span class="pun">&lt;</span><span class="pln">b</span><span class="pun">&gt;</span><span class="lit">2</span><span class="pun">&lt;/</span><span class="pln">b</span><span class="pun">&gt;&lt;/</span><span class="pln">li</span><span class="pun">&gt;</span></code>) stays
+ on one line. Whitespace between the nodes is changed (runs of spaces become one, the
+ whitespace between blocks is dropped), except in <code class="lang-d"><span class="pun">&lt;</span><span class="pln">pre</span><span class="pun">&gt;</span></code>, <code class="lang-d"><span class="pun">&lt;</span><span class="pln">textarea</span><span class="pun">&gt;</span></code>, <code class="lang-d"><span class="pun">&lt;</span><span class="pln">script</span><span class="pun">&gt;</span></code>, <code class="lang-d"><span class="pun">&lt;</span><span class="pln">style</span><span class="pun">&gt;</span></code>, ...
 </td>
 						</tr>
 					</table>

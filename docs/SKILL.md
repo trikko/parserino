@@ -82,6 +82,9 @@ no "invalid html" exception.
   `copyFrom`, or insert their html.
 - `el = "<b>html</b>";` replaces the element with the one parsed from the
   string.
+- `toString` (and `outerHTML`, `innerHTML`) gives the html as it is;
+  `toPrettyString` indents it, to show it to a person. It changes the
+  whitespace between the nodes: don't store or send it.
 
 ## Parsing
 

@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="UTF-8"/>
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
-		<title>Document.toString - multiple declarations</title>
+		<title>Function Node.toPrettyString</title>
 		<link rel="stylesheet" href="../css/style.min.css"/>
 		<script type="text/javascript" src="../js/script.min.js"></script>
 	</head>
@@ -161,75 +161,15 @@ document.getElementById('symbolSearchPane').style.display = 'block';</script>
 		</nav>
 		<div id="main-contents">
 			<div>
-				<h1>Document.toString - multiple declarations</h1>
-				<nav class="page-nav">
-					<ul>
-						<li>
-							<a href="#0">
-								Function <code>Document.toString</code>
-							</a>
-						</li>
-						<li>
-							<a href="#1">
-								Function <code>Document.toString</code>
-							</a>
-						</li>
-						<li>
-							<a href="#2">
-								Function <code>Document.toString</code>
-							</a>
-						</li>
-					</ul>
-				</nav><h2 id="0">Function Document.toString</h2><p>Return document as html string
+				<h1>Function Node.toPrettyString</h1><p>The node as indented html, to read it (see <code class="lang-d"><a href="../parserino/Document.toPrettyString.html"><span class="typ">Document<wbr/></span><span class="pun">.</span><span class="pln">toPrettyString</span></a></code>)
 </p>
 				<div class="prototype">
 					<code class="lang-d">
-						<div class="single-prototype"><span class="typ">string</span> <span class="pln">toString</span><span class="pun">(</span><span class="pun">)</span><span class="pln"> </span><span class="kwd">const</span><span class="pun">;</span>
+						<div class="single-prototype"><span class="typ">string</span> <span class="pln">toPrettyString</span><span class="pun">(</span><span class="pun">)</span><span class="pln"> </span><span class="kwd">const</span><span class="pun">;</span>
 						</div>
 					</code>
 				</div>
-				<h2 id="1">Function Document.toString</h2><p>Write the document as html to a sink
-</p>
-				<div class="prototype">
-					<code class="lang-d">
-						<div class="single-prototype">
-				<span class="typ">void</span> <span class="pln">toString</span><span class="pun">(</span>
-				<br/>&nbsp;&nbsp;<span class="kwd">scope </span><span class="typ">void</span> <span class="kwd">delegate</span><span class="pun">(</span><span class="kwd">const</span><span class="pun">(</span><span class="typ">char</span><span class="pun">)</span><span class="pun">[]</span><span class="pun">)</span> <span class="pln">sink</span>
-				<br/>
-				<span class="pun">)</span><span class="pln"> </span><span class="kwd">const</span><span class="pun">;</span>
-						</div>
-					</code>
-				</div>
-				<h2 id="2">Function Document.toString</h2><p>The document as indented html, to read it: each block element on its own line, two
- spaces for each level; elements with only text and inline elements stay on one line.
- The whitespace between the nodes changes (except in <code class="lang-d"><span class="pun">&lt;</span><span class="pln">pre</span><span class="pun">&gt;</span></code>, <code class="lang-d"><span class="pun">&lt;</span><span class="pln">textarea</span><span class="pun">&gt;</span></code>, <code class="lang-d"><span class="pun">&lt;</span><span class="pln">script</span><span class="pun">&gt;</span></code>,
- ...): use <code class="lang-d"><a href="../parserino/Document.toString.html"><span class="pln">toString</span></a></code> to store or send the html.
-</p>
-				<div class="prototype">
-					<code class="lang-d">
-						<div class="single-prototype">
-				<span class="typ">void</span> <span class="pln">toString</span>(W)<span class="pun">(</span>
-				<br/>&nbsp;&nbsp;<span class="kwd">ref </span><span class="pln">W</span> <span class="pln">writer</span>
-				<br/>
-				<span class="pun">)</span><span class="pln"> </span><span class="kwd">const</span>
-				<br/>
-				<span class="kwd">if</span> <span class="pun">(</span><span class="pln">isOutputRange</span><span class="pun">!(</span><span class="pln">W</span><span class="pun">, </span><span class="kwd">const</span><span class="pun">(</span><span class="typ">char</span><span class="pun">)[]) &amp;&amp; !</span><span class="kwd">is</span><span class="pun">(</span><span class="pln">W </span><span class="pun">: </span><span class="typ">void </span><span class="kwd">delegate</span><span class="pun">(</span><span class="kwd">const</span><span class="pun">(</span><span class="typ">char</span><span class="pun">)[]))</span><span class="pun">);</span>
-						</div>
-					</code>
-				</div>
-				<section><pre class="code"><code class="lang-d"><a href="../parserino/Document.html"><span class="typ">Document</span></a><span class="pln"> doc </span><span class="pun">= </span><span class="str">`&lt;ul&gt;&lt;li&gt;Bread&lt;/li&gt;&lt;li&gt;Milk &lt;b&gt;2 l&lt;/b&gt;&lt;/li&gt;&lt;/ul&gt;`</span><span class="pun">;
-</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">doc<wbr/></span><span class="pun">.</span><span class="pln">toPrettyString </span><span class="pun">==
-    </span><span class="str">"&lt;html&gt;\n" </span><span class="pun">~
-    </span><span class="str">"  &lt;head&gt;&lt;/head&gt;\n" </span><span class="pun">~
-    </span><span class="str">"  &lt;body&gt;\n" </span><span class="pun">~
-    </span><span class="str">"    &lt;ul&gt;\n" </span><span class="pun">~
-    </span><span class="str">"      &lt;li&gt;Bread&lt;/li&gt;\n" </span><span class="pun">~
-    </span><span class="str">"      &lt;li&gt;Milk &lt;b&gt;2 l&lt;/b&gt;&lt;/li&gt;\n" </span><span class="pun">~
-    </span><span class="str">"    &lt;/ul&gt;\n" </span><span class="pun">~
-    </span><span class="str">"  &lt;/body&gt;\n" </span><span class="pun">~
-    </span><span class="str">"&lt;/html&gt;"</span><span class="pun">);</span></code></pre>
-</section>
-
+				
 			</div>
 			<footer>
 				<div id="license-info">

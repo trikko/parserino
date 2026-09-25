@@ -586,6 +586,98 @@ struct Document
         serializeTo(Serialize.Tree, &d.dom.node, sink);
     }
 
+    /++ The document as indented html, to read it: each block element on its own line, two
+    + spaces for each level; elements with only text and inline elements stay on one line.
+    + The whitespace between the nodes changes (except in `<pre>`, `<textarea>`, `<script>`,
+    + ...): use `toString` to store or send the html.
+    + ---
+    + Document doc = `<ul><li>Bread</li><li>Milk <b>2 l</b></li></ul>`;
+    + assert(doc.toPrettyString ==
+    +     "<html>\n" ~
+    +     "  <head></head>\n" ~
+    +     "  <body>\n" ~
+    +     "    <ul>\n" ~
+    +     "      <li>Bread</li>\n" ~
+    +     "      <li>Milk <b>2 l</b></li>\n" ~
+    +     "    </ul>\n" ~
+    +     "  </body>\n" ~
+    +     "</html>");
+    + ---
+    +/
+    string toPrettyString() const
+    {
+        auto d = (cast() this).mutableImpl();
+        d.finish();
+        return prettyOf(&d.dom.node);
+    }
+
+    unittest
+    {
+        Document doc = `<ul><li>Bread</li><li>Milk <b>2 l</b></li></ul>`;
+        assert(doc.toPrettyString ==
+            "<html>\n" ~
+            "  <head></head>\n" ~
+            "  <body>\n" ~
+            "    <ul>\n" ~
+            "      <li>Bread</li>\n" ~
+            "      <li>Milk <b>2 l</b></li>\n" ~
+            "    </ul>\n" ~
+            "  </body>\n" ~
+            "</html>");
+
+        // The whitespace of the source is collapsed; texts between blocks go on their own line
+        doc = "<!DOCTYPE html><body>\n  <p>\n   Hello   <i>big</i>\n world </p><!-- c -->\n<div>text<p>x</p> tail </div>";
+        assert(doc.toPrettyString ==
+            "<!DOCTYPE html>\n" ~
+            "<html>\n" ~
+            "  <head></head>\n" ~
+            "  <body>\n" ~
+            "    <p>Hello <i>big</i> world</p>\n" ~
+            "    <!-- c -->\n" ~
+            "    <div>\n" ~
+            "      text\n" ~
+            "      <p>x</p>\n" ~
+            "      tail\n" ~
+            "    </div>\n" ~
+            "  </body>\n" ~
+            "</html>");
+
+        // <pre>, <textarea>, <script> keep their content; texts are still escaped
+        doc = "<div><pre>  a\n   b</pre><p>x <textarea>  y\n z</textarea></p><script>if (a < b) f();</script><p>1 &lt; 2</p></div>";
+        assert(doc.body.firstChild.toPrettyString ==
+            "<div>\n" ~
+            "  <pre>  a\n   b</pre>\n" ~
+            "  <p>x <textarea>  y\n z</textarea></p>\n" ~
+            "  <script>if (a < b) f();</script>\n" ~
+            "  <p>1 &lt; 2</p>\n" ~
+            "</div>");
+
+        // Void elements, templates, foreign elements, a single text
+        doc = "<div><br><img src=x><template><p>t</p><div>u</div></template><svg><g><rect/></g></svg></div>";
+        assert(doc.body.firstChild.toPrettyString ==
+            "<div>\n" ~
+            "  <br>\n" ~
+            "  <img src=\"x\">\n" ~
+            "  <template>\n" ~
+            "    <p>t</p>\n" ~
+            "    <div>u</div>\n" ~
+            "  </template>\n" ~
+            "  <svg>\n" ~
+            "    <g>\n" ~
+            "      <rect></rect>\n" ~
+            "    </g>\n" ~
+            "  </svg>\n" ~
+            "</div>");
+        assert(doc.createText(" a  b ").toPrettyString == "a b");
+
+        // Deep trees don't overflow the stack (on one line, or indented)
+        import std.array : replicate;
+        doc = "<p>" ~ "<span>".replicate(100_000) ~ "x";
+        assert(doc.body.firstChild.toPrettyString == "<p>" ~ "<span>".replicate(100_000) ~ "x" ~ "</span>".replicate(100_000) ~ "</p>");
+        doc = "<div>".replicate(2_000) ~ "x";
+        assert(doc.toPrettyString.length > 2_000 * 2_000);
+    }
+
     /// ditto
     void toString(W)(ref W writer) const
     if (isOutputRange!(W, const(char)[]) && !is(W : void delegate(const(char)[])))
@@ -1668,6 +1760,15 @@ struct Node
         self.onlyValid();
         self.impl.ensureClosed(self.raw);
         serializeTo(Serialize.Tree, self.raw, sink);
+    }
+
+    /// The node as indented html, to read it (see `Document.toPrettyString`)
+    string toPrettyString() const
+    {
+        auto self = cast() this;
+        self.onlyValid();
+        self.impl.ensureClosed(self.raw);
+        return prettyOf(self.raw);
     }
 
     /// ditto
@@ -3916,6 +4017,15 @@ DomAttribute* attributeByName(DomElement* e, scope const(char)[] name) nothrow @
 void serializeTo(Serialize what, DomNode* node, scope void delegate(const(char)[]) sink)
 {
     parserino.html.serializer.serialize(node, sink, what);
+}
+
+string prettyOf(DomNode* node)
+{
+    import std.array : appender;
+    auto app = appender!string;
+    auto sink = (const(char)[] s) { app.put(s); };
+    parserino.html.serializer.serializePretty(node, sink);
+    return app.data;
 }
 
 /++ Parse `html` in the context of `context` (an element of `doc`) into a new document fragment.

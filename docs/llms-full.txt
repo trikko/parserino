@@ -27,6 +27,7 @@ The root of the DOM tree.
 - `Element createElement(string tagName)`, `Node createText(string text)`, `Node createComment(string text)`.
 - `Node fragment(string html, string context = "body")`: Parses html in the context of an element (as the standard fragment parsing: `"tr"` makes `<td>` valid, `"textarea"` makes everything text, `"svg"`/`"math"` for foreign content) into a `DocumentFragment` node. Inserting the fragment moves its children.
 - `string toString()`, `toString(sink)` (a delegate or an output range).
+- `string toPrettyString()`: The html indented, to read it: each block element on its own line, two spaces per level; elements with only text and inline elements stay on one line. Whitespace between nodes changes (not in `<pre>`, `<textarea>`, `<script>`, ...): use `toString` to store or send html.
 - `Element byId(id)`, `byClass(name)`, `byTagName(name)` (`"*"`: all), `bySelector(css)` / `bySelector(Selector)` / `bySelector!css`, `byComment(text)` (whitespace at the ends ignored), `byCommentExact(text)`, `children!show`, `descendants!show`.
 
 ### `Node`
@@ -45,7 +46,7 @@ The root of the DOM tree.
   - `replaceWith(what)`;
   - `appendChild(Node)`, `node ~= what`;
   - `bool remove()`: detaches the node (it stays valid).
-- `Node dup()` (deep), `Node shallowDup()`, `string toString()` (the html of the node).
+- `Node dup()` (deep), `Node shallowDup()`, `string toString()` (the html of the node), `string toPrettyString()` (indented, to read it).
 
 ### `Element` (a `Node` too)
 - `string localName` ("div", "foreignObject"), `string tagName` ("DIV" for html elements), `localNameView`.

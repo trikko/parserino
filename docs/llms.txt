@@ -37,7 +37,7 @@ void main() {
 - `title`, `title(string)`: Get or set the document title.
 - `createElement(tag)` (an `Element`), `createText(text)`, `createComment(text)` (`Node`s).
 - `fragment(html, context = "body")`: Parses html in the context of an element into a `DocumentFragment` node; inserting it moves its children.
-- `toString()`: Serializes the entire document back to HTML.
+- `toString()`: Serializes the entire document back to HTML; `toPrettyString()` indents it, to read it (whitespace changes: not for storing).
 - **Search Methods**: `byId(id)` (an invalid `Element` if not found), `byClass`, `byTagName` (`"*"` for all), `bySelector(css or Selector)`, `byComment(text)`, `byCommentExact(text)`, `children!show`, `descendants!show`.
 
 ### Node
@@ -46,7 +46,7 @@ void main() {
 - Navigation (all with `!(Show...)`): `parent`, `firstChild`, `lastChild`, `nextSibling`, `previousSibling`, `children`, `descendants`; `hasChildNodes`, `contains(node)` (inclusive).
 - Search: `byId`, `byClass`, `byTagName`, `bySelector`, `byComment`, `byCommentExact`.
 - Mutations: `append`, `prepend`, `before`, `after`, `replaceWith` (accept a `Node`, a `string` as text, `"<b>x</b>".asFragment` as html, a fragment), `appendChild(node)`, `remove()`, `~=`.
-- `dup`, `shallowDup`, `toString`.
+- `dup`, `shallowDup`, `toString`, `toPrettyString`.
 
 ### Element (also has all the `Node` members)
 - `localName` ("div", "foreignObject"), `tagName` ("DIV"), `id` (get/set), `classes`, `attributes`.

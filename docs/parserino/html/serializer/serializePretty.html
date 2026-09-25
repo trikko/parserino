@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="UTF-8"/>
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
-		<title>Enum Serialize</title>
+		<title>Function serializePretty</title>
 		<link rel="stylesheet" href="../../../css/style.min.css"/>
 		<script type="text/javascript" src="../../../js/script.min.js"></script>
 	</head>
@@ -104,45 +104,23 @@ document.getElementById('symbolSearchPane').style.display = 'block';</script>
 		</nav>
 		<div id="main-contents">
 			<div>
-				<h1>Enum Serialize</h1><p>What <code class="lang-d"><a href="../../../parserino/html/serializer/serialize.html"><span class="pln">serialize</span></a></code> writes
+				<h1>Function serializePretty</h1><p>Serialize <code class="lang-d"><a href="../../../parserino/html/serializer/serializePretty.html#node"><span class="pln">node</span></a></code> indented, to read it: each block element on its own line, two spaces for
+ each level; an element with only text and inline elements (<code class="lang-d"><span class="pun">&lt;</span><span class="pln">li</span><span class="pun">&gt;</span><span class="typ">Milk </span><span class="pun">&lt;</span><span class="pln">b</span><span class="pun">&gt;</span><span class="lit">2</span><span class="pun">&lt;/</span><span class="pln">b</span><span class="pun">&gt;&lt;/</span><span class="pln">li</span><span class="pun">&gt;</span></code>) stays
+ on one line. Whitespace between the nodes is changed (runs of spaces become one, the
+ whitespace between blocks is dropped), except in <code class="lang-d"><span class="pun">&lt;</span><span class="pln">pre</span><span class="pun">&gt;</span></code>, <code class="lang-d"><span class="pun">&lt;</span><span class="pln">textarea</span><span class="pun">&gt;</span></code>, <code class="lang-d"><span class="pun">&lt;</span><span class="pln">script</span><span class="pun">&gt;</span></code>, <code class="lang-d"><span class="pun">&lt;</span><span class="pln">style</span><span class="pun">&gt;</span></code>, ...
 </p>
 				<div class="prototype">
 					<code class="lang-d">
 						<div class="single-prototype">
-				<span class="kwd">enum</span> <span class="typ">Serialize</span> <span class="pun">:</span> <span class="typ">int</span> <span class="pun">{ ... }</span>
+				<span class="typ">void</span> <span class="pln">serializePretty</span>(Sink)<span class="pun">(</span>
+				<br/>&nbsp;&nbsp;<span class="kwd">const</span><span class="pun">(</span><a href="../../../parserino/dom/DomNode.html"><span class="typ">DomNode</span></a><span class="pun">)</span><span class="pun">*</span> <span class="pln">node</span><span class="pun">,</span>
+				<br/>&nbsp;&nbsp;<span class="kwd">ref </span><span class="typ">Sink</span> <span class="pln">sink</span>
+				<br/>
+				<span class="pun">)</span><span class="pun">;</span>
 						</div>
 					</code>
 				</div>
 				
-				<section><h2>Enum members</h2>
-					<table>
-						<col class="caption"/>
-						<tr>
-							<th>Name</th><th>Description</th>
-						</tr>
-						<tr>
-							<td id="Children">
-								<code>Children</code>
-							</td>
-							<td>only the descendants (innerHTML)
-</td>
-						</tr>
-						<tr>
-							<td id="Node">
-								<code>Node</code>
-							</td>
-							<td>only the node: the start tag for elements, the text for texts, ...
-</td>
-						</tr>
-						<tr>
-							<td id="Tree">
-								<code>Tree</code>
-							</td>
-							<td>the node and its descendants (for a document: its children)
-</td>
-						</tr>
-					</table>
-				</section>
 			</div>
 			<footer>
 				<div id="license-info">

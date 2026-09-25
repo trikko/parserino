@@ -92,6 +92,7 @@
 <url><loc>https://trikko.github.io/parserino/parserino/html/serializer.html</loc></url>
 <url><loc>https://trikko.github.io/parserino/parserino/html/serializer/Serialize.html</loc></url>
 <url><loc>https://trikko.github.io/parserino/parserino/html/serializer/serialize.html</loc></url>
+<url><loc>https://trikko.github.io/parserino/parserino/html/serializer/serializePretty.html</loc></url>
 <url><loc>https://trikko.github.io/parserino/parserino/html/tokenizer.html</loc></url>
 <url><loc>https://trikko.github.io/parserino/parserino/html/tokenizer/State.html</loc></url>
 <url><loc>https://trikko.github.io/parserino/parserino/html/tokenizer/Token.html</loc></url>
@@ -374,6 +375,7 @@
 <url><loc>https://trikko.github.io/parserino/parserino/Document.this.html</loc></url>
 <url><loc>https://trikko.github.io/parserino/parserino/Document.title.html</loc></url>
 <url><loc>https://trikko.github.io/parserino/parserino/Document.title.html</loc></url>
+<url><loc>https://trikko.github.io/parserino/parserino/Document.toPrettyString.html</loc></url>
 <url><loc>https://trikko.github.io/parserino/parserino/Document.toString.html</loc></url>
 <url><loc>https://trikko.github.io/parserino/parserino/Document.toString.html</loc></url>
 <url><loc>https://trikko.github.io/parserino/parserino/Document.toString.html</loc></url>
@@ -466,6 +468,7 @@
 <url><loc>https://trikko.github.io/parserino/parserino/Node.textContent.html</loc></url>
 <url><loc>https://trikko.github.io/parserino/parserino/Node.textContent.html</loc></url>
 <url><loc>https://trikko.github.io/parserino/parserino/Node.toHash.html</loc></url>
+<url><loc>https://trikko.github.io/parserino/parserino/Node.toPrettyString.html</loc></url>
 <url><loc>https://trikko.github.io/parserino/parserino/Node.toString.html</loc></url>
 <url><loc>https://trikko.github.io/parserino/parserino/Node.toString.html</loc></url>
 <url><loc>https://trikko.github.io/parserino/parserino/Node.toString.html</loc></url>
