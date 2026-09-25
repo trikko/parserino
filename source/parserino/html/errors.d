@@ -9,7 +9,9 @@ module parserino.html.errors;
 
 @nogc nothrow pure @safe:
 
-/// The code of a parse error
+/++ The code of a parse error. The tokenizer errors are the codes of the standard in PascalCase
+ + (`UnexpectedNullCharacter` is `unexpected-null-character`, see `errorName`).
+ +/
 enum ParseErrorCode : ubyte
 {
     AbruptClosingOfEmptyComment,
@@ -145,9 +147,9 @@ private immutable string[ParseErrorCode.max + 1] errorNames = [
 /// A parse error found by the parser: the position is a line and a column (1-based, in characters)
 struct RawParseError
 {
-    ParseErrorCode code;
-    uint line;
-    uint column;
+    ParseErrorCode code;    /// the error
+    uint line;              /// 1-based
+    uint column;            /// 1-based, in characters
 }
 
 unittest

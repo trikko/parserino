@@ -9,6 +9,7 @@ module parserino.html.serializer;
 import parserino.dom;
 import parserino.names;
 
+/// What `serialize` writes
 enum Serialize
 {
     Node,       /// only the node: the start tag for elements, the text for texts, ...

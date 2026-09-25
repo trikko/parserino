@@ -13,12 +13,13 @@ import parserino.dom;
 import parserino.names;
 import parserino.html.errors : RawParseError;
 
+/// A document as plain arrays (see the module): made by `takeSnapshot`, turned back into a document by `restore`
 struct DomSnapshot
 {
-    CompatMode compatMode;
-    bool scripting;
-    SnapshotNode[] nodes;
-    SnapshotAttribute[] attributes;     // the attributes of the elements, in the same order
+    CompatMode compatMode;              /// as `DomDocument.compatMode`
+    bool scripting;                     /// as `DomDocument.scripting`
+    SnapshotNode[] nodes;               /// all the nodes but the document, in tree order (template contents before the children)
+    SnapshotAttribute[] attributes;     /// the attributes of the elements, in the same order
 
     /++ Rebuild the tree into `doc` (an empty document). It returns false if out of memory.
      + The document uses the strings of the snapshot without copying them: the snapshot must
@@ -98,27 +99,29 @@ struct DomSnapshot
     }
 }
 
+/// A node of a `DomSnapshot`
 struct SnapshotNode
 {
-    NodeType type;
-    Ns ns;
-    bool inTemplate;            // a child of the template content of its parent
-    uint depth;                 // 0 for the children of the document
-    uint name;                  // the tag id if known (else 0 and the name is in `text`)
-    uint attributes;            // how many attributes
+    NodeType type;              /// the node type
+    Ns ns;                      /// the namespace of elements
+    bool inTemplate;            /// a child of the template content of its parent
+    uint depth;                 /// 0 for the children of the document
+    uint name;                  /// the tag id if known (else 0 and the name is in `text`); `Tag.TextNode`, ... for character data
+    uint attributes;            /// how many attributes
 
-    string text;                // unknown tag name, character data, doctype name
-    string qualifiedName;       // element qualified name, processing instruction target, doctype public id
-    string systemId;            // doctype system id
+    string text;                /// unknown tag name, character data, doctype name
+    string qualifiedName;       /// element qualified name, processing instruction target, doctype public id
+    string systemId;            /// doctype system id
 }
 
+/// An attribute of a `DomSnapshot`
 struct SnapshotAttribute
 {
-    uint name;                  // the attribute id if known (else 0 and the name is in `localName`)
-    Ns ns;
-    string localName;
-    string qualifiedName;
-    string value;
+    uint name;                  /// the attribute id if known (else 0 and the name is in `localName`)
+    Ns ns;                      /// as `DomAttribute.ns`
+    string localName;           /// only for unknown names
+    string qualifiedName;       /// as `DomAttribute.qualifiedName`
+    string value;               /// the value
 }
 
 /// A snapshot of `doc` (it uses the GC; it also works at compile time)

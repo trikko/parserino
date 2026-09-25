@@ -13,7 +13,8 @@ import parserino.html.errors;
 
 @nogc nothrow pure @safe:
 
-enum Mode : ubyte
+// The insertion modes of the standard
+private enum Mode : ubyte
 {
     Initial, BeforeHtml, BeforeHead, InHead, InHeadNoscript, AfterHead, InBody, Text,
     InTable, InTableText, InCaption, InColumnGroup, InTableBody, InRow, InCell, InTemplate,
@@ -21,32 +22,33 @@ enum Mode : ubyte
 }
 
 // Element flags
-enum : ubyte
+private enum : ubyte
 {
     FlagSelected = 1,           // option selectedness
     FlagContentDisabled = 2,    // the "disabled" of a selectedcontent (not in a select, or nested)
 }
 
+/// The tree construction: it gets the tokens from the tokenizer (see `sink`) and builds the tree in `doc`
 struct TreeBuilder
 {
 @nogc nothrow pure @safe:
     @disable this(this);
 
-    DomDocument* doc;
-    Tokenizer* tokenizer;
+    DomDocument* doc;       /// The document being built
+    Tokenizer* tokenizer;   /// The tokenizer that feeds it (to switch its state and report errors)
 
     /// The stack of open elements and the list of active formatting elements (null = marker)
     Buffer!(DomNode*) openElements;
-    Buffer!(DomNode*) activeFormatting;
+    Buffer!(DomNode*) activeFormatting;     /// ditto
 
-    bool framesetOk = true;
-    DomElement* head;
-    DomElement* body;
-    CompatMode compatMode;
+    bool framesetOk = true;     /// The "frameset-ok" flag
+    DomElement* head;           /// The head element pointer
+    DomElement* body;           /// The `<body>` the parser inserted, or null
+    CompatMode compatMode;      /// The mode from the doctype (for fragments: the one of the document)
 
     /// Fragment parsing: the context element and the root of the result
     DomNode* context;
-    DomElement* fragmentRoot;
+    DomElement* fragmentRoot;   /// ditto
 
     /// Out of memory
     bool failed;
@@ -127,7 +129,7 @@ struct TreeBuilder
     }
 
     // Did a buffer run out of memory?
-    bool buffersFailed() const
+    private bool buffersFailed() const
     {
         return openElements.failed || activeFormatting.failed || templateModes.failed || pendingText.failed
             || scratch.failed;

@@ -8,11 +8,12 @@ import parserino.arena;
 
 @nogc nothrow pure @safe:
 
+/// Token types, as in CSS Syntax (`Cdo` is `<!--`, `Cdc` is `-->`)
 enum TokenType : ubyte
 {
     Eof,
     Ident,
-    Function,      /// `name(`: `text` is the name
+    Function,       /// a name followed by a left parenthesis: `text` is the name
     AtKeyword,
     Hash,           /// `text` is the name after '#'
     String,
@@ -35,21 +36,24 @@ enum TokenType : ubyte
     RightCurly,
 }
 
+/// A token
 struct Token
 {
-    TokenType type;
-    dchar delim;            /// for `delim`
+    TokenType type;         /// the token type
+    dchar delim;            /// for `Delim`
     const(char)[] text;     /// unescaped name or string value
     double number = 0;      /// for number, percentage, dimension
     bool isInteger;         /// the number has no '.' and no exponent
     bool hasSign;           /// the number starts with '+' or '-'
 }
 
+/// The tokens of a string, one at a time (`front`, `popFront`)
 struct Tokenizer
 {
 @nogc nothrow pure @safe:
     @disable this(this);
 
+    /// Tokenize `input`: the texts of the tokens are slices of `input`, or in `arena` when unescaped
     this(const(char)[] input, Arena* arena)
     {
         this.input = input;
@@ -452,7 +456,8 @@ struct Tokenizer
     }
 }
 
-void putUtf8(ref Buffer!char buf, dchar c)
+// Append `c` to `buf` in UTF-8
+private void putUtf8(ref Buffer!char buf, dchar c)
 {
     if (c < 0x80) buf.put(cast(char) c);
     else if (c < 0x800) { buf.put(cast(char) (0xC0 | (c >> 6))); buf.put(cast(char) (0x80 | (c & 0x3F))); }

@@ -39,13 +39,16 @@ import parserino.arena;
 
 @nogc nothrow pure @safe:
 
-/// Namespaces
+/// Namespaces. `None` is no namespace (as for most attributes); nothing uses `Any`.
 enum Ns : ubyte
 {
     None, Any, Html, Math, Svg, Xlink, Xml, Xmlns,
 }
 
-/// Known tags. Unknown tag names get ids from `Tag.Last` on.
+/++ Known tags. Unknown tag names get ids from `Tag.Last` on.
+ + The members are the names in PascalCase (`annotation-xml` is `AnnotationXml`); `Undef`
+ + (no tag), `EndOfFile` and the `...Node` members name the nodes that are not elements.
+ +/
 enum Tag : uint
 {
 ''')
@@ -75,7 +78,7 @@ immutable ubyte[Ns.max + 1][Tag.Last] tagCategories = [
 for n, c in tags: o.append('    [%s],\n' % ', '.join(str(x) for x in c))
 o.append('];\n\n')
 
-o.append('/// Known attributes. Unknown names get ids from `AttrName.Last` on.\nenum AttrName : uint\n{\n')
+o.append('/++ Known attributes. Unknown names get ids from `AttrName.Last` on.\n + The members are the names in PascalCase (`accept-charset` is `AcceptCharset`); `Undef` is no attribute.\n +/\nenum AttrName : uint\n{\n')
 for i, n in enumerate(attrs):
     o.append('    %s = %d,\n' % ('Undef' if n == '#undef' else ident(n), i))
 o.append('    Last = %d,\n}\n\n' % len(attrs))
@@ -241,6 +244,7 @@ module parserino.html.entities;
 
 @nogc nothrow pure @safe:
 
+/// A named character reference
 struct Entity
 {
     string name;    /// without '&', with the ';' when it has one
@@ -261,7 +265,8 @@ e.append('''];
 struct EntityMatcher
 {
 @nogc nothrow pure @safe:
-    size_t lo = 0, hi = entities.length;
+    size_t lo = 0;              /// the names still possible: `entities[lo .. hi]`
+    size_t hi = entities.length;    /// ditto
     size_t depth;       /// chars seen
     size_t best = size_t.max;   /// the longest full match so far (index in `entities`)
     size_t bestLength;  /// its length

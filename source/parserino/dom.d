@@ -2,8 +2,8 @@
  The document tree.
 
  Every node lives in the arena of its document and is freed with it: removed
- nodes stay valid. Nodes are plain structs: `Element`, `CharacterData`, ... start
- with a `Node`: `node.as!Element` (after checking `type`) gives the struct that contains it.
+ nodes stay valid. Nodes are plain structs: `DomElement`, `DomCharacterData`, ... start
+ with a `DomNode`: `node.as!DomElement` (after checking `type`) gives the struct that contains it.
 +/
 module parserino.dom;
 
@@ -12,7 +12,7 @@ import parserino.names;
 import core.stdc.string : memcpy;
 import std.traits : CopyConstness;
 
-// Used by `Node.as` in CTFE (see `ctfeContainer`), they allocate: keep them outside the `@nogc:` sections
+// Used by `DomNode.as` in CTFE (see `ctfeContainer`), they allocate: keep them outside the `@nogc:` sections
 version (D_BetterC)
 {
     // No AAs without druntime (and no parsing at compile time, see `parserino.arena`)
@@ -45,6 +45,7 @@ void textContent(Sink)(const(DomNode)* node, ref Sink sink)
 
 @nogc nothrow pure @safe:
 
+/// Node types, with the values of DOM `nodeType`
 enum NodeType : ubyte
 {
     Element = 1,
@@ -57,6 +58,7 @@ enum NodeType : ubyte
     DocumentFragment = 11,
 }
 
+/// Quirks mode of a document, set by the parser from the doctype
 enum CompatMode : ubyte { NoQuirks, LimitedQuirks, Quirks }
 
 /// The common part of all the nodes
@@ -64,17 +66,17 @@ struct DomNode
 {
 @nogc nothrow pure @safe:
 
-    NodeType type;
-    Ns ns;
+    NodeType type;  /// The node type
+    Ns ns;          /// Namespace of elements
     /// Tag of elements (a `Tag` or an id from the document names). Other nodes: `Tag.TextNode`, `Tag.CommentNode`, ...
     uint name;
 
-    DomNode* parent;
-    DomNode* firstChild;
-    DomNode* lastChild;
-    DomNode* prev;
-    DomNode* next;
-    DomDocument* document;
+    DomNode* parent;        /// null for detached nodes and roots
+    DomNode* firstChild;    /// First child
+    DomNode* lastChild;     /// Last child
+    DomNode* prev;          /// Previous sibling
+    DomNode* next;          /// Next sibling
+    DomDocument* document;  /// The document that owns the node
 
     /// Is this an element in the html namespace with this tag?
     bool isHtml(uint tag) const pure { return type == NodeType.Element && name == tag && ns == Ns.Html; }
@@ -102,12 +104,15 @@ struct DomNode
 
     /// The element / character data, or null if the node is something else
     DomElement* asElement() pure return { return type == NodeType.Element ? as!DomElement : null; }
+    /// ditto
     const(DomElement)* asElement() const pure return { return type == NodeType.Element ? as!DomElement : null; }
 
     /// ditto
     DomCharacterData* asCharacterData() pure return { return isCharacterData ? as!DomCharacterData : null; }
+    /// ditto
     const(DomCharacterData)* asCharacterData() const pure return { return isCharacterData ? as!DomCharacterData : null; }
 
+    /// Is it text, a comment, a processing instruction or a CDATA section?
     bool isCharacterData() const pure
     {
         return type == NodeType.Text || type == NodeType.Comment || type == NodeType.ProcessingInstruction || type == NodeType.CDataSection;
@@ -116,6 +121,7 @@ struct DomNode
     /// Previous/next sibling that is an element
     // These are templates on the constness of `this` (not `inout`: CTFE can't convert inout pointers)
     auto prevElement(this This)() pure { This* n = prev; while (n !is null && n.type != NodeType.Element) n = n.prev; return n; }
+    /// ditto
     auto nextElement(this This)() pure { This* n = next; while (n !is null && n.type != NodeType.Element) n = n.next; return n; }
 
     /// Append `child` as the last child (`child` must be detached)
@@ -250,14 +256,14 @@ struct DomAttribute
 
     /// Local name, lowercase (an `AttrName` or an id from the document names)
     uint name;
-    Ns ns;
+    Ns ns;  /// `Ns.None` for most attributes; `Xlink`, `Xml`, `Xmlns` for some attributes of foreign elements
     /// The name to serialize, when it differs from the local name (`xlink:href`, `viewBox`), else null
     const(char)[] qualifiedName;
-    const(char)[] value;
+    const(char)[] value;    /// The value
 
-    DomElement* owner;
-    DomAttribute* prev;
-    DomAttribute* next;
+    DomElement* owner;      /// The element of the attribute (set when it is appended)
+    DomAttribute* prev;     /// Previous attribute of the element
+    DomAttribute* next;     /// Next attribute of the element
 
     /// The local name
     const(char)[] localName() const pure { return owner.node.document.attrName(name); }
@@ -271,16 +277,16 @@ struct DomElement
 {
 @nogc nothrow pure @safe:
 
-    DomNode node;
+    DomNode node;   /// The common part (`alias this`)
     alias node this;
 
     /// The name to serialize, when it differs from the local name (`foreignObject`), else null
     const(char)[] qualifiedName;
 
-    DomAttribute* firstAttr;
-    DomAttribute* lastAttr;
-    DomAttribute* idAttr;
-    DomAttribute* classAttr;
+    DomAttribute* firstAttr;    /// The attributes, a linked list
+    DomAttribute* lastAttr;     /// ditto
+    DomAttribute* idAttr;       /// The first `id` attribute (no namespace or html), or null
+    DomAttribute* classAttr;    /// The first `class` attribute (no namespace or html), or null
 
     /// The content of a `<template>`
     DomDocumentFragment* templateContent;
@@ -341,7 +347,7 @@ struct DomCharacterData
 {
 @nogc nothrow pure @safe:
 
-    DomNode node;
+    DomNode node;   /// The common part (`alias this`)
     alias node this;
 
     /// The target of a processing instruction
@@ -351,6 +357,7 @@ struct DomCharacterData
     private size_t length;
     private size_t capacity;
 
+    /// The text
     const(char)[] data() const pure return @trusted { return ptr is null ? "" : ptr[0 .. length]; }
 
     /++ Use `s` as the text, without copying it: `s` must outlive the document and never change
@@ -392,19 +399,21 @@ struct DomCharacterData
     }
 }
 
+/// A doctype: `<!DOCTYPE name PUBLIC "publicId" "systemId">`
 struct DomDocumentType
 {
-    DomNode node;
+    DomNode node;   /// The common part (`alias this`)
     alias node this;
 
-    const(char)[] name;
-    const(char)[] publicId;
-    const(char)[] systemId;
+    const(char)[] name;     /// The name (`html`)
+    const(char)[] publicId; /// Empty if missing
+    const(char)[] systemId; /// ditto
 }
 
+/// A fragment, or the content of a `<template>`
 struct DomDocumentFragment
 {
-    DomNode node;
+    DomNode node;   /// The common part (`alias this`)
     alias node this;
 
     /// The `<template>` of a template content, else null
@@ -423,8 +432,7 @@ private bool isA(T)(NodeType t) @nogc nothrow pure
     else static assert(0, T.stringof ~ " is not a node");
 }
 
-/// The document: it owns the memory of all its nodes
-// CTFE helpers for `Node.as`: they use the GC (an AA), so they are called as @nogc
+// CTFE helpers for `DomNode.as`: they use the GC (an AA), so they are called as @nogc
 
 private void* ctfeContainer(const(DomNode)* n) @nogc nothrow pure @trusted
 {
@@ -438,20 +446,23 @@ private void ctfeRegister(T)(T* x) @nogc nothrow pure @trusted
     (cast(F) &ctfeStore!T)(x);
 }
 
+/++ The document: it owns the memory of all its nodes (and the names it meets). It can't be
+ + copied: allocate it zeroed, call `initialize`, and `release` it at the end.
+ +/
 struct DomDocument
 {
 @nogc nothrow pure @safe:
 
-    DomNode node;
+    DomNode node;   /// The common part (`alias this`)
     alias node this;
 
     @disable this(this);
 
-    Arena arena;
-    CompatMode compatMode;
-    bool scripting;
+    Arena arena;            /// The memory of the nodes, attributes and strings
+    CompatMode compatMode;  /// The quirks mode
+    bool scripting;         /// Parsed as with scripting enabled (`<noscript>` is raw text)
 
-    DomDocumentType* doctype;
+    DomDocumentType* doctype;   /// The doctype, or null
 
     /// The `<head>`: the first `head` child of the `<html>` root element (as in the standard)
     auto head(this This)() { return rootChild!This(Tag.Head, Tag.Head); }
@@ -524,6 +535,7 @@ struct DomDocument
         return tags.find(lower, Tag.Last);
     }
 
+    /// The name of a tag id
     const(char)[] tagName(uint id) const pure
     {
         return id < Tag.Last ? tagNames[id] : tags.name(id, Tag.Last);
@@ -549,6 +561,7 @@ struct DomDocument
         return attrs.find(lower, AttrName.Last);
     }
 
+    /// The name of an attribute id
     const(char)[] attrName(uint id) const pure
     {
         return id < AttrName.Last ? attrNames[id] : attrs.name(id, AttrName.Last);
@@ -556,6 +569,9 @@ struct DomDocument
 
     // ------------------------------------------------------------ creation
 
+    /++ A new element (not attached), with an empty content for a `<template>`.
+     + It returns null if out of memory, as the other `create...` functions.
+     +/
     DomElement* createElement(uint tag, Ns ns) pure
     {
         auto e = arena.make!DomElement;
@@ -576,9 +592,12 @@ struct DomDocument
         return e;
     }
 
+    /// A new text node (not attached), with a copy of `data`
     DomCharacterData* createText(scope const(char)[] data) pure { return createCharacterData(NodeType.Text, Tag.TextNode, data); }
+    /// A new comment (not attached), with a copy of `data`
     DomCharacterData* createComment(scope const(char)[] data) pure { return createCharacterData(NodeType.Comment, Tag.CommentNode, data); }
 
+    /// A new processing instruction (not attached)
     DomCharacterData* createProcessingInstruction(scope const(char)[] target, scope const(char)[] data) pure
     {
         auto pi = createCharacterData(NodeType.ProcessingInstruction, Tag.ProcessingInstructionNode, data);
@@ -587,6 +606,7 @@ struct DomDocument
         return pi;
     }
 
+    /// A new doctype (not attached)
     DomDocumentType* createDocumentType(scope const(char)[] name, scope const(char)[] publicId, scope const(char)[] systemId) pure
     {
         auto d = arena.make!DomDocumentType;
@@ -601,6 +621,7 @@ struct DomDocument
         return d;
     }
 
+    /// A new empty fragment
     DomDocumentFragment* createFragment() pure
     {
         auto f = arena.make!DomDocumentFragment;

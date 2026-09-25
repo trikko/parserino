@@ -24,6 +24,7 @@ enum Combinator : ubyte
     SubsequentSibling,  /// `a ~ b`
 }
 
+/// Kinds of simple selectors
 enum SimpleKind : ubyte
 {
     Universal,      /// `*`
@@ -36,16 +37,16 @@ enum SimpleKind : ubyte
     Is,            /// `:is(list)`, `:where(list)`
     Has,            /// `:has(relative list)`
     NthChild,       /// `:nth-child(an+b [of list])`
-    NthLastChild,
-    NthOfType,
-    NthLastOfType,
+    NthLastChild,   /// `:nth-last-child(an+b [of list])`
+    NthOfType,      /// `:nth-of-type(an+b)`
+    NthLastOfType,  /// `:nth-last-of-type(an+b)`
     Contains,       /// `:lexbor-contains(text [i])`
     Lang,           /// `:lang(en, "fr-CH")`
     Dir,            /// `:dir(ltr)`, `:dir(rtl)`: `name` is the direction (lowercase)
     Never,          /// states of a live document (`:hover`), pseudo-elements (`::before`)
 }
 
-/// Namespace of a type or attribute selector (`svg|rect`, `[xlink|href]`)
+/// Namespace of a type or attribute selector (`svg|rect`, `[xlink|href]`): the other members are the predefined prefixes
 enum NsMatch : ubyte
 {
     Any,    /// `*|x`, or no prefix for type selectors
@@ -58,6 +59,7 @@ enum NsMatch : ubyte
     Xmlns,
 }
 
+/// Operator of an attribute selector
 enum AttrMatch : ubyte
 {
     Exists,     /// `[x]`
@@ -69,6 +71,7 @@ enum AttrMatch : ubyte
     Substring,  /// `[x*=y]`
 }
 
+/// Case sensitivity of the value of an attribute selector
 enum AttrCase : ubyte
 {
     Auto,          /// case-insensitive only for some html attributes (type, lang, ...)
@@ -76,6 +79,7 @@ enum AttrCase : ubyte
     Sensitive,      /// `[x=y s]`
 }
 
+/// Pseudo-classes without arguments that can match (`:first-child` is `FirstChild`)
 enum PseudoClass : ubyte
 {
     AnyLink, Blank, Checked, Disabled, Empty, Enabled, FirstChild, FirstOfType,
@@ -86,17 +90,18 @@ enum PseudoClass : ubyte
 /// A simple selector
 struct Simple
 {
-    SimpleKind kind;
-    AttrMatch match;
-    AttrCase attrCase;
-    PseudoClass pseudo;
+    SimpleKind kind;                /// what it is: the other fields depend on it
+    AttrMatch match;                /// attribute selectors
+    AttrCase attrCase;              /// ditto
+    PseudoClass pseudo;             /// `SimpleKind.PseudoClass`
     bool insensitive;               /// `:lexbor-contains(x i)`
     NsMatch ns;                     /// type, universal and attribute selectors
     const(char)[] name;             /// type (lowercase), id, class, attribute (lowercase) or contains text
     const(char)[] rawName;          /// type and attribute: the name as written (for the non-html elements)
     uint knownId;                   /// type and attribute: the id of a known name (`Tag`, `AttrName`), else 0
     const(char)[] value;            /// attribute value
-    long a, b;                      /// an+b
+    long a;                         /// an+b
+    long b;                         /// ditto
     const(SelectorList)* list;      /// argument of :not, :is, :has, :nth-*(... of list)
     const(const(char)[])[] ranges;  /// language ranges of :lang()
 }
@@ -105,19 +110,19 @@ struct Simple
 struct Compound
 {
     Combinator combinator;  /// relation with the previous compound (the leading one for :has)
-    const(Simple)[] simples;
+    const(Simple)[] simples;    /// the simple selectors, all to match
 }
 
 /// A chain of compounds (`div > p a`), left to right
 struct Complex
 {
-    const(Compound)[] compounds;
+    const(Compound)[] compounds;    /// the compounds: the last one is the subject
 }
 
 /// A comma separated list of complex selectors
 struct SelectorList
 {
-    const(Complex)[] items;
+    const(Complex)[] items;     /// the complex selectors
 
     /// Does any selector need the following siblings or the children of the element?
     /// (`:last-child`, `:has()`, `:empty`, ...)

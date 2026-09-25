@@ -7,6 +7,7 @@ module parserino.html.decoder;
 
 import parserino.arena;
 
+/// The UTF-8 decoder of the tokenizer (see the module)
 struct Utf8Decoder
 {
 @nogc nothrow pure @safe:

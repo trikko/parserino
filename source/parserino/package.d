@@ -34,6 +34,10 @@ OTHER DEALINGS IN THE SOFTWARE.
  +    assert(doc.byTagName("p").front.textContent == "Hello World!");
  + }
  + ---
+ + LLM-friendly documentation: $(LINK2 https://trikko.github.io/parserino/llms.txt, llms.txt),
+ + the whole API in $(LINK2 https://trikko.github.io/parserino/llms-full.txt, llms-full.txt),
+ + a skill for agents in $(LINK2 https://trikko.github.io/parserino/SKILL.md, SKILL.md).
+ +
  + The main types are `Document`, `Node` and `Element`:
  + - a `Node` is any node of the tree: an element, a text, a comment, a doctype, ...;
  + - an `Element` is a node that is an element: it adds attributes, `innerHTML`, `matches`, ...
@@ -116,6 +120,7 @@ enum Show : uint
 /// Thrown on invalid operations (invalid node, impossible mutation, bad selector, ...)
 class ParserinoException : Exception
 {
+    /// An exception with a message, thrown at `file`:`line`
     this(string msg, string file = __FILE__, size_t line = __LINE__) pure nothrow @safe { super(msg, file, line); }
 }
 
@@ -192,7 +197,7 @@ struct Document
     /// ditto
     this(const(char)[] html, ParseOptions options) { start(html, options, false); }
 
-    // An immutable string doesn't need a copy for the lazy parsing
+    /// ditto (an immutable string is not copied by the lazy parsing)
     this(string html, Parsing parsing = Parsing.Eager, size_t chunkSize = DefaultChunkSize)
     {
         ParseOptions options;
@@ -402,7 +407,7 @@ struct Document
 
     ~this() { if (impl !is null) DocImpl.release(impl); impl = null; }
 
-    ///
+    /// Copies share the same document (reference counted)
     ref Document opAssign(Document rhs) return
     {
         auto tmp = impl;
@@ -414,10 +419,14 @@ struct Document
     /// Parse `html` into a new document: `doc = "<html>...";`
     ref Document opAssign(const(char)[] html) return { return this = Document(html); }
 
-    ///
+    /// `doc = null` releases the document: `doc` becomes invalid
     ref Document opAssign(typeof(null)) return { return this = Document.init; }
 
-    bool opEquals(const typeof(null)) const @safe nothrow pure { return !isValid; }
+    /++ `doc == null` is true for an invalid document, `doc == "..."` compares the html of the
+    + document, `doc == other` is true if they are copies of the same document.
+    +/
+    bool opEquals(typeof(null)) const @safe nothrow pure { return !isValid; }
+    /// ditto
     bool opEquals(D)(auto ref const D d) const
     {
         static if (isSomeString!D) return isValid && toString() == d;
@@ -1669,7 +1678,7 @@ struct Node
         toString((const(char)[] s) { put(writer, s); });
     }
 
-    ///
+    /// `cast(string) node` is the same as `toString`
     string opCast(T : string)() const { return toString(); }
 
     unittest
@@ -1684,16 +1693,21 @@ struct Node
         assert(de == "<html><head></head><body><p></p></body></html>");
     }
 
-    bool opEquals(const typeof(null)) const @safe nothrow pure @nogc { return !isValid; }
+    /++ `node == null` is true for an invalid node, `node == "..."` compares the html of the
+    + node, `node == other` is true if they are the same node.
+    +/
+    bool opEquals(typeof(null)) const @safe nothrow pure @nogc { return !isValid; }
+    /// ditto
     bool opEquals(E)(auto ref const E e) const
     {
         static if (isSomeString!E) return isValid && e == this.toString;
         else return e.raw is this.raw;
     }
 
+    /// Nodes can be keys of associative arrays (the same node, the same key)
     size_t toHash() const nothrow @safe { return hashOf(raw); }
 
-    ///
+    /// `node = null` makes it an invalid node (it releases its document)
     ref Node opAssign(typeof(null)) return { this = Node.init; return this; }
 
     private:
@@ -1968,22 +1982,16 @@ struct Element
     @property void id(const(char)[] value) { setAttribute("id", value); }
 
     /// All the classes of this element
-    @property auto classes()
-    {
-        import std.algorithm : map;
-        return classesView.map!(c => c.idup);
-    }
+    @property ClassRange!false classes() { return ClassRange!false(doc, classAttribute); }
 
     /// ditto, without copying
-    @property auto classesView()
-    {
-        import std.algorithm : splitter, filter;
+    @property ClassRange!true classesView() { return ClassRange!true(doc, classAttribute); }
 
+    private const(char)[] classAttribute()
+    {
         onlyValid();
         impl.ensureAttrs(raw);
-
-        auto cls = element.classAttr is null ? "" : attrValue(element.classAttr);
-        return cls.splitter!(c => c < 0x80 && isHtmlSpace(cast(char) c)).filter!(x => x.length > 0);
+        return element.classAttr is null ? "" : attrValue(element.classAttr);
     }
 
     unittest
@@ -2259,10 +2267,10 @@ struct Element
         return this;
     }
 
-    ///
+    /// `element = null` makes it an invalid element (it releases its document)
     ref Element opAssign(typeof(null)) return { this = Element.init; return this; }
 
-    ///
+    /// Copies refer to the same element
     ref Element opAssign(Element rhs) return
     {
         node = rhs.node;
@@ -2383,6 +2391,56 @@ struct AttributeRange(bool view)
 }
 
 
+/// A range of the classes of an element (`classes`, `classesView`). It keeps the document alive.
+struct ClassRange(bool view)
+{
+    ///
+    @property bool empty() const @safe nothrow pure @nogc { return rest.length == 0; }
+
+    ///
+    @property auto front() const
+    {
+        static if (view) return rest[0 .. end];
+        else return rest[0 .. end].idup;
+    }
+
+    ///
+    void popFront() { rest = rest[end .. $]; skipSpaces(); }
+
+    ///
+    @property ClassRange save() { return this; }
+
+    private:
+    Document doc;
+    const(char)[] rest;     // from the front class on
+    size_t end;             // the length of the front class
+
+    this(Document doc, const(char)[] classes) { this.doc = doc; rest = classes; skipSpaces(); }
+
+    // The classes are separated by html spaces (all ASCII: a byte of a multibyte char is never one)
+    void skipSpaces() @safe nothrow pure @nogc
+    {
+        while (rest.length && isHtmlSpace(rest[0])) rest = rest[1 .. $];
+        end = 0;
+        while (end < rest.length && !isHtmlSpace(rest[end])) end++;
+    }
+}
+
+unittest
+{
+    import std.array : array;
+    Document doc = "<p class=\"  a\tbè \n\fc\u00a0d  \">";
+    auto p = doc.byTagName("p").front;
+    assert(p.classes.array == ["a", "bè", "c\u00a0d"]);    // U+00A0 is not an html space
+    assert(p.classesView.array == ["a", "bè", "c\u00a0d"]);
+    auto r = p.classes;
+    auto copy = r.save;
+    r.popFront();
+    assert(copy.front == "a" && r.front == "bè");
+    assert(doc.createElement("p").classes.empty);
+}
+
+
 /++ A compiled css selector. It can be used with any document, many times.
 + ---
 + auto sel = Selector("div > a[href]");
@@ -2426,7 +2484,7 @@ struct Selector
         owner = null;
     }
 
-    ///
+    /// Copies share the same compiled selector
     ref Selector opAssign(Selector rhs) return
     {
         import std.algorithm.mutation : swap;
@@ -2976,7 +3034,7 @@ struct NodeRange(Filter, Show show)
     }
 }
 
-// The result of a navigation with this filter: `Element` only for elements
+/// The result of a navigation with the filter `show`: `Element` for `Show.Element`, else `Node`
 template NodeOf(Show show)
 {
     static if (show == Show.Element) alias NodeOf = Element;
@@ -2984,7 +3042,7 @@ template NodeOf(Show show)
 }
 
 // Does the filter accept this node?
-bool shown(Show show, const(DomNode)* n) @safe nothrow pure @nogc { return ((1u << (n.type - 1)) & show) != 0; }
+private bool shown(Show show, const(DomNode)* n) @safe nothrow pure @nogc { return ((1u << (n.type - 1)) & show) != 0; }
 
 
 private:
@@ -3686,7 +3744,7 @@ bool isRootElement(const(DomNode)* n) nothrow @nogc
         && (n.name == Tag.Html || n.name == Tag.Body);
 }
 
-bool isHtmlSpace(char c) nothrow @nogc pure { return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f'; }
+bool isHtmlSpace(char c) @safe nothrow @nogc pure { return c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\f'; }
 
 // The next word of a space separated list (a class attribute) from `i`; empty at the end
 const(char)[] nextWord(return scope const(char)[] v, ref size_t i) nothrow @nogc pure

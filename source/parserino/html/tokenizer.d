@@ -16,6 +16,7 @@ import parserino.html.errors;
 
 @nogc nothrow pure @safe:
 
+/// Token types (a text token is a run of characters)
 enum TokenType : ubyte
 {
     StartTag,
@@ -27,22 +28,23 @@ enum TokenType : ubyte
     Eof,
 }
 
+/// An attribute of a tag token
 struct TokenAttribute
 {
     const(char)[] name;     /// lowercase
-    const(char)[] value;
+    const(char)[] value;    /// the value, with character references decoded
 }
 
 /// A token. Slices are valid only while the sink processes it.
 struct Token
 {
-    TokenType type;
+    TokenType type;     /// the token type
 
-    /// Tag id (interned in the document) and lowercase name, for tags
+    /// Tag id (interned in the document) and lowercase name, for tags; the name of a doctype
     uint tag;
-    const(char)[] name;
-    bool selfClosing;
-    const(TokenAttribute)[] attributes;
+    const(char)[] name;                     /// ditto
+    bool selfClosing;                       /// `<br/>`
+    const(TokenAttribute)[] attributes;     /// of a start tag, without duplicates (end tags have none)
 
     /// Text, comment or processing instruction data
     const(char)[] data;
@@ -52,23 +54,29 @@ struct Token
     /// Processing instruction target
     const(char)[] target;
 
-    /// Doctype
+    /// Doctype: the force-quirks flag
     bool forceQuirks;
-    bool hasName, hasPublicId, hasSystemId;
-    const(char)[] publicId, systemId;
+    bool hasName;               /// Doctype: is there a name, a public id, a system id? (missing is not empty)
+    bool hasPublicId;           /// ditto
+    bool hasSystemId;           /// ditto
+    const(char)[] publicId;     /// Doctype identifiers
+    const(char)[] systemId;     /// ditto
 }
 
 /// The receiver of the tokens (the tree builder)
 struct TokenSink
 {
-    void* context;
+    void* context;  /// Passed to the functions
     /// Process a token. It returns false to stop (out of memory).
     bool function(void* context, ref Token token) @nogc nothrow pure @safe process;
     /// Is the adjusted current node an element not in the html namespace? (for CDATA sections)
     bool function(void* context) @nogc nothrow pure @safe inForeignContent;
 }
 
-/// States of the tokenizer (the ones the tree builder can set are `data`, `rcdata`, `rawtext`, `scriptData`, `plaintext`)
+/++ States of the tokenizer, named after the states of the standard (`BeforeAttrName` is the
+ + "before attribute name state"). The ones the tree builder can set are `Data`, `Rcdata`,
+ + `Rawtext`, `ScriptData`, `Plaintext`.
+ +/
 enum State : ubyte
 {
     Data, Rcdata, Rawtext, ScriptData, Plaintext,
@@ -97,11 +105,13 @@ enum State : ubyte
     AmbiguousAmpersand,
 }
 
+/// The tokenizer: `feed` it the input, then `finish`
 struct Tokenizer
 {
 @nogc nothrow pure @safe:
     @disable this(this);
 
+    /// Tokens go to `sink`; the tag names are interned in `document`
     this(DomDocument* document, TokenSink sink)
     {
         this.document = document;

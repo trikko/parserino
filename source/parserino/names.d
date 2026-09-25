@@ -11,13 +11,16 @@ import parserino.arena;
 
 @nogc nothrow pure @safe:
 
-/// Namespaces
+/// Namespaces. `None` is no namespace (as for most attributes); nothing uses `Any`.
 enum Ns : ubyte
 {
     None, Any, Html, Math, Svg, Xlink, Xml, Xmlns,
 }
 
-/// Known tags. Unknown tag names get ids from `Tag.Last` on.
+/++ Known tags. Unknown tag names get ids from `Tag.Last` on.
+ + The members are the names in PascalCase (`annotation-xml` is `AnnotationXml`); `Undef`
+ + (no tag), `EndOfFile` and the `...Node` members name the nodes that are not elements.
+ +/
 enum Tag : uint
 {
     Undef = 0,
@@ -640,7 +643,9 @@ immutable ubyte[Ns.max + 1][Tag.Last] tagCategories = [
     [0, 0, 2, 0, 0, 0, 0, 0],
 ];
 
-/// Known attributes. Unknown names get ids from `AttrName.Last` on.
+/++ Known attributes. Unknown names get ids from `AttrName.Last` on.
+ + The members are the names in PascalCase (`accept-charset` is `AcceptCharset`); `Undef` is no attribute.
+ +/
 enum AttrName : uint
 {
     Undef = 0,

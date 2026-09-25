@@ -6,6 +6,7 @@ module parserino.html.entities;
 
 @nogc nothrow pure @safe:
 
+/// A named character reference
 struct Entity
 {
     string name;    /// without '&', with the ';' when it has one
@@ -2253,7 +2254,8 @@ static immutable Entity[] entities = [
 struct EntityMatcher
 {
 @nogc nothrow pure @safe:
-    size_t lo = 0, hi = entities.length;
+    size_t lo = 0;              /// the names still possible: `entities[lo .. hi]`
+    size_t hi = entities.length;    /// ditto
     size_t depth;       /// chars seen
     size_t best = size_t.max;   /// the longest full match so far (index in `entities`)
     size_t bestLength;  /// its length

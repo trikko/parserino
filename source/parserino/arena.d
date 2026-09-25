@@ -51,6 +51,10 @@ void copyItems(T)(T* dst, T* src, size_t n) @system
     else if (n) memcpy(dst, src, n * T.sizeof);
 }
 
+/++ The bump allocator: memory comes from zeroed blocks (4 KB, doubling up to 16 KB, or bigger
+ + for a bigger allocation) that are freed all together by `release` or the destructor.
+ + An `Arena` can't be copied.
+ +/
 struct Arena
 {
 @nogc nothrow pure @safe:
@@ -173,6 +177,7 @@ struct Buffer(T)
 @nogc nothrow pure @safe:
     @disable this(this);
 
+    /// Append an item
     pragma(inline, true)
     void put(T x) @trusted
     {
@@ -207,10 +212,15 @@ struct Buffer(T)
     }
 
     // Forced inlining: these are in the hot loops of the parser
+    /// The items (a slice of the buffer: valid until the next `put`)
     pragma(inline, true) inout(T)[] opSlice() inout { return data[0 .. length_]; }
+    /// The item at index `i`
     pragma(inline, true) ref inout(T) opIndex(size_t i) inout { return data[i]; }
+    /// Number of items
     pragma(inline, true) @property size_t length() const { return length_; }
+    /// Is it empty?
     pragma(inline, true) @property bool empty() const { return length_ == 0; }
+    /// Remove all the items (the memory is kept)
     pragma(inline, true) void clear() { length_ = 0; }
 
     /// Remove the last item

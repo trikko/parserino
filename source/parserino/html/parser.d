@@ -18,8 +18,8 @@ struct Parser
 @nogc nothrow pure @safe:
     @disable this(this);
 
-    TreeBuilder tree;
-    Tokenizer tokenizer;
+    TreeBuilder tree;       /// The tree construction
+    Tokenizer tokenizer;    /// The tokenizer (it feeds `tree`)
 
     /// Start parsing `doc` (an empty document)
     void begin(DomDocument* doc)
@@ -87,6 +87,7 @@ Parser* newParser() @trusted
     return p;
 }
 
+/// Free a parser made by `newParser`
 void freeParser(Parser* p) @trusted
 {
     import core.memory : pureFree;
