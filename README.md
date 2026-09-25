@@ -1,12 +1,12 @@
 # parserino [![Build & Test](https://github.com/trikko/parserino/actions/workflows/d.yml/badge.svg)](https://github.com/trikko/parserino/actions/workflows/d.yml)
 * HTML5 parser and DOM editor written in pure D (tree construction derived from [Lexbor](https://github.com/lexbor/lexbor))
-* No C dependencies: no cmake, no prebuilt libraries, no DLLs
+* No 3rd-party dependencies
 * Fast parsing; lazy parsing reads only what your queries need
 * CSS selectors (Selectors 4), DOM names and behaviour (`textContent`, `before`, `children`, ...)
 * HTML parsed exactly as browsers do: it passes all the tree construction tests of the
   [web-platform-tests](https://github.com/web-platform-tests/wpt/tree/master/html/syntax/parsing)
   and the tokenizer tests of [html5lib](https://github.com/html5lib/html5lib-tests)
-* Documents parsed at compile time, for fast html templates
+* Documents can be parsed at compile time, for fast html templates
 * Safe memory management: documents are reference counted, nodes keep them alive
 * The parser core (`parserino.html`, `parserino.dom`, `parserino.css`) is `@nogc nothrow` and works with `-betterC`
 
@@ -129,54 +129,6 @@ writeln(doc.bytesParsed, " of ", page.length, " bytes parsed");   // e.g. 16384 
 The results are always the same as for a fully parsed page: elements that the parser could
 still move (in open tables, misnested tags, ...) are returned only when they are final.
 
-# templates
-
-A template is plain html, with example content, that you fill by ids and classes. With
-`ctDocument` it's parsed at compile time: at runtime each call gives a new document, without
-parsing it again.
-
-```d
-// views/card.html: <div class="card"><h2 id="name">Name</h2><p id="price">0.00</p></div>
-auto card = ctDocument!(import("card.html"));        // dub: "stringImportPaths": ["views"]
-
-card.byId("name").textContent = "Apples";
-card.byId("price").textContent = "2.50";
-writeln(card.body.innerHTML);   // <div class="card"><h2 id="name">Apples</h2><p id="price">2.50</p></div>
-```
-
-For templates known only at runtime (read from a file, a database, ...) parse them once and
-keep a `Snapshot`: `Document(snapshot)` makes a new copy much faster than parsing.
-
-```d
-auto template_ = Document(readText("card.html")).snapshot;
-
-foreach (fruit; ["Apples", "Pears"])
-{
-    auto card = Document(template_);
-    card.byId("name").textContent = fruit;
-}
-```
-
-Repeated rows: clone the first example and remove the examples.
-
-```d
-Document page = `<table><tr class="row"><td class="name">Example</td></tr></table>`;
-auto model = page.byClass("row").front;
-
-foreach (fruit; ["Apples", "Pears"])
-{
-    auto row = model.dup;
-    row.byClass("name").front.textContent = fruit;
-    model.before(row);
-}
-model.remove();
-
-assert(page.byTagName("td").map!(td => td.textContent).array == ["Apples", "Pears"]);
-```
-
-Parsing at compile time needs compiler memory and time: it's meant for templates, big pages
-make the build slower.
-
 # parsing options
 
 ```d
@@ -189,6 +141,41 @@ auto cells = doc.fragment("<td>1</td><td>2</td>", "tr");
 
 auto copy = doc.dup;            // an independent deep copy
 ```
+
+# templates: snapshots and compile time
+
+A page that is filled again and again (a template, for each request of a web server) doesn't
+need to be parsed each time. `doc.snapshot` takes a compact, immutable copy of the tree, and
+`Document(snapshot)` rebuilds from it a new, independent document, without parsing and
+much faster:
+
+```d
+immutable Snapshot page;
+shared static this() { page = Document(readText("views/page.html")).snapshot; }
+
+string render(string user)
+{
+    auto doc = Document(page);          // a fresh copy of the template: no parsing
+    doc.byId("user").textContent = user;
+    return doc.toString;
+}
+```
+
+A snapshot never changes, so it can be shared between threads, and the documents made from it
+borrow its strings instead of copying them (it stays alive as long as they need it). It's also a
+cheap way to save a document and go back to it later: `doc = Document(saved)`.
+
+`ctDocument` does the same at compile time: the html is parsed by the compiler and the snapshot
+is stored in the program, so at runtime there is no parsing at all:
+
+```d
+auto doc = ctDocument!(import("page.html"));   // needs the path of page.html in stringImportPaths (-J)
+doc.byId("user").textContent = "guest";
+```
+
+Each call returns a new document. Parsing at compile time needs compiler memory and time: some
+tens of KB take about 1 s, a 600 KB page about 1 GB and 10 s (dmd). See
+[example 05](examples/05_html_templates) for a template engine built this way.
 
 # checking the html
 
