@@ -13,7 +13,8 @@ set -e
 
 HTML5LIB_COMMIT=224991ec10db04f056a89eed8b0bd8695fd2950e
 WPT_COMMIT=d0e58242b68ca8513bb2375e2d00c147cd7481b9
-DOCS_COMMIT=2a2752c
+# A commit of the public history (CI clones with --depth 1: it's fetched if missing)
+DOCS_COMMIT=088e6614372bf6380a807740d5dfb33e2eac2d84
 
 DIR=$(cd "$(dirname "$0")" && pwd)
 ROOT=$(cd "$DIR/../.." && pwd)
@@ -47,7 +48,10 @@ fi
 
 # doc_*: the ddox pages, at a fixed commit
 if [ ! -f files/.docsdone ]; then
-    git -C "$ROOT" ls-tree -r --name-only $DOCS_COMMIT docs | grep '\.html$' | while read -r f; do
+    git -C "$ROOT" cat-file -e "$DOCS_COMMIT^{commit}" 2>/dev/null || git -C "$ROOT" fetch -q --depth 1 origin $DOCS_COMMIT
+    docs=$(git -C "$ROOT" ls-tree -r --name-only $DOCS_COMMIT docs | grep '\.html$')
+    [ -n "$docs" ] || { echo "No ddox pages at $DOCS_COMMIT" >&2; exit 1; }
+    echo "$docs" | while read -r f; do
         name=$(echo "$f" | sed 's|^docs/||; s|/|_|g')
         git -C "$ROOT" show "$DOCS_COMMIT:$f" > "files/doc_$name"
     done
