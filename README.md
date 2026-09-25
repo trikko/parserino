@@ -16,9 +16,8 @@ and the tables of names and character references are derived from lexbor and kee
 Apache 2.0 license: see `LICENSE-lexbor` and `NOTICE-lexbor`.
 
 # documentation
-* The documentation of each symbol is in the source (`source/parserino/package.d`).
-* [docs/llms-full.txt](docs/llms-full.txt): the whole API in one page, with examples; also good
-  for LLMs (Claude, Gemini, ChatGPT, ...). [docs/llms.txt](docs/llms.txt) is the short version.
+* [The API reference](https://trikko.github.io/parserino/parserino.html), generated from the
+  documentation in the source (`source/parserino/package.d`).
 * The [examples](examples) folder: hello world, searches, editing, a lazy scraper, a template engine.
 
 # using parserino with an AI agent
