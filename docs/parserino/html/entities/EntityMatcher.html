@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+		<title>Struct EntityMatcher</title>
+		<link rel="stylesheet" href="../../../css/style.min.css"/>
+		<script type="text/javascript" src="../../../js/script.min.js"></script>
+	</head>
+	<body onload="setupDdox();">
+		<header></header>
+		<nav id="main-nav">
+			<div>
+				<noscript>
+					<p style="color: red">The search functionality needs JavaScript enabled</p>
+				</noscript>
+				<div id="symbolSearchPane" style="display: none">
+					<form action="#" method="GET">
+						<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(24);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" autofocus/>
+					</form>
+					<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../../../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../../../";
+document.getElementById('symbolSearchPane').style.display = 'block';</script>
+				</div>
+				<ul class="tree-view">
+					<li class="tree-view ">
+						<a class="package" href="#">parserino</a>
+				<ul class="tree-view">
+					<li class="tree-view collapsed">
+						<a class="package" href="#">css</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../../../parserino/css/matcher.html">matcher</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/css/selector.html">selector</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/css/tokenizer.html">tokenizer</a>
+					</li>
+				</ul>
+					</li>
+					<li class="tree-view ">
+						<a class="package" href="#">html</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../../../parserino/html/decoder.html">decoder</a>
+					</li>
+					<li>
+						<a class="module selected" href="../../../parserino/html/entities.html">entities</a>
+				<ul class="tree-view">
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Variable))" href="../../../parserino/html/entities/entities.html">entities</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../../parserino/html/entities/Entity.html">Entity</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../../parserino/html/entities/EntityMatcher.html">EntityMatcher</a>
+				</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/html/errors.html">errors</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/html/parser.html">parser</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/html/serializer.html">serializer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/html/tokenizer.html">tokenizer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/html/treebuilder.html">treebuilder</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/arena.html">arena</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/dom.html">dom</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/encoding.html">encoding</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/names.html">names</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/snapshot.html">snapshot</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino.html">parserino</a>
+					</li>
+				</ul>
+			</div>
+			<p id="main-nav-footer">
+				Built with<a href="https://github.com/MartinNowak/scod">scod</a>
+			</p>
+		</nav>
+		<div id="main-contents">
+			<div>
+				<h1>Struct EntityMatcher</h1><p>Incremental matching of a name, one char at a time: <code class="lang-d"><a href="../../../parserino/html/entities/entities.html"><span class="pln">entities</span></a><span class="pun">[<a href="../../../parserino/html/entities/EntityMatcher.lo.html"></span><span class="pln">lo</span></a><span class="pln"> </span><span class="pun">.. <a href="../../../parserino/html/entities/EntityMatcher.hi.html"></span><span class="pln">hi</span></a><span class="pun">]</span></code> are the
+ names starting with the chars seen so far. It works across input chunks.
+</p>
+				<div class="prototype">
+					<code class="lang-d">
+						<div class="single-prototype">
+				<span class="kwd">struct</span> <span class="typ">EntityMatcher</span><span class="pun">;</span>
+						</div>
+					</code>
+				</div>
+				
+				<section><h2>Fields</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Type</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/entities/EntityMatcher.best.html" class="public"><code>best</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">ulong</span></code></td><td>the longest full match so far (index in <code class="lang-d"><a href="../../../parserino/html/entities/entities.html"><span class="pln">entities</span></a></code>)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/entities/EntityMatcher.bestLength.html" class="public"><code>bestLength</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">ulong</span></code></td><td>its length
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/entities/EntityMatcher.depth.html" class="public"><code>depth</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">ulong</span></code></td><td>chars seen
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/entities/EntityMatcher.hi.html" class="public"><code>hi</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">ulong</span></code></td><td>the names still possible: <code class="lang-d"><a href="../../../parserino/html/entities/entities.html"><span class="pln">entities</span></a><span class="pun">[<a href="../../../parserino/html/entities/EntityMatcher.lo.html"></span><span class="pln">lo</span></a><span class="pln"> </span><span class="pun">.. </span><span class="pln">hi</span><span class="pun">]</span></code>
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/entities/EntityMatcher.lo.html" class="public"><code>lo</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">ulong</span></code></td><td>the names still possible: <code class="lang-d"><a href="../../../parserino/html/entities/entities.html"><span class="pln">entities</span></a><span class="pun">[</span><span class="pln">lo </span><span class="pun">.. <a href="../../../parserino/html/entities/EntityMatcher.hi.html"></span><span class="pln">hi</span></a><span class="pun">]</span></code>
+</td>
+						</tr>
+					</table>
+				</section>
+				<section><h2>Methods</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/entities/EntityMatcher.put.html" class="public">
+									<code>put</code>
+								</a>
+								<span class="tableEntryAnnotation">(c)</span>
+							</td>
+							<td>Feed one char. It returns false when no name can match anymore.
+</td>
+						</tr>
+					</table>
+				</section><section><h2>Example</h2>
+
+<pre class="code"><code class="lang-d"><span class="typ">EntityMatcher </span><span class="pln">m</span><span class="pun">;
+</span><span class="kwd">foreach </span><span class="pun">(</span><span class="typ">char </span><span class="pln">c</span><span class="pun">; </span><span class="str">"notin;"</span><span class="pun">) </span><span class="kwd">if </span><span class="pun">(!</span><span class="pln">m<wbr/></span><span class="pun">.</span><span class="pln">put</span><span class="pun">(</span><span class="pln">c</span><span class="pun">)) </span><span class="kwd">break</span><span class="pun">;
+</span><span class="kwd">assert</span><span class="pun">(<a href="../../../parserino/html/entities/entities.html"></span><span class="pln">entities</span></a><span class="pun">[</span><span class="pln">m<wbr/></span><span class="pun">.</span><span class="pln">best</span><span class="pun">]<wbr/>.</span><span class="pln">name </span><span class="pun">== </span><span class="str">"notin;"</span><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(<a href="../../../parserino/html/entities/entities.html"></span><span class="pln">entities</span></a><span class="pun">[</span><span class="pln">m<wbr/></span><span class="pun">.</span><span class="pln">best</span><span class="pun">]<wbr/>.</span><span class="pln">value </span><span class="pun">== </span><span class="str">"\u2209"</span><span class="pun">);
+
+</span><span class="typ">EntityMatcher </span><span class="pln">m2</span><span class="pun">;
+</span><span class="kwd">foreach </span><span class="pun">(</span><span class="typ">char </span><span class="pln">c</span><span class="pun">; </span><span class="str">"notit;"</span><span class="pun">) </span><span class="kwd">if </span><span class="pun">(!</span><span class="pln">m2<wbr/></span><span class="pun">.</span><span class="pln">put</span><span class="pun">(</span><span class="pln">c</span><span class="pun">)) </span><span class="kwd">break</span><span class="pun">;
+</span><span class="kwd">assert</span><span class="pun">(<a href="../../../parserino/html/entities/entities.html"></span><span class="pln">entities</span></a><span class="pun">[</span><span class="pln">m2<wbr/></span><span class="pun">.</span><span class="pln">best</span><span class="pun">]<wbr/>.</span><span class="pln">name </span><span class="pun">== </span><span class="str">"not"</span><span class="pun">);
+</span></code></pre>
+</section>
+
+			</div>
+			<footer>
+				<div id="license-info">
+					
+				</div>
+			</footer>
+		</div>
+	</body>
+</html>

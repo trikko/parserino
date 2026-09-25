@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+		<title>Function ctDocument</title>
+		<link rel="stylesheet" href="../css/style.min.css"/>
+		<script type="text/javascript" src="../js/script.min.js"></script>
+	</head>
+	<body onload="setupDdox();">
+		<header></header>
+		<nav id="main-nav">
+			<div>
+				<noscript>
+					<p style="color: red">The search functionality needs JavaScript enabled</p>
+				</noscript>
+				<div id="symbolSearchPane" style="display: none">
+					<form action="#" method="GET">
+						<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(24);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" autofocus/>
+					</form>
+					<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../";
+document.getElementById('symbolSearchPane').style.display = 'block';</script>
+				</div>
+				<ul class="tree-view">
+					<li class="tree-view ">
+						<a class="package" href="#">parserino</a>
+				<ul class="tree-view">
+					<li class="tree-view collapsed">
+						<a class="package" href="#">css</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../parserino/css/matcher.html">matcher</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/css/selector.html">selector</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/css/tokenizer.html">tokenizer</a>
+					</li>
+				</ul>
+					</li>
+					<li class="tree-view collapsed">
+						<a class="package" href="#">html</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../parserino/html/decoder.html">decoder</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/html/entities.html">entities</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/html/errors.html">errors</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/html/parser.html">parser</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/html/serializer.html">serializer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/html/tokenizer.html">tokenizer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/html/treebuilder.html">treebuilder</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/arena.html">arena</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/dom.html">dom</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/encoding.html">encoding</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/names.html">names</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/snapshot.html">snapshot</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module selected" href="../parserino.html">parserino</a>
+				<ul class="tree-view">
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../parserino/asFragment.html">asFragment</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/AttributeRange.html">AttributeRange</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/ClassRange.html">ClassRange</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../parserino/ctDocument.html">ctDocument</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../parserino/ctSelector.html">ctSelector</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(EnumMember))" href="../parserino/DefaultChunkSize.html">DefaultChunkSize</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/Document.html">Document</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/Element.html">Element</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../parserino/frontOr.html">frontOr</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../parserino/frontOrInit.html">frontOrInit</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../parserino/frontOrThrow.html">frontOrThrow</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../parserino/isValidSelector.html">isValidSelector</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/Node.html">Node</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Alias))" href="../parserino/NodeOf.html">NodeOf</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/NodeRange.html">NodeRange</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/ParseError.html">ParseError</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/ParseOptions.html">ParseOptions</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Class))" href="../parserino/ParserinoException.html">ParserinoException</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../parserino/Parsing.html">Parsing</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/Selector.html">Selector</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../parserino/Show.html">Show</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/Snapshot.html">Snapshot</a>
+				</li>
+				</ul>
+					</li>
+				</ul>
+			</div>
+			<p id="main-nav-footer">
+				Built with<a href="https://github.com/MartinNowak/scod">scod</a>
+			</p>
+		</nav>
+		<div id="main-contents">
+			<div>
+				<h1>Function ctDocument</h1><p>A document parsed at compile time.
+ The compiler parses <code class="lang-d"><span class="pln">html</span></code> once and stores the tree in the executable. At runtime each call
+ returns a new document (mutable, independent from the others) copied from that tree, without
+ tokenizing or building it again.
+</p>
+				<div class="prototype">
+					<code class="lang-d">
+						<div class="single-prototype"><a href="../parserino/Document.html"><span class="typ">Document</span></a> <span class="pln">ctDocument</span>(<span class="typ">string</span> html, <a href="../parserino/ParseOptions.html"><span class="typ">ParseOptions</span></a> options<span class="pln"> </span><span class="pun">= </span><span class="typ">ParseOptions<wbr/></span><span class="pun">.</span><span class="pln">init</span>)<span class="pun">(</span><span class="pun">)</span><span class="pun">;</span>
+						</div>
+					</code>
+				</div>
+				<section><pre class="code"><code class="lang-d"><span class="kwd">auto </span><span class="pln">page </span><span class="pun">= </span><span class="pln">ctDocument</span><span class="pun">!(</span><span class="kwd">import</span><span class="pun">(</span><span class="str">"page.html"</span><span class="pun">));   </span><span class="com">// needs -J with the path of page.html
+</span><span class="pln">page<wbr/></span><span class="pun">.</span><span class="pln">byId</span><span class="pun">(</span><span class="str">"title"</span><span class="pun">)<wbr/>.</span><span class="pln">textContent </span><span class="pun">= </span><span class="str">"Hello"</span><span class="pun">;</span></code></pre>
+<p> With <code class="lang-d"><span class="pln">options<wbr/></span><span class="pun">.</span><span class="pln">collectErrors</span></code> the html is validated at compile time: any parse error is a
+ compile error that lists them. The other options don't matter here.
+</p>
+<pre class="code"><code class="lang-d"><span class="kwd">enum <a href="../parserino/ParseOptions.html"></span><span class="typ">ParseOptions</span></a><span class="pln"> strict </span><span class="pun">= { </span><span class="pln">collectErrors</span><span class="pun">: </span><span class="kwd">true </span><span class="pun">};
+</span><span class="kwd">auto </span><span class="pln">page </span><span class="pun">= </span><span class="pln">ctDocument</span><span class="pun">!(</span><span class="kwd">import</span><span class="pun">(</span><span class="str">"page.html"</span><span class="pun">), </span><span class="pln">strict</span><span class="pun">);   </span><span class="com">// doesn't compile if page.html is not valid html</span></code></pre>
+<p> CTFE needs compiler memory and time: some tens of KB take about 1 s, a 600 KB page about
+ 1 GB and 10 s (dmd).
+</p>
+</section>
+<section><h2>Example</h2>
+
+<pre class="code"><code class="lang-d"><span class="kwd">import </span><span class="pln">std<wbr/></span><span class="pun">.</span><span class="pln">array </span><span class="pun">: </span><span class="pln">replicate</span><span class="pun">;
+
+</span><span class="kwd">enum </span><span class="pln">html </span><span class="pun">= </span><span class="str">"&lt;!DOCTYPE html&gt;&lt;title&gt;Hi&lt;/title&gt;&lt;p class=a&gt;Hello &lt;b&gt;world&lt;/p&gt;!&lt;table&gt;&lt;td&gt;x"</span><span class="pun">;
+
+</span><span class="kwd">auto </span><span class="pln">doc </span><span class="pun">= </span><span class="pln">ctDocument</span><span class="pun">!</span><span class="pln">html</span><span class="pun">;
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">doc<wbr/></span><span class="pun">.</span><span class="pln">toString </span><span class="pun">== <a href="../parserino/Document.html"></span><span class="typ">Document</span></a><span class="pun">(</span><span class="pln">html</span><span class="pun">)<wbr/>.</span><span class="pln">toString</span><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">doc<wbr/></span><span class="pun">.</span><span class="pln">title </span><span class="pun">== </span><span class="str">"Hi"</span><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">doc<wbr/></span><span class="pun">.</span><span class="pln">body<wbr/></span><span class="pun">.</span><span class="pln">firstChild</span><span class="pun">!(<a href="../parserino/Show.html#All"></span><span class="typ">Show<wbr/></span><span class="pun">.</span><span class="typ">All</span></a><span class="pun">)<wbr/>.</span><span class="pln">textContent </span><span class="pun">== </span><span class="str">"Hello world"</span><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">doc<wbr/></span><span class="pun">.</span><span class="pln">bySelector</span><span class="pun">!</span><span class="str">"td"<wbr/></span><span class="pun">.</span><span class="pln">front<wbr/></span><span class="pun">.</span><span class="pln">textContent </span><span class="pun">== </span><span class="str">"x"</span><span class="pun">);
+
+</span><span class="com">// Each call returns a new document
+</span><span class="pln">doc<wbr/></span><span class="pun">.</span><span class="pln">body<wbr/></span><span class="pun">.</span><span class="pln">innerHTML </span><span class="pun">= </span><span class="str">"changed"</span><span class="pun">;
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">ctDocument</span><span class="pun">!</span><span class="pln">html<wbr/></span><span class="pun">.</span><span class="pln">body<wbr/></span><span class="pun">.</span><span class="pln">innerHTML </span><span class="pun">!= </span><span class="str">"changed"</span><span class="pun">);
+
+</span><span class="kwd">enum <a href="../parserino/ParseOptions.html"></span><span class="typ">ParseOptions</span></a><span class="pln"> scripting </span><span class="pun">= { </span><span class="pln">scripting</span><span class="pun">: </span><span class="kwd">true </span><span class="pun">};
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">ctDocument</span><span class="pun">!(</span><span class="str">"&lt;noscript&gt;&lt;p&gt;x&lt;/p&gt;&lt;/noscript&gt;"</span><span class="pun">, </span><span class="pln">scripting</span><span class="pun">)<wbr/>.</span><span class="pln">byTagName</span><span class="pun">(</span><span class="str">"p"</span><span class="pun">)<wbr/>.</span><span class="pln">empty</span><span class="pun">);
+
+</span><span class="com">// Deep trees at compile time
+</span><span class="kwd">enum </span><span class="pln">nested </span><span class="pun">= </span><span class="str">"&lt;div&gt;"<wbr/></span><span class="pun">.</span><span class="pln">replicate</span><span class="pun">(</span><span class="lit">40</span><span class="pun">) ~ </span><span class="str">"&lt;b&gt;&lt;i&gt;&lt;u&gt;&lt;s&gt;x"</span><span class="pun">;
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">ctDocument</span><span class="pun">!</span><span class="pln">nested<wbr/></span><span class="pun">.</span><span class="pln">toString </span><span class="pun">== <a href="../parserino/Document.html"></span><span class="typ">Document</span></a><span class="pun">(</span><span class="pln">nested</span><span class="pun">)<wbr/>.</span><span class="pln">toString</span><span class="pun">);
+
+</span><span class="com">// Validated at compile time
+</span><span class="kwd">enum <a href="../parserino/ParseOptions.html"></span><span class="typ">ParseOptions</span></a><span class="pln"> strict </span><span class="pun">= { </span><span class="pln">collectErrors</span><span class="pun">: </span><span class="kwd">true </span><span class="pun">};
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">ctDocument</span><span class="pun">!(</span><span class="str">"&lt;!DOCTYPE html&gt;&lt;title&gt;ok&lt;/title&gt;&lt;p&gt;valid"</span><span class="pun">, </span><span class="pln">strict</span><span class="pun">)<wbr/>.</span><span class="pln">title </span><span class="pun">== </span><span class="str">"ok"</span><span class="pun">);
+</span><span class="kwd">static assert</span><span class="pun">(!</span><span class="kwd">__traits</span><span class="pun">(</span><span class="pln">compiles</span><span class="pun">, </span><span class="pln">ctDocument</span><span class="pun">!(</span><span class="str">"&lt;!DOCTYPE html&gt;&lt;p&gt;x&lt;/b&gt;"</span><span class="pun">, </span><span class="pln">strict</span><span class="pun">)));
+</span></code></pre>
+</section>
+
+			</div>
+			<footer>
+				<div id="license-info">
+					
+				</div>
+			</footer>
+		</div>
+	</body>
+</html>

@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+		<title>Struct DomAttribute</title>
+		<link rel="stylesheet" href="../../css/style.min.css"/>
+		<script type="text/javascript" src="../../js/script.min.js"></script>
+	</head>
+	<body onload="setupDdox();">
+		<header></header>
+		<nav id="main-nav">
+			<div>
+				<noscript>
+					<p style="color: red">The search functionality needs JavaScript enabled</p>
+				</noscript>
+				<div id="symbolSearchPane" style="display: none">
+					<form action="#" method="GET">
+						<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(24);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" autofocus/>
+					</form>
+					<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../../";
+document.getElementById('symbolSearchPane').style.display = 'block';</script>
+				</div>
+				<ul class="tree-view">
+					<li class="tree-view ">
+						<a class="package" href="#">parserino</a>
+				<ul class="tree-view">
+					<li class="tree-view collapsed">
+						<a class="package" href="#">css</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../../parserino/css/matcher.html">matcher</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/css/selector.html">selector</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/css/tokenizer.html">tokenizer</a>
+					</li>
+				</ul>
+					</li>
+					<li class="tree-view collapsed">
+						<a class="package" href="#">html</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../../parserino/html/decoder.html">decoder</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/entities.html">entities</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/errors.html">errors</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/parser.html">parser</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/serializer.html">serializer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/tokenizer.html">tokenizer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/treebuilder.html">treebuilder</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/arena.html">arena</a>
+					</li>
+					<li>
+						<a class="module selected" href="../../parserino/dom.html">dom</a>
+				<ul class="tree-view">
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../parserino/dom/CompatMode.html">CompatMode</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/dom/DomAttribute.html">DomAttribute</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/dom/DomCharacterData.html">DomCharacterData</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/dom/DomDocument.html">DomDocument</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/dom/DomDocumentFragment.html">DomDocumentFragment</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/dom/DomDocumentType.html">DomDocumentType</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/dom/DomElement.html">DomElement</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/dom/DomNode.html">DomNode</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../parserino/dom/NodeType.html">NodeType</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../../parserino/dom/textContent.html">textContent</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../../parserino/dom/toLower.html">toLower</a>
+				</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/encoding.html">encoding</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/names.html">names</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/snapshot.html">snapshot</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino.html">parserino</a>
+					</li>
+				</ul>
+			</div>
+			<p id="main-nav-footer">
+				Built with<a href="https://github.com/MartinNowak/scod">scod</a>
+			</p>
+		</nav>
+		<div id="main-contents">
+			<div>
+				<h1>Struct DomAttribute</h1><p>An attribute
+</p>
+				<div class="prototype">
+					<code class="lang-d">
+						<div class="single-prototype">
+				<span class="kwd">struct</span> <span class="typ">DomAttribute</span><span class="pun">;</span>
+						</div>
+					</code>
+				</div>
+				
+				<section><h2>Fields</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Type</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomAttribute.name.html" class="public"><code>name</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">uint</span></code></td><td>Local name, lowercase (an <code class="lang-d"><span class="typ">AttrName</span></code> or an id from the document names)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomAttribute.next.html" class="public"><code>next</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../../parserino/dom/DomAttribute.html"><span class="typ">DomAttribute</span></a><span class="pun">*</span></code></td><td>Next attribute of the element
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomAttribute.ns.html" class="public"><code>ns</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../../parserino/names/Ns.html"><span class="typ">Ns</span></a></code></td><td><code class="lang-d"><span class="typ">Ns<wbr/></span><span class="pun">.</span><span class="typ">None</span></code> for most attributes; <code class="lang-d"><span class="typ">Xlink</span></code>, <code class="lang-d"><span class="typ">Xml</span></code>, <code class="lang-d"><span class="typ">Xmlns</span></code> for some attributes of foreign elements
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomAttribute.owner.html" class="public"><code>owner</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../../parserino/dom/DomElement.html"><span class="typ">DomElement</span></a><span class="pun">*</span></code></td><td>The element of the attribute (set when it is appended)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomAttribute.prev.html" class="public"><code>prev</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../../parserino/dom/DomAttribute.html"><span class="typ">DomAttribute</span></a><span class="pun">*</span></code></td><td>Previous attribute of the element
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomAttribute.qualifiedName.html" class="public"><code>qualifiedName</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="kwd">const</span><span class="pun">(</span><span class="typ">char</span><span class="pun">)</span><span class="pun">[]</span></code></td><td>The name to serialize, when it differs from the local name (<code class="lang-d"><span class="pln">xlink</span><span class="pun">:</span><span class="pln">href</span></code>, <code class="lang-d"><span class="pln">viewBox</span></code>), else null
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomAttribute.value.html" class="public"><code>value</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="kwd">const</span><span class="pun">(</span><span class="typ">char</span><span class="pun">)</span><span class="pun">[]</span></code></td><td>The value
+</td>
+						</tr>
+					</table>
+				</section>
+				<section><h2>Methods</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomAttribute.fullName.html" class="public">
+									<code>fullName</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>The full name: <code class="lang-d"><span class="pln">xlink</span><span class="pun">:</span><span class="pln">href</span></code>, <code class="lang-d"><span class="pln">viewBox</span></code>, <code class="lang-d"><span class="kwd">class</span></code>
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomAttribute.localName.html" class="public">
+									<code>localName</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>The local name
+</td>
+						</tr>
+					</table>
+				</section>
+			</div>
+			<footer>
+				<div id="license-info">
+					
+				</div>
+			</footer>
+		</div>
+	</body>
+</html>

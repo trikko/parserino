@@ -21,6 +21,43 @@ Apache 2.0 license: see `LICENSE-lexbor` and `NOTICE-lexbor`.
   for LLMs (Claude, Gemini, ChatGPT, ...). [docs/llms.txt](docs/llms.txt) is the short version.
 * The [examples](examples) folder: hello world, searches, editing, a lazy scraper, a template engine.
 
+# using parserino with an AI agent
+
+Parserino is rare in the training data of the models, and its API changed with 1.0: a model left
+to guess writes old or invented code. Give it the reference instead:
+
+* [SKILL.md](https://trikko.github.io/parserino/SKILL.md): the rules that are easiest to get
+  wrong, as a skill. [AGENTS.md](https://trikko.github.io/parserino/AGENTS.md) is the same text
+  without the front matter, for tools that want a rules file (`AGENTS.md`, `CLAUDE.md`, `.cursorrules`, ...).
+* [llms-full.txt](https://trikko.github.io/parserino/llms-full.txt): the whole API;
+  [llms.txt](https://trikko.github.io/parserino/llms.txt): a short overview.
+
+The easiest way: ask your agent to do it.
+
+> Install the skill at https://trikko.github.io/parserino/SKILL.md. It is the reference for
+> parserino, the D html parser I am using.
+
+Or by hand: a skill is a folder with `SKILL.md` in it (`llms-full.txt` next to it saves a download).
+
+| Tool | For all projects | For one project |
+|---|---|---|
+| Claude Code | `~/.claude/skills/parserino/` | `.claude/skills/parserino/` |
+| Antigravity (IDE, 2.0) | `~/.gemini/config/skills/parserino/` | `.agents/skills/parserino/` |
+| Antigravity CLI | `~/.gemini/antigravity-cli/skills/parserino/` | `.agents/skills/parserino/` |
+| Gemini CLI | `~/.gemini/skills/parserino/` | `.gemini/skills/parserino/` |
+| Codex | `~/.agents/skills/parserino/` | `.agents/skills/parserino/` |
+
+For example, for Claude Code:
+
+```sh
+mkdir -p ~/.claude/skills/parserino && cd ~/.claude/skills/parserino
+curl -fsSLO https://trikko.github.io/parserino/SKILL.md
+curl -fsSLO https://trikko.github.io/parserino/llms-full.txt
+```
+
+The skill is loaded when the task is about parserino or html in D; in Claude Code you can also
+call it with `/parserino`.
+
 # how it works
 
 Parse a page and take what you need from it:

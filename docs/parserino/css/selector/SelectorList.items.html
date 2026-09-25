@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+		<title>Variable SelectorList.items</title>
+		<link rel="stylesheet" href="../../../css/style.min.css"/>
+		<script type="text/javascript" src="../../../js/script.min.js"></script>
+	</head>
+	<body onload="setupDdox();">
+		<header></header>
+		<nav id="main-nav">
+			<div>
+				<noscript>
+					<p style="color: red">The search functionality needs JavaScript enabled</p>
+				</noscript>
+				<div id="symbolSearchPane" style="display: none">
+					<form action="#" method="GET">
+						<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(24);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" autofocus/>
+					</form>
+					<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../../../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../../../";
+document.getElementById('symbolSearchPane').style.display = 'block';</script>
+				</div>
+				<ul class="tree-view">
+					<li class="tree-view ">
+						<a class="package" href="#">parserino</a>
+				<ul class="tree-view">
+					<li class="tree-view ">
+						<a class="package" href="#">css</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../../../parserino/css/matcher.html">matcher</a>
+					</li>
+					<li>
+						<a class="module selected" href="../../../parserino/css/selector.html">selector</a>
+				<ul class="tree-view">
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../../parserino/css/selector/AttrCase.html">AttrCase</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../../parserino/css/selector/AttrMatch.html">AttrMatch</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../../parserino/css/selector/Combinator.html">Combinator</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../../parserino/css/selector/Complex.html">Complex</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../../parserino/css/selector/Compound.html">Compound</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../../parserino/css/selector/NsMatch.html">NsMatch</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../../../parserino/css/selector/parseSelector.html">parseSelector</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../../parserino/css/selector/PseudoClass.html">PseudoClass</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../../parserino/css/selector/SelectorList.html">SelectorList</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../../parserino/css/selector/Simple.html">Simple</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../../parserino/css/selector/SimpleKind.html">SimpleKind</a>
+				</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/css/tokenizer.html">tokenizer</a>
+					</li>
+				</ul>
+					</li>
+					<li class="tree-view collapsed">
+						<a class="package" href="#">html</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../../../parserino/html/decoder.html">decoder</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/html/entities.html">entities</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/html/errors.html">errors</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/html/parser.html">parser</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/html/serializer.html">serializer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/html/tokenizer.html">tokenizer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/html/treebuilder.html">treebuilder</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/arena.html">arena</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/dom.html">dom</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/encoding.html">encoding</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/names.html">names</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/snapshot.html">snapshot</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino.html">parserino</a>
+					</li>
+				</ul>
+			</div>
+			<p id="main-nav-footer">
+				Built with<a href="https://github.com/MartinNowak/scod">scod</a>
+			</p>
+		</nav>
+		<div id="main-contents">
+			<div>
+				<h1>Variable SelectorList.items</h1><p>the complex selectors
+</p>
+				<div class="prototype">
+					<code class="lang-d">
+						<div class="single-prototype">
+				<span class="kwd">struct</span> <a href="../../../parserino/css/selector/SelectorList.html"><span class="typ">SelectorList</span></a>
+				<br/>
+				<span class="pun">
+					{
+					<br/>
+				</span>
+				&nbsp;&nbsp;<span class="com">// ...</span>
+				<br/>
+				&nbsp;&nbsp;<span class="kwd">const</span><span class="pun">(</span><a href="../../../parserino/css/selector/Complex.html"><span class="typ">Complex</span></a><span class="pun">)</span><span class="pun">[]</span> <span class="pln">items</span><span class="pun">;</span>
+				<br/>
+				&nbsp;&nbsp;<span class="com">// ...</span>
+				<br/>
+				<span class="pun">}</span>
+						</div>
+					</code>
+				</div>
+				
+			</div>
+			<footer>
+				<div id="license-info">
+					
+				</div>
+			</footer>
+		</div>
+	</body>
+</html>

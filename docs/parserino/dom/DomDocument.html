@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+		<title>Struct DomDocument</title>
+		<link rel="stylesheet" href="../../css/style.min.css"/>
+		<script type="text/javascript" src="../../js/script.min.js"></script>
+	</head>
+	<body onload="setupDdox();">
+		<header></header>
+		<nav id="main-nav">
+			<div>
+				<noscript>
+					<p style="color: red">The search functionality needs JavaScript enabled</p>
+				</noscript>
+				<div id="symbolSearchPane" style="display: none">
+					<form action="#" method="GET">
+						<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(24);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" autofocus/>
+					</form>
+					<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../../";
+document.getElementById('symbolSearchPane').style.display = 'block';</script>
+				</div>
+				<ul class="tree-view">
+					<li class="tree-view ">
+						<a class="package" href="#">parserino</a>
+				<ul class="tree-view">
+					<li class="tree-view collapsed">
+						<a class="package" href="#">css</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../../parserino/css/matcher.html">matcher</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/css/selector.html">selector</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/css/tokenizer.html">tokenizer</a>
+					</li>
+				</ul>
+					</li>
+					<li class="tree-view collapsed">
+						<a class="package" href="#">html</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../../parserino/html/decoder.html">decoder</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/entities.html">entities</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/errors.html">errors</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/parser.html">parser</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/serializer.html">serializer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/tokenizer.html">tokenizer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/treebuilder.html">treebuilder</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/arena.html">arena</a>
+					</li>
+					<li>
+						<a class="module selected" href="../../parserino/dom.html">dom</a>
+				<ul class="tree-view">
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../parserino/dom/CompatMode.html">CompatMode</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/dom/DomAttribute.html">DomAttribute</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/dom/DomCharacterData.html">DomCharacterData</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/dom/DomDocument.html">DomDocument</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/dom/DomDocumentFragment.html">DomDocumentFragment</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/dom/DomDocumentType.html">DomDocumentType</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/dom/DomElement.html">DomElement</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/dom/DomNode.html">DomNode</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../parserino/dom/NodeType.html">NodeType</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../../parserino/dom/textContent.html">textContent</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../../parserino/dom/toLower.html">toLower</a>
+				</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/encoding.html">encoding</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/names.html">names</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/snapshot.html">snapshot</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino.html">parserino</a>
+					</li>
+				</ul>
+			</div>
+			<p id="main-nav-footer">
+				Built with<a href="https://github.com/MartinNowak/scod">scod</a>
+			</p>
+		</nav>
+		<div id="main-contents">
+			<div>
+				<h1>Struct DomDocument</h1><p>The document: it owns the memory of all its nodes (and the names it meets). It can't be
+</p>
+				<div class="prototype">
+					<code class="lang-d">
+						<div class="single-prototype">
+				<span class="kwd">struct</span> <span class="typ">DomDocument</span><span class="pun">;</span>
+						</div>
+					</code>
+				</div>
+				
+				<section><h2>Fields</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Type</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomDocument.arena.html" class="public"><code>arena</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../../parserino/arena/Arena.html"><span class="typ">Arena</span></a></code></td><td>The memory of the nodes, attributes and strings
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomDocument.compatMode.html" class="public"><code>compatMode</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../../parserino/dom/CompatMode.html"><span class="typ">CompatMode</span></a></code></td><td>The quirks mode
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomDocument.doctype.html" class="public"><code>doctype</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../../parserino/dom/DomDocumentType.html"><span class="typ">DomDocumentType</span></a><span class="pun">*</span></code></td><td>The doctype, or null
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomDocument.node.html" class="public"><code>node</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../../parserino/dom/DomNode.html"><span class="typ">DomNode</span></a></code></td><td>The common part (<code class="lang-d"><span class="kwd">alias this</span></code>)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomDocument.scripting.html" class="public"><code>scripting</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">bool</span></code></td><td>Parsed as with scripting enabled (<code class="lang-d"><span class="pun">&lt;</span><span class="pln">noscript</span><span class="pun">&gt;</span></code> is raw text)
+</td>
+						</tr>
+					</table>
+				</section>
+				<section><h2>Methods</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomDocument.attrId.html" class="public">
+									<code>attrId</code>
+								</a>
+								<span class="tableEntryAnnotation">(lowerName)</span>
+							</td>
+							<td>Attribute id of a lowercase name, adding it if unknown. 0 if out of memory.
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomDocument.attrName.html" class="public">
+									<code>attrName</code>
+								</a>
+								<span class="tableEntryAnnotation">(id)</span>
+							</td>
+							<td>The name of an attribute id
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomDocument.body.html" class="public">
+									<code>body</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>The <code class="lang-d"><span class="pun">&lt;</span><span class="pln">body</span><span class="pun">&gt;</span></code>: the first <code class="lang-d"><span class="pln">body</span></code> or <code class="lang-d"><span class="pln">frameset</span></code> child of the <code class="lang-d"><span class="pun">&lt;</span><span class="pln">html</span><span class="pun">&gt;</span></code> root element (as in the standard)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomDocument.copy.html" class="public">
+									<code>copy</code>
+								</a>
+								<span class="tableEntryAnnotation">(s)</span>
+							</td>
+							<td>A string owned by the document
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomDocument.createAttribute.html" class="public">
+									<code>createAttribute</code>
+								</a>
+								<span class="tableEntryAnnotation">(lowerName, value, ns)</span>
+							</td>
+							<td>A new attribute (not attached). The name must be lowercase.
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomDocument.createComment.html" class="public">
+									<code>createComment</code>
+								</a>
+								<span class="tableEntryAnnotation">(data)</span>
+							</td>
+							<td>A new comment (not attached), with a copy of <code class="lang-d"><a href="../../parserino/dom/DomDocument.createComment.html#data"><span class="pln">data</span></a></code>
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomDocument.createDocumentType.html" class="public">
+									<code>createDocumentType</code>
+								</a>
+								<span class="tableEntryAnnotation">(name, publicId, systemId)</span>
+							</td>
+							<td>A new doctype (not attached)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomDocument.createElement.html" class="public">
+									<code>createElement</code>
+								</a>
+								<span class="tableEntryAnnotation">(tag, ns)</span>
+							</td>
+							<td>A new element (not attached), with an empty content for a <code class="lang-d"><span class="pun">&lt;</span><span class="kwd">template</span><span class="pun">&gt;</span></code>.
+ It returns null if out of memory, as the other <code class="lang-d"><span class="pln">create</span><span class="pun">...</span></code> functions.
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomDocument.createFragment.html" class="public">
+									<code>createFragment</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>A new empty fragment
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomDocument.createProcessingInstruction.html" class="public">
+									<code>createProcessingInstruction</code>
+								</a>
+								<span class="tableEntryAnnotation">(target, data)</span>
+							</td>
+							<td>A new processing instruction (not attached)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomDocument.createText.html" class="public">
+									<code>createText</code>
+								</a>
+								<span class="tableEntryAnnotation">(data)</span>
+							</td>
+							<td>A new text node (not attached), with a copy of <code class="lang-d"><a href="../../parserino/dom/DomDocument.createText.html#data"><span class="pln">data</span></a></code>
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomDocument.documentElement.html" class="public">
+									<code>documentElement</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>The root element (<code class="lang-d"><span class="pun">&lt;</span><span class="pln">html</span><span class="pun">&gt;</span></code>)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomDocument.findAttrName.html" class="public">
+									<code>findAttrName</code>
+								</a>
+								<span class="tableEntryAnnotation">(name)</span>
+							</td>
+							<td>Attribute id of a name (any case), 0 if the document never saw it
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomDocument.findTagName.html" class="public">
+									<code>findTagName</code>
+								</a>
+								<span class="tableEntryAnnotation">(name)</span>
+							</td>
+							<td>Tag id of a name (any case), 0 if the document never saw it
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomDocument.head.html" class="public">
+									<code>head</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>The <code class="lang-d"><span class="pun">&lt;</span><span class="pln">head</span><span class="pun">&gt;</span></code>: the first <code class="lang-d"><span class="pln">head</span></code> child of the <code class="lang-d"><span class="pun">&lt;</span><span class="pln">html</span><span class="pun">&gt;</span></code> root element (as in the standard)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomDocument.importNode.html" class="public">
+									<code>importNode</code>
+								</a>
+								<span class="tableEntryAnnotation">(src, deep)</span>
+							</td>
+							<td>A copy of <code class="lang-d"><a href="../../parserino/dom/DomDocument.importNode.html#src"><span class="pln">src</span></a></code> owned by this document. Deep: with all the descendants and the template
+ contents; else only the node (and the attributes). It returns null if out of memory.
+ The visit is iterative, so deep trees don't overflow the stack.
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomDocument.initialize.html" class="public">
+									<code>initialize</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>Initialize a document allocated by the caller (zeroed memory)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomDocument.release.html" class="public">
+									<code>release</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>Free all the memory
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomDocument.setAttribute.html" class="public">
+									<code>setAttribute</code>
+								</a>
+								<span class="tableEntryAnnotation">(e, name, value)</span>
+							</td>
+							<td>Set (or add) an attribute. The name is lowercased. It returns null if out of memory.
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomDocument.tagId.html" class="public">
+									<code>tagId</code>
+								</a>
+								<span class="tableEntryAnnotation">(lowerName)</span>
+							</td>
+							<td>Tag id of a lowercase name, adding it if unknown. 0 if out of memory.
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomDocument.tagName.html" class="public">
+									<code>tagName</code>
+								</a>
+								<span class="tableEntryAnnotation">(id)</span>
+							</td>
+							<td>The name of a tag id
+</td>
+						</tr>
+					</table>
+				</section><section><h2>copied</h2>
+<p>allocate it zeroed, call <code class="lang-d"><a href="../../parserino/dom/DomDocument.initialize.html"><span class="pln">initialize</span></a></code>, and <code class="lang-d"><a href="../../parserino/dom/DomDocument.release.html"><span class="pln">release</span></a></code> it at the end.
+</p>
+</section>
+
+			</div>
+			<footer>
+				<div id="license-info">
+					
+				</div>
+			</footer>
+		</div>
+	</body>
+</html>

@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+		<title>Module parserino.css.selector</title>
+		<link rel="stylesheet" href="../../css/style.min.css"/>
+		<script type="text/javascript" src="../../js/script.min.js"></script>
+	</head>
+	<body onload="setupDdox();">
+		<header></header>
+		<nav id="main-nav">
+			<div>
+				<noscript>
+					<p style="color: red">The search functionality needs JavaScript enabled</p>
+				</noscript>
+				<div id="symbolSearchPane" style="display: none">
+					<form action="#" method="GET">
+						<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(24);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" autofocus/>
+					</form>
+					<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../../";
+document.getElementById('symbolSearchPane').style.display = 'block';</script>
+				</div>
+				<ul class="tree-view">
+					<li class="tree-view ">
+						<a class="package" href="#">parserino</a>
+				<ul class="tree-view">
+					<li class="tree-view ">
+						<a class="package" href="#">css</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../../parserino/css/matcher.html">matcher</a>
+					</li>
+					<li>
+						<a class="module selected" href="../../parserino/css/selector.html">selector</a>
+				<ul class="tree-view">
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../parserino/css/selector/AttrCase.html">AttrCase</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../parserino/css/selector/AttrMatch.html">AttrMatch</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../parserino/css/selector/Combinator.html">Combinator</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/css/selector/Complex.html">Complex</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/css/selector/Compound.html">Compound</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../parserino/css/selector/NsMatch.html">NsMatch</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../../parserino/css/selector/parseSelector.html">parseSelector</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../parserino/css/selector/PseudoClass.html">PseudoClass</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/css/selector/SelectorList.html">SelectorList</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/css/selector/Simple.html">Simple</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../parserino/css/selector/SimpleKind.html">SimpleKind</a>
+				</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/css/tokenizer.html">tokenizer</a>
+					</li>
+				</ul>
+					</li>
+					<li class="tree-view collapsed">
+						<a class="package" href="#">html</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../../parserino/html/decoder.html">decoder</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/entities.html">entities</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/errors.html">errors</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/parser.html">parser</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/serializer.html">serializer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/tokenizer.html">tokenizer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/treebuilder.html">treebuilder</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/arena.html">arena</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/dom.html">dom</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/encoding.html">encoding</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/names.html">names</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/snapshot.html">snapshot</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino.html">parserino</a>
+					</li>
+				</ul>
+			</div>
+			<p id="main-nav-footer">
+				Built with<a href="https://github.com/MartinNowak/scod">scod</a>
+			</p>
+		</nav>
+		<div id="main-contents">
+			<div>
+				<h1>Module parserino.css.selector</h1><p>CSS selectors: syntax tree and parser.
+</p><section><p>The parser follows Selectors Level 4, for a static document: user-action and
+ time pseudo-classes (<code class="lang-d"><span class="pun">:</span><span class="pln">hover</span></code>, <code class="lang-d"><span class="pun">:</span><span class="pln">visited</span></code>, ...) and pseudo-elements (<code class="lang-d"><span class="pun">::</span><span class="pln">before</span></code>)
+ are valid but never match. It works at runtime and at compile time.
+</p>
+
+<p> Namespace prefixes are predefined: <code class="lang-d"><span class="pln">html</span></code>, <code class="lang-d"><span class="pln">svg</span></code>, <code class="lang-d"><span class="pln">math</span></code>, <code class="lang-d"><span class="pln">xlink</span></code>, <code class="lang-d"><span class="pln">xml</span></code>, <code class="lang-d"><span class="pln">xmlns</span></code>.
+</p>
+</section>
+<section></section>
+				<section>
+					<h2>Functions</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<code>
+									<a id="parseSelector" class="public" href="../../parserino/css/selector/parseSelector.html">parseSelector</a><span class="tableEntryAnnotation">(input, arena)</span>
+								</code>
+							</td>
+							<td>Parse a selector list. It returns <code class="lang-d"><span class="kwd">null</span></code> on syntax errors or if out of memory.
+All the memory comes from <code class="lang-d"><a href="../../parserino/css/selector/parseSelector.html#arena"><span class="pln">arena</span></a></code>.
+</td>
+						</tr>
+					</table>
+				</section>
+				<section>
+					<h2>Structs</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<code>
+									<a id="Complex" class="public" href="../../parserino/css/selector/Complex.html">Complex</a>
+								</code>
+							</td>
+							<td>A chain of compounds (<code class="lang-d"><span class="pln">div </span><span class="pun">&gt; </span><span class="pln">p a</span></code>), left to right
+</td>
+						</tr>
+						<tr>
+							<td>
+								<code>
+									<a id="Compound" class="public" href="../../parserino/css/selector/Compound.html">Compound</a>
+								</code>
+							</td>
+							<td>A sequence of simple selectors (<code class="lang-d"><span class="pln">div<wbr/></span><span class="pun">.</span><span class="pln">a</span><span class="pun">[</span><span class="pln">x</span><span class="pun">]</span></code>)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<code>
+									<a id="SelectorList" class="public" href="../../parserino/css/selector/SelectorList.html">SelectorList</a>
+								</code>
+							</td>
+							<td>A comma separated list of complex selectors
+</td>
+						</tr>
+						<tr>
+							<td>
+								<code>
+									<a id="Simple" class="public" href="../../parserino/css/selector/Simple.html">Simple</a>
+								</code>
+							</td>
+							<td>A simple selector
+</td>
+						</tr>
+					</table>
+				</section>
+				<section>
+					<h2>Enums</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<code>
+									<a id="AttrCase" class="public" href="../../parserino/css/selector/AttrCase.html">AttrCase</a>
+								</code>
+							</td>
+							<td>Case sensitivity of the value of an attribute selector
+</td>
+						</tr>
+						<tr>
+							<td>
+								<code>
+									<a id="AttrMatch" class="public" href="../../parserino/css/selector/AttrMatch.html">AttrMatch</a>
+								</code>
+							</td>
+							<td>Operator of an attribute selector
+</td>
+						</tr>
+						<tr>
+							<td>
+								<code>
+									<a id="Combinator" class="public" href="../../parserino/css/selector/Combinator.html">Combinator</a>
+								</code>
+							</td>
+							<td>How a compound selector is related to the previous one
+</td>
+						</tr>
+						<tr>
+							<td>
+								<code>
+									<a id="NsMatch" class="public" href="../../parserino/css/selector/NsMatch.html">NsMatch</a>
+								</code>
+							</td>
+							<td>Namespace of a type or attribute selector (<code class="lang-d"><span class="pln">svg</span><span class="pun">|</span><span class="pln">rect</span></code>, <code class="lang-d"><span class="pun">[</span><span class="pln">xlink</span><span class="pun">|</span><span class="pln">href</span><span class="pun">]</span></code>): the other members are the predefined prefixes
+</td>
+						</tr>
+						<tr>
+							<td>
+								<code>
+									<a id="PseudoClass" class="public" href="../../parserino/css/selector/PseudoClass.html">PseudoClass</a>
+								</code>
+							</td>
+							<td>Pseudo-classes without arguments that can match (<code class="lang-d"><span class="pun">:</span><span class="pln">first</span><span class="pun">-</span><span class="pln">child</span></code> is <code class="lang-d"><span class="typ">FirstChild</span></code>)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<code>
+									<a id="SimpleKind" class="public" href="../../parserino/css/selector/SimpleKind.html">SimpleKind</a>
+								</code>
+							</td>
+							<td>Kinds of simple selectors
+</td>
+						</tr>
+					</table>
+				</section>
+			</div>
+			<footer>
+				<div id="license-info">
+					
+				</div>
+			</footer>
+		</div>
+	</body>
+</html>

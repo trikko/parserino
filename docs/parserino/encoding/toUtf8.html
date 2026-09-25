@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+		<title>Function toUtf8</title>
+		<link rel="stylesheet" href="../../css/style.min.css"/>
+		<script type="text/javascript" src="../../js/script.min.js"></script>
+	</head>
+	<body onload="setupDdox();">
+		<header></header>
+		<nav id="main-nav">
+			<div>
+				<noscript>
+					<p style="color: red">The search functionality needs JavaScript enabled</p>
+				</noscript>
+				<div id="symbolSearchPane" style="display: none">
+					<form action="#" method="GET">
+						<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(24);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" autofocus/>
+					</form>
+					<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../../";
+document.getElementById('symbolSearchPane').style.display = 'block';</script>
+				</div>
+				<ul class="tree-view">
+					<li class="tree-view ">
+						<a class="package" href="#">parserino</a>
+				<ul class="tree-view">
+					<li class="tree-view collapsed">
+						<a class="package" href="#">css</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../../parserino/css/matcher.html">matcher</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/css/selector.html">selector</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/css/tokenizer.html">tokenizer</a>
+					</li>
+				</ul>
+					</li>
+					<li class="tree-view collapsed">
+						<a class="package" href="#">html</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../../parserino/html/decoder.html">decoder</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/entities.html">entities</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/errors.html">errors</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/parser.html">parser</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/serializer.html">serializer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/tokenizer.html">tokenizer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/treebuilder.html">treebuilder</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/arena.html">arena</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/dom.html">dom</a>
+					</li>
+					<li>
+						<a class="module selected" href="../../parserino/encoding.html">encoding</a>
+				<ul class="tree-view">
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../../parserino/encoding/encodingForLabel.html">encodingForLabel</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../../parserino/encoding/sniffEncoding.html">sniffEncoding</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../../parserino/encoding/toUtf8.html">toUtf8</a>
+				</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/names.html">names</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/snapshot.html">snapshot</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino.html">parserino</a>
+					</li>
+				</ul>
+			</div>
+			<p id="main-nav-footer">
+				Built with<a href="https://github.com/MartinNowak/scod">scod</a>
+			</p>
+		</nav>
+		<div id="main-contents">
+			<div>
+				<h1>Function toUtf8</h1><p>Convert html to UTF-8. <code class="lang-d"><a href="../../parserino/encoding/toUtf8.html#encoding"><span class="pln">encoding</span></a></code> is a label ("utf-8", "latin1", "windows-1251", ...); if
+ null it's found with <code class="lang-d"><a href="../../parserino/encoding/sniffEncoding.html"><span class="pln">sniffEncoding</span></a></code> (<code class="lang-d"><a href="../../parserino/encoding/toUtf8.html#transportCharset"><span class="pln">transportCharset</span></a></code> is the charset of the HTTP
+ Content-Type, if known). Invalid sequences become U+FFFD. It throws <code class="lang-d"><span class="typ">ParserinoException</span></code> for
+ unsupported encodings.
+</p>
+				<div class="prototype">
+					<code class="lang-d">
+						<div class="single-prototype">
+				<span class="typ">string</span> <span class="pln">toUtf8</span><span class="pun">(</span>
+				<br/>&nbsp;&nbsp;<span class="kwd">const</span><span class="pun">(</span><span class="typ">ubyte</span><span class="pun">)</span><span class="pun">[]</span> <span class="pln">bytes</span><span class="pun">,</span>
+				<br/>
+				&nbsp;&nbsp;<span class="kwd">const</span><span class="pun">(</span><span class="typ">char</span><span class="pun">)</span><span class="pun">[]</span> <span class="pln">encoding</span> <span class="pun">=</span> <span class="kwd">null</span><span class="pun">,</span>
+				<br/>
+				&nbsp;&nbsp;<span class="kwd">const</span><span class="pun">(</span><span class="typ">char</span><span class="pun">)</span><span class="pun">[]</span> <span class="pln">transportCharset</span> <span class="pun">=</span> <span class="kwd">null</span>
+				<br/>
+				<span class="pun">)</span><span class="pun">;</span>
+						</div>
+					</code>
+				</div>
+				<section><h2>Example</h2>
+
+<pre class="code"><code class="lang-d"><span class="kwd">import <a href="../../parserino.html"></span><span class="pln">parserino</span></a><span class="pln"> </span><span class="pun">: </span><span class="typ">Document</span><span class="pun">;
+
+</span><span class="com">// A page in windows-1252 that says so
+</span><span class="kwd">const</span><span class="pun">(</span><span class="typ">ubyte</span><span class="pun">)[] </span><span class="pln">latin </span><span class="pun">= </span><span class="kwd">cast</span><span class="pun">(</span><span class="kwd">const</span><span class="pun">(</span><span class="typ">ubyte</span><span class="pun">)[]) </span><span class="str">"&lt;meta charset=\"windows-1252\"&gt;&lt;p&gt;caf\xE9 \x80"</span><span class="pun">;
+</span><span class="kwd">assert</span><span class="pun">(<a href="../../parserino/encoding/sniffEncoding.html"></span><span class="pln">sniffEncoding</span></a><span class="pun">(</span><span class="pln">latin</span><span class="pun">) == </span><span class="str">"windows-1252"</span><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="typ">Document</span><span class="pun">(</span><span class="pln">toUtf8</span><span class="pun">(</span><span class="pln">latin</span><span class="pun">))<wbr/>.</span><span class="pln">body<wbr/></span><span class="pun">.</span><span class="pln">textContent </span><span class="pun">== </span><span class="str">"café €"</span><span class="pun">);
+
+</span><span class="com">// Without a declaration: UTF-8 if valid, else windows-1252
+</span><span class="kwd">assert</span><span class="pun">(<a href="../../parserino/encoding/sniffEncoding.html"></span><span class="pln">sniffEncoding</span></a><span class="pun">(</span><span class="kwd">cast</span><span class="pun">(</span><span class="kwd">const</span><span class="pun">(</span><span class="typ">ubyte</span><span class="pun">)[]) </span><span class="str">"&lt;p&gt;caf\xC3\xA9"</span><span class="pun">) == </span><span class="str">"UTF-8"</span><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(<a href="../../parserino/encoding/sniffEncoding.html"></span><span class="pln">sniffEncoding</span></a><span class="pun">(</span><span class="kwd">cast</span><span class="pun">(</span><span class="kwd">const</span><span class="pun">(</span><span class="typ">ubyte</span><span class="pun">)[]) </span><span class="str">"&lt;p&gt;caf\xE9"</span><span class="pun">) == </span><span class="str">"windows-1252"</span><span class="pun">);
+
+</span><span class="com">// UTF-16 with a BOM; the charset of HTTP wins over the &lt;meta&gt;
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">toUtf8</span><span class="pun">(</span><span class="kwd">cast</span><span class="pun">(</span><span class="kwd">const</span><span class="pun">(</span><span class="typ">ubyte</span><span class="pun">)[]) </span><span class="str">"\xFF\xFE&lt;\0p\0&gt;\0\xE9\0"</span><span class="pun">) == </span><span class="str">"&lt;p&gt;é"</span><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(<a href="../../parserino/encoding/sniffEncoding.html"></span><span class="pln">sniffEncoding</span></a><span class="pun">(</span><span class="kwd">cast</span><span class="pun">(</span><span class="kwd">const</span><span class="pun">(</span><span class="typ">ubyte</span><span class="pun">)[]) </span><span class="str">"&lt;meta charset=latin1&gt;"</span><span class="pun">, </span><span class="str">"utf-8"</span><span class="pun">) == </span><span class="str">"UTF-8"</span><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(<a href="../../parserino/encoding/sniffEncoding.html"></span><span class="pln">sniffEncoding</span></a><span class="pun">(</span><span class="kwd">cast</span><span class="pun">(</span><span class="kwd">const</span><span class="pun">(</span><span class="typ">ubyte</span><span class="pun">)[]) </span><span class="str">"&lt;meta http-equiv=Content-Type content='text/html; charset=ISO-8859-2'&gt;"</span><span class="pun">)
+    == </span><span class="str">"ISO-8859-2"</span><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">toUtf8</span><span class="pun">(</span><span class="kwd">cast</span><span class="pun">(</span><span class="kwd">const</span><span class="pun">(</span><span class="typ">ubyte</span><span class="pun">)[]) </span><span class="str">"\xE8"</span><span class="pun">, </span><span class="str">"windows-1251"</span><span class="pun">) == </span><span class="str">"и"</span><span class="pun">);
+</span></code></pre>
+</section>
+
+			</div>
+			<footer>
+				<div id="license-info">
+					
+				</div>
+			</footer>
+		</div>
+	</body>
+</html>

@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+		<title>Struct DomNode</title>
+		<link rel="stylesheet" href="../../css/style.min.css"/>
+		<script type="text/javascript" src="../../js/script.min.js"></script>
+	</head>
+	<body onload="setupDdox();">
+		<header></header>
+		<nav id="main-nav">
+			<div>
+				<noscript>
+					<p style="color: red">The search functionality needs JavaScript enabled</p>
+				</noscript>
+				<div id="symbolSearchPane" style="display: none">
+					<form action="#" method="GET">
+						<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(24);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" autofocus/>
+					</form>
+					<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../../";
+document.getElementById('symbolSearchPane').style.display = 'block';</script>
+				</div>
+				<ul class="tree-view">
+					<li class="tree-view ">
+						<a class="package" href="#">parserino</a>
+				<ul class="tree-view">
+					<li class="tree-view collapsed">
+						<a class="package" href="#">css</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../../parserino/css/matcher.html">matcher</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/css/selector.html">selector</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/css/tokenizer.html">tokenizer</a>
+					</li>
+				</ul>
+					</li>
+					<li class="tree-view collapsed">
+						<a class="package" href="#">html</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../../parserino/html/decoder.html">decoder</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/entities.html">entities</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/errors.html">errors</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/parser.html">parser</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/serializer.html">serializer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/tokenizer.html">tokenizer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/treebuilder.html">treebuilder</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/arena.html">arena</a>
+					</li>
+					<li>
+						<a class="module selected" href="../../parserino/dom.html">dom</a>
+				<ul class="tree-view">
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../parserino/dom/CompatMode.html">CompatMode</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/dom/DomAttribute.html">DomAttribute</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/dom/DomCharacterData.html">DomCharacterData</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/dom/DomDocument.html">DomDocument</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/dom/DomDocumentFragment.html">DomDocumentFragment</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/dom/DomDocumentType.html">DomDocumentType</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/dom/DomElement.html">DomElement</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/dom/DomNode.html">DomNode</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../parserino/dom/NodeType.html">NodeType</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../../parserino/dom/textContent.html">textContent</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../../parserino/dom/toLower.html">toLower</a>
+				</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/encoding.html">encoding</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/names.html">names</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/snapshot.html">snapshot</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino.html">parserino</a>
+					</li>
+				</ul>
+			</div>
+			<p id="main-nav-footer">
+				Built with<a href="https://github.com/MartinNowak/scod">scod</a>
+			</p>
+		</nav>
+		<div id="main-contents">
+			<div>
+				<h1>Struct DomNode</h1><p>The common part of all the nodes
+</p>
+				<div class="prototype">
+					<code class="lang-d">
+						<div class="single-prototype">
+				<span class="kwd">struct</span> <span class="typ">DomNode</span><span class="pun">;</span>
+						</div>
+					</code>
+				</div>
+				
+				<section><h2>Fields</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Type</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.document.html" class="public"><code>document</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../../parserino/dom/DomDocument.html"><span class="typ">DomDocument</span></a><span class="pun">*</span></code></td><td>The document that owns the node
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.firstChild.html" class="public"><code>firstChild</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../../parserino/dom/DomNode.html"><span class="typ">DomNode</span></a><span class="pun">*</span></code></td><td>First child
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.lastChild.html" class="public"><code>lastChild</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../../parserino/dom/DomNode.html"><span class="typ">DomNode</span></a><span class="pun">*</span></code></td><td>Last child
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.name.html" class="public"><code>name</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">uint</span></code></td><td>Tag of elements (a <code class="lang-d"><span class="typ">Tag</span></code> or an id from the document names). Other nodes: <code class="lang-d"><span class="typ">Tag<wbr/></span><span class="pun">.</span><span class="typ">TextNode</span></code>, <code class="lang-d"><span class="typ">Tag<wbr/></span><span class="pun">.</span><span class="typ">CommentNode</span></code>, ...
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.next.html" class="public"><code>next</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../../parserino/dom/DomNode.html"><span class="typ">DomNode</span></a><span class="pun">*</span></code></td><td>Next sibling
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.ns.html" class="public"><code>ns</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../../parserino/names/Ns.html"><span class="typ">Ns</span></a></code></td><td>Namespace of elements
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.parent.html" class="public"><code>parent</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../../parserino/dom/DomNode.html"><span class="typ">DomNode</span></a><span class="pun">*</span></code></td><td>null for detached nodes and roots
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.prev.html" class="public"><code>prev</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../../parserino/dom/DomNode.html"><span class="typ">DomNode</span></a><span class="pun">*</span></code></td><td>Previous sibling
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.type.html" class="public"><code>type</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../../parserino/dom/NodeType.html"><span class="typ">NodeType</span></a></code></td><td>The node type
+</td>
+						</tr>
+					</table>
+				</section>
+				<section><h2>Methods</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.appendChild.html" class="public">
+									<code>appendChild</code>
+								</a>
+								<span class="tableEntryAnnotation">(child)</span>
+							</td>
+							<td>Append <code class="lang-d"><a href="../../parserino/dom/DomNode.appendChild.html#child"><span class="pln">child</span></a></code> as the last child (<code class="lang-d"><a href="../../parserino/dom/DomNode.appendChild.html#child"><span class="pln">child</span></a></code> must be detached)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.as.html" class="public">
+									<code>as</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>The struct that contains this node: <code class="lang-d"><a href="../../parserino/dom/DomElement.html"><span class="typ">DomElement</span></a></code>, <code class="lang-d"><a href="../../parserino/dom/DomCharacterData.html"><span class="typ">DomCharacterData</span></a></code>, <code class="lang-d"><a href="../../parserino/dom/DomDocumentType.html"><span class="typ">DomDocumentType</span></a></code>,
+ <code class="lang-d"><a href="../../parserino/dom/DomDocumentFragment.html"><span class="typ">DomDocumentFragment</span></a></code> or <code class="lang-d"><a href="../../parserino/dom/DomDocument.html"><span class="typ">DomDocument</span></a></code>. <code class="lang-d"><a href="../../parserino/dom/DomNode.type.html"><span class="pln">type</span></a></code> must match (checked only by an assert).
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.asCharacterData.html" class="public">
+									<code>asCharacterData</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>The element / character data, or null if the node is something else
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.asElement.html" class="public">
+									<code>asElement</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>The element / character data, or null if the node is something else
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.contains.html" class="public">
+									<code>contains</code>
+								</a>
+								<span class="tableEntryAnnotation">(other)</span>
+							</td>
+							<td>Is <code class="lang-d"><a href="../../parserino/dom/DomNode.contains.html#other"><span class="pln">other</span></a></code> this node or one of its descendants?
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.firstChildOrContent.html" class="public">
+									<code>firstChildOrContent</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>The first node of the template content for a <code class="lang-d"><span class="pun">&lt;</span><span class="kwd">template</span><span class="pun">&gt;</span></code>, else the first child
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.insertAfter.html" class="public">
+									<code>insertAfter</code>
+								</a>
+								<span class="tableEntryAnnotation">(node)</span>
+							</td>
+							<td>Insert <code class="lang-d"><a href="../../parserino/dom/DomNode.insertAfter.html#node"><span class="pln">node</span></a></code> (detached) after this node
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.insertBefore.html" class="public">
+									<code>insertBefore</code>
+								</a>
+								<span class="tableEntryAnnotation">(node)</span>
+							</td>
+							<td>Insert <code class="lang-d"><a href="../../parserino/dom/DomNode.insertBefore.html#node"><span class="pln">node</span></a></code> (detached) before this node
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.isBlank.html" class="public">
+									<code>isBlank</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>Like <code class="lang-d"><a href="../../parserino/dom/DomNode.isEmpty.html"><span class="pln">isEmpty</span></a></code>, but text made only of whitespace doesn't count either (the <code class="lang-d"><span class="pun">:</span><span class="pln">blank</span></code> selector)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.isCharacterData.html" class="public">
+									<code>isCharacterData</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>Is it text, a comment, a processing instruction or a CDATA section?
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.isEmpty.html" class="public">
+									<code>isEmpty</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>Does it have no children that are elements or non-empty text? Comments and processing
+ instructions don't count (as for the <code class="lang-d"><span class="pun">:</span><span class="pln">empty</span></code> selector).
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.isHtml.html" class="public">
+									<code>isHtml</code>
+								</a>
+								<span class="tableEntryAnnotation">(tag)</span>
+							</td>
+							<td>Is this an element in the html namespace with this tag?
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.localName.html" class="public">
+									<code>localName</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>Local name ("div", "#text", "!--", ...; the target for processing instructions)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.moveChildrenTo.html" class="public">
+									<code>moveChildrenTo</code>
+								</a>
+								<span class="tableEntryAnnotation">(to)</span>
+							</td>
+							<td>Move all the children of this node at the end of <code class="lang-d"><a href="../../parserino/dom/DomNode.moveChildrenTo.html#to"><span class="pln">to</span></a></code>
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.nextElement.html" class="public">
+									<code>nextElement</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>Previous/next sibling that is an element
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.nextInTree.html" class="public">
+									<code>nextInTree</code>
+								</a>
+								<span class="tableEntryAnnotation">(root)</span>
+							</td>
+							<td>Next node in tree order inside <code class="lang-d"><a href="../../parserino/dom/DomNode.nextInTree.html#root"><span class="pln">root</span></a></code> (excluded), or null
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.nextSkippingChildren.html" class="public">
+									<code>nextSkippingChildren</code>
+								</a>
+								<span class="tableEntryAnnotation">(root)</span>
+							</td>
+							<td>Next node in tree order after this subtree, inside <code class="lang-d"><a href="../../parserino/dom/DomNode.nextSkippingChildren.html#root"><span class="pln">root</span></a></code>, or null
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.parentOrHost.html" class="public">
+									<code>parentOrHost</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>The parent, or the <code class="lang-d"><span class="pun">&lt;</span><span class="kwd">template</span><span class="pun">&gt;</span></code> for the nodes of a template content
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.prevElement.html" class="public">
+									<code>prevElement</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>Previous/next sibling that is an element
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/dom/DomNode.remove.html" class="public">
+									<code>remove</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>Detach this node from its parent
+</td>
+						</tr>
+					</table>
+				</section>
+			</div>
+			<footer>
+				<div id="license-info">
+					
+				</div>
+			</footer>
+		</div>
+	</body>
+</html>

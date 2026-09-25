@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+		<title>Variable tagNames</title>
+		<link rel="stylesheet" href="../../css/style.min.css"/>
+		<script type="text/javascript" src="../../js/script.min.js"></script>
+	</head>
+	<body onload="setupDdox();">
+		<header></header>
+		<nav id="main-nav">
+			<div>
+				<noscript>
+					<p style="color: red">The search functionality needs JavaScript enabled</p>
+				</noscript>
+				<div id="symbolSearchPane" style="display: none">
+					<form action="#" method="GET">
+						<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(24);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" autofocus/>
+					</form>
+					<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../../";
+document.getElementById('symbolSearchPane').style.display = 'block';</script>
+				</div>
+				<ul class="tree-view">
+					<li class="tree-view ">
+						<a class="package" href="#">parserino</a>
+				<ul class="tree-view">
+					<li class="tree-view collapsed">
+						<a class="package" href="#">css</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../../parserino/css/matcher.html">matcher</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/css/selector.html">selector</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/css/tokenizer.html">tokenizer</a>
+					</li>
+				</ul>
+					</li>
+					<li class="tree-view collapsed">
+						<a class="package" href="#">html</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../../parserino/html/decoder.html">decoder</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/entities.html">entities</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/errors.html">errors</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/parser.html">parser</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/serializer.html">serializer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/tokenizer.html">tokenizer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/treebuilder.html">treebuilder</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/arena.html">arena</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/dom.html">dom</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/encoding.html">encoding</a>
+					</li>
+					<li>
+						<a class="module selected" href="../../parserino/names.html">names</a>
+				<ul class="tree-view">
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../parserino/names/AttrName.html">AttrName</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Variable))" href="../../parserino/names/attrNames.html">attrNames</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../parserino/names/Category.html">Category</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../../parserino/names/hash.html">hash</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../../parserino/names/knownAttr.html">knownAttr</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../../parserino/names/knownTag.html">knownTag</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/names/NameTable.html">NameTable</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../parserino/names/Ns.html">Ns</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../parserino/names/Tag.html">Tag</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Variable))" href="../../parserino/names/tagCategories.html">tagCategories</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Variable))" href="../../parserino/names/tagNames.html">tagNames</a>
+				</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/snapshot.html">snapshot</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino.html">parserino</a>
+					</li>
+				</ul>
+			</div>
+			<p id="main-nav-footer">
+				Built with<a href="https://github.com/MartinNowak/scod">scod</a>
+			</p>
+		</nav>
+		<div id="main-contents">
+			<div>
+				<h1>Variable tagNames</h1><p>Names of the known tags (lowercase)
+</p>
+				<div class="prototype">
+					<code class="lang-d">
+						<div class="single-prototype">
+				<span class="kwd">immutable</span><span class="pun">(</span><span class="typ">char</span><span class="pun">[]</span><span class="pun">[</span><span class="lit">199</span><span class="pun">]</span><span class="pun">)</span> <span class="pln">tagNames</span> <span class="pun">=</span> <span class="pun">[</span><span class="str">"#undef"</span><span class="pun">, </span><span class="str">"#end-of-file"</span><span class="pun">, </span><span class="str">"#text"</span><span class="pun">, </span><span class="str">"#document"</span><span class="pun">, </span><span class="str">"!--"</span><span class="pun">, </span><span class="str">"!doctype"</span><span class="pun">, </span><span class="str">"?ProcessingInstruction"</span><span class="pun">, </span><span class="str">"a"</span><span class="pun">, </span><span class="str">"abbr"</span><span class="pun">, </span><span class="str">"acronym"</span><span class="pun">, </span><span class="str">"address"</span><span class="pun">, </span><span class="str">"altglyph"</span><span class="pun">, </span><span class="str">"altglyphdef"</span><span class="pun">, </span><span class="str">"altglyphitem"</span><span class="pun">, </span><span class="str">"animatecolor"</span><span class="pun">, </span><span class="str">"animatemotion"</span><span class="pun">, </span><span class="str">"animatetransform"</span><span class="pun">, </span><span class="str">"annotation-xml"</span><span class="pun">, </span><span class="str">"applet"</span><span class="pun">, </span><span class="str">"area"</span><span class="pun">, </span><span class="str">"article"</span><span class="pun">, </span><span class="str">"aside"</span><span class="pun">, </span><span class="str">"audio"</span><span class="pun">, </span><span class="str">"b"</span><span class="pun">, </span><span class="str">"base"</span><span class="pun">, </span><span class="str">"basefont"</span><span class="pun">, </span><span class="str">"bdi"</span><span class="pun">, </span><span class="str">"bdo"</span><span class="pun">, </span><span class="str">"bgsound"</span><span class="pun">, </span><span class="str">"big"</span><span class="pun">, </span><span class="str">"blink"</span><span class="pun">, </span><span class="str">"blockquote"</span><span class="pun">, </span><span class="str">"body"</span><span class="pun">, </span><span class="str">"br"</span><span class="pun">, </span><span class="str">"button"</span><span class="pun">, </span><span class="str">"canvas"</span><span class="pun">, </span><span class="str">"caption"</span><span class="pun">, </span><span class="str">"center"</span><span class="pun">, </span><span class="str">"cite"</span><span class="pun">, </span><span class="str">"clippath"</span><span class="pun">, </span><span class="str">"code"</span><span class="pun">, </span><span class="str">"col"</span><span class="pun">, </span><span class="str">"colgroup"</span><span class="pun">, </span><span class="str">"data"</span><span class="pun">, </span><span class="str">"datalist"</span><span class="pun">, </span><span class="str">"dd"</span><span class="pun">, </span><span class="str">"del"</span><span class="pun">, </span><span class="str">"desc"</span><span class="pun">, </span><span class="str">"details"</span><span class="pun">, </span><span class="str">"dfn"</span><span class="pun">, </span><span class="str">"dialog"</span><span class="pun">, </span><span class="str">"dir"</span><span class="pun">, </span><span class="str">"div"</span><span class="pun">, </span><span class="str">"dl"</span><span class="pun">, </span><span class="str">"dt"</span><span class="pun">, </span><span class="str">"em"</span><span class="pun">, </span><span class="str">"embed"</span><span class="pun">, </span><span class="str">"feblend"</span><span class="pun">, </span><span class="str">"fecolormatrix"</span><span class="pun">, </span><span class="str">"fecomponenttransfer"</span><span class="pun">, </span><span class="str">"fecomposite"</span><span class="pun">, </span><span class="str">"feconvolvematrix"</span><span class="pun">, </span><span class="str">"fediffuselighting"</span><span class="pun">, </span><span class="str">"fedisplacementmap"</span><span class="pun">, </span><span class="str">"fedistantlight"</span><span class="pun">, </span><span class="str">"fedropshadow"</span><span class="pun">, </span><span class="str">"feflood"</span><span class="pun">, </span><span class="str">"fefunca"</span><span class="pun">, </span><span class="str">"fefuncb"</span><span class="pun">, </span><span class="str">"fefuncg"</span><span class="pun">, </span><span class="str">"fefuncr"</span><span class="pun">, </span><span class="str">"fegaussianblur"</span><span class="pun">, </span><span class="str">"feimage"</span><span class="pun">, </span><span class="str">"femerge"</span><span class="pun">, </span><span class="str">"femergenode"</span><span class="pun">, </span><span class="str">"femorphology"</span><span class="pun">, </span><span class="str">"feoffset"</span><span class="pun">, </span><span class="str">"fepointlight"</span><span class="pun">, </span><span class="str">"fespecularlighting"</span><span class="pun">, </span><span class="str">"fespotlight"</span><span class="pun">, </span><span class="str">"fetile"</span><span class="pun">, </span><span class="str">"feturbulence"</span><span class="pun">, </span><span class="str">"fieldset"</span><span class="pun">, </span><span class="str">"figcaption"</span><span class="pun">, </span><span class="str">"figure"</span><span class="pun">, </span><span class="str">"font"</span><span class="pun">, </span><span class="str">"footer"</span><span class="pun">, </span><span class="str">"foreignobject"</span><span class="pun">, </span><span class="str">"form"</span><span class="pun">, </span><span class="str">"frame"</span><span class="pun">, </span><span class="str">"frameset"</span><span class="pun">, </span><span class="str">"glyphref"</span><span class="pun">, </span><span class="str">"h1"</span><span class="pun">, </span><span class="str">"h2"</span><span class="pun">, </span><span class="str">"h3"</span><span class="pun">, </span><span class="str">"h4"</span><span class="pun">, </span><span class="str">"h5"</span><span class="pun">, </span><span class="str">"h6"</span><span class="pun">, </span><span class="str">"head"</span><span class="pun">, </span><span class="str">"header"</span><span class="pun">, </span><span class="str">"hgroup"</span><span class="pun">, </span><span class="str">"hr"</span><span class="pun">, </span><span class="str">"html"</span><span class="pun">, </span><span class="str">"i"</span><span class="pun">, </span><span class="str">"iframe"</span><span class="pun">, </span><span class="str">"image"</span><span class="pun">, </span><span class="str">"img"</span><span class="pun">, </span><span class="str">"input"</span><span class="pun">, </span><span class="str">"ins"</span><span class="pun">, </span><span class="str">"isindex"</span><span class="pun">, </span><span class="str">"kbd"</span><span class="pun">, </span><span class="str">"keygen"</span><span class="pun">, </span><span class="str">"label"</span><span class="pun">, </span><span class="str">"legend"</span><span class="pun">, </span><span class="str">"li"</span><span class="pun">, </span><span class="str">"lineargradient"</span><span class="pun">, </span><span class="str">"link"</span><span class="pun">, </span><span class="str">"listing"</span><span class="pun">, </span><span class="str">"main"</span><span class="pun">, </span><span class="str">"malignmark"</span><span class="pun">, </span><span class="str">"map"</span><span class="pun">, </span><span class="str">"mark"</span><span class="pun">, </span><span class="str">"marquee"</span><span class="pun">, </span><span class="str">"math"</span><span class="pun">, </span><span class="str">"menu"</span><span class="pun">, </span><span class="str">"meta"</span><span class="pun">, </span><span class="str">"meter"</span><span class="pun">, </span><span class="str">"mfenced"</span><span class="pun">, </span><span class="str">"mglyph"</span><span class="pun">, </span><span class="str">"mi"</span><span class="pun">, </span><span class="str">"mn"</span><span class="pun">, </span><span class="str">"mo"</span><span class="pun">, </span><span class="str">"ms"</span><span class="pun">, </span><span class="str">"mtext"</span><span class="pun">, </span><span class="str">"multicol"</span><span class="pun">, </span><span class="str">"nav"</span><span class="pun">, </span><span class="str">"nextid"</span><span class="pun">, </span><span class="str">"nobr"</span><span class="pun">, </span><span class="str">"noembed"</span><span class="pun">, </span><span class="str">"noframes"</span><span class="pun">, </span><span class="str">"noscript"</span><span class="pun">, </span><span class="str">"object"</span><span class="pun">, </span><span class="str">"ol"</span><span class="pun">, </span><span class="str">"optgroup"</span><span class="pun">, </span><span class="str">"option"</span><span class="pun">, </span><span class="str">"output"</span><span class="pun">, </span><span class="str">"p"</span><span class="pun">, </span><span class="str">"param"</span><span class="pun">, </span><span class="str">"path"</span><span class="pun">, </span><span class="str">"picture"</span><span class="pun">, </span><span class="str">"plaintext"</span><span class="pun">, </span><span class="str">"pre"</span><span class="pun">, </span><span class="str">"progress"</span><span class="pun">, </span><span class="str">"q"</span><span class="pun">, </span><span class="str">"radialgradient"</span><span class="pun">, </span><span class="str">"rb"</span><span class="pun">, </span><span class="str">"rp"</span><span class="pun">, </span><span class="str">"rt"</span><span class="pun">, </span><span class="str">"rtc"</span><span class="pun">, </span><span class="str">"ruby"</span><span class="pun">, </span><span class="str">"s"</span><span class="pun">, </span><span class="str">"samp"</span><span class="pun">, </span><span class="str">"script"</span><span class="pun">, </span><span class="str">"search"</span><span class="pun">, </span><span class="str">"section"</span><span class="pun">, </span><span class="str">"select"</span><span class="pun">, </span><span class="str">"selectedcontent"</span><span class="pun">, </span><span class="str">"slot"</span><span class="pun">, </span><span class="str">"small"</span><span class="pun">, </span><span class="str">"source"</span><span class="pun">, </span><span class="str">"spacer"</span><span class="pun">, </span><span class="str">"span"</span><span class="pun">, </span><span class="str">"strike"</span><span class="pun">, </span><span class="str">"strong"</span><span class="pun">, </span><span class="str">"style"</span><span class="pun">, </span><span class="str">"sub"</span><span class="pun">, </span><span class="str">"summary"</span><span class="pun">, </span><span class="str">"sup"</span><span class="pun">, </span><span class="str">"svg"</span><span class="pun">, </span><span class="str">"table"</span><span class="pun">, </span><span class="str">"tbody"</span><span class="pun">, </span><span class="str">"td"</span><span class="pun">, </span><span class="str">"template"</span><span class="pun">, </span><span class="str">"textarea"</span><span class="pun">, </span><span class="str">"textpath"</span><span class="pun">, </span><span class="str">"tfoot"</span><span class="pun">, </span><span class="str">"th"</span><span class="pun">, </span><span class="str">"thead"</span><span class="pun">, </span><span class="str">"time"</span><span class="pun">, </span><span class="str">"title"</span><span class="pun">, </span><span class="str">"tr"</span><span class="pun">, </span><span class="str">"track"</span><span class="pun">, </span><span class="str">"tt"</span><span class="pun">, </span><span class="str">"u"</span><span class="pun">, </span><span class="str">"ul"</span><span class="pun">, </span><span class="str">"var"</span><span class="pun">, </span><span class="str">"video"</span><span class="pun">, </span><span class="str">"wbr"</span><span class="pun">, </span><span class="str">"xmp"</span><span class="pun">]</span><span class="pun">;</span>
+						</div>
+					</code>
+				</div>
+				
+			</div>
+			<footer>
+				<div id="license-info">
+					
+				</div>
+			</footer>
+		</div>
+	</body>
+</html>

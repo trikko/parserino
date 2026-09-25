@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+		<title>Struct Buffer</title>
+		<link rel="stylesheet" href="../../css/style.min.css"/>
+		<script type="text/javascript" src="../../js/script.min.js"></script>
+	</head>
+	<body onload="setupDdox();">
+		<header></header>
+		<nav id="main-nav">
+			<div>
+				<noscript>
+					<p style="color: red">The search functionality needs JavaScript enabled</p>
+				</noscript>
+				<div id="symbolSearchPane" style="display: none">
+					<form action="#" method="GET">
+						<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(24);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" autofocus/>
+					</form>
+					<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../../";
+document.getElementById('symbolSearchPane').style.display = 'block';</script>
+				</div>
+				<ul class="tree-view">
+					<li class="tree-view ">
+						<a class="package" href="#">parserino</a>
+				<ul class="tree-view">
+					<li class="tree-view collapsed">
+						<a class="package" href="#">css</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../../parserino/css/matcher.html">matcher</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/css/selector.html">selector</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/css/tokenizer.html">tokenizer</a>
+					</li>
+				</ul>
+					</li>
+					<li class="tree-view collapsed">
+						<a class="package" href="#">html</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../../parserino/html/decoder.html">decoder</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/entities.html">entities</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/errors.html">errors</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/parser.html">parser</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/serializer.html">serializer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/tokenizer.html">tokenizer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/treebuilder.html">treebuilder</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module selected" href="../../parserino/arena.html">arena</a>
+				<ul class="tree-view">
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/arena/Arena.html">Arena</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/arena/Buffer.html">Buffer</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../../parserino/arena/copyItems.html">copyItems</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../../parserino/arena/copyItems.html">copyItems</a>
+				</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/dom.html">dom</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/encoding.html">encoding</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/names.html">names</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/snapshot.html">snapshot</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino.html">parserino</a>
+					</li>
+				</ul>
+			</div>
+			<p id="main-nav-footer">
+				Built with<a href="https://github.com/MartinNowak/scod">scod</a>
+			</p>
+		</nav>
+		<div id="main-contents">
+			<div>
+				<h1>Struct Buffer</h1><p>A growable array for temporary data (malloc'd, GC in CTFE).
+ If memory runs out, the items are not added and <code class="lang-d"><a href="../../parserino/arena/Buffer.failed.html"><span class="pln">failed</span></a></code> becomes true (and stays true):
+ the owner checks it at the end of its work, as it checks the results of the <code class="lang-d"><a href="../../parserino/arena/Arena.html"><span class="typ">Arena</span></a></code>.
+</p>
+				<div class="prototype">
+					<code class="lang-d">
+						<div class="single-prototype">
+				<span class="kwd">struct</span> <span class="typ">Buffer</span>(T)<span class="pun">;</span>
+						</div>
+					</code>
+				</div>
+				
+				<section><h2>Fields</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Type</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/arena/Buffer.failed.html" class="public"><code>failed</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">bool</span></code></td><td>Memory ran out: some items were not added
+</td>
+						</tr>
+					</table>
+				</section>
+				<section><h2>Properties</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Type</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/arena/Buffer.empty.html" class="public property"><code>empty</code></a><span class="tableEntryAnnotation">[get]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">bool</span></code></td><td>Is it empty?
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/arena/Buffer.length.html" class="public property"><code>length</code></a><span class="tableEntryAnnotation">[get]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="pln">size_t</span></code></td><td>Number of items
+</td>
+						</tr>
+					</table>
+				</section>
+				<section><h2>Methods</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/arena/Buffer.clear.html" class="public">
+									<code>clear</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>Remove all the items (the memory is kept)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/arena/Buffer.opIndex.html" class="public">
+									<code>opIndex</code>
+								</a>
+								<span class="tableEntryAnnotation">(i)</span>
+							</td>
+							<td>The item at index <code class="lang-d"><a href="../../parserino/arena/Buffer.opIndex.html#i"><span class="pln">i</span></a></code>
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/arena/Buffer.opSlice.html" class="public">
+									<code>opSlice</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>The items (a slice of the buffer: valid until the next <code class="lang-d"><a href="../../parserino/arena/Buffer.put.html"><span class="pln">put</span></a></code>)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/arena/Buffer.put.html" class="public">
+									<code>put</code>
+								</a>
+								<span class="tableEntryAnnotation">(x)</span>
+							</td>
+							<td>Append an item
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/arena/Buffer.put.html" class="public">
+									<code>put</code>
+								</a>
+								<span class="tableEntryAnnotation">(xs)</span>
+							</td>
+							<td>Append many items at once
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/arena/Buffer.putLower.html" class="public">
+									<code>putLower</code>
+								</a>
+								<span class="tableEntryAnnotation">(s)</span>
+							</td>
+							<td>Append <code class="lang-d"><a href="../../parserino/arena/Buffer.putLower.html#s"><span class="pln">s</span></a></code> in ASCII lowercase
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/arena/Buffer.removeLast.html" class="public">
+									<code>removeLast</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>Remove the last item
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../parserino/arena/Buffer.shrinkTo.html" class="public">
+									<code>shrinkTo</code>
+								</a>
+								<span class="tableEntryAnnotation">(n)</span>
+							</td>
+							<td>Keep only the first <code class="lang-d"><a href="../../parserino/arena/Buffer.shrinkTo.html#n"><span class="pln">n</span></a></code> items
+</td>
+						</tr>
+					</table>
+				</section>
+			</div>
+			<footer>
+				<div id="license-info">
+					
+				</div>
+			</footer>
+		</div>
+	</body>
+</html>

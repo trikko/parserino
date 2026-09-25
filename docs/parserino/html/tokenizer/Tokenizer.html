@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+		<title>Struct Tokenizer</title>
+		<link rel="stylesheet" href="../../../css/style.min.css"/>
+		<script type="text/javascript" src="../../../js/script.min.js"></script>
+	</head>
+	<body onload="setupDdox();">
+		<header></header>
+		<nav id="main-nav">
+			<div>
+				<noscript>
+					<p style="color: red">The search functionality needs JavaScript enabled</p>
+				</noscript>
+				<div id="symbolSearchPane" style="display: none">
+					<form action="#" method="GET">
+						<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(24);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" autofocus/>
+					</form>
+					<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../../../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../../../";
+document.getElementById('symbolSearchPane').style.display = 'block';</script>
+				</div>
+				<ul class="tree-view">
+					<li class="tree-view ">
+						<a class="package" href="#">parserino</a>
+				<ul class="tree-view">
+					<li class="tree-view collapsed">
+						<a class="package" href="#">css</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../../../parserino/css/matcher.html">matcher</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/css/selector.html">selector</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/css/tokenizer.html">tokenizer</a>
+					</li>
+				</ul>
+					</li>
+					<li class="tree-view ">
+						<a class="package" href="#">html</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../../../parserino/html/decoder.html">decoder</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/html/entities.html">entities</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/html/errors.html">errors</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/html/parser.html">parser</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/html/serializer.html">serializer</a>
+					</li>
+					<li>
+						<a class="module selected" href="../../../parserino/html/tokenizer.html">tokenizer</a>
+				<ul class="tree-view">
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../../parserino/html/tokenizer/State.html">State</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../../parserino/html/tokenizer/Token.html">Token</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../../parserino/html/tokenizer/TokenAttribute.html">TokenAttribute</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../../parserino/html/tokenizer/Tokenizer.html">Tokenizer</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../../parserino/html/tokenizer/TokenSink.html">TokenSink</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../../parserino/html/tokenizer/TokenType.html">TokenType</a>
+				</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/html/treebuilder.html">treebuilder</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/arena.html">arena</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/dom.html">dom</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/encoding.html">encoding</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/names.html">names</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/snapshot.html">snapshot</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino.html">parserino</a>
+					</li>
+				</ul>
+			</div>
+			<p id="main-nav-footer">
+				Built with<a href="https://github.com/MartinNowak/scod">scod</a>
+			</p>
+		</nav>
+		<div id="main-contents">
+			<div>
+				<h1>Struct Tokenizer</h1><p>The tokenizer: <code class="lang-d"><a href="../../../parserino/html/tokenizer/Tokenizer.feed.html"><span class="pln">feed</span></a></code> it the input, then <code class="lang-d"><a href="../../../parserino/html/tokenizer/Tokenizer.finish.html"><span class="pln">finish</span></a></code>
+</p>
+				<div class="prototype">
+					<code class="lang-d">
+						<div class="single-prototype">
+				<span class="kwd">struct</span> <span class="typ">Tokenizer</span><span class="pun">;</span>
+						</div>
+					</code>
+				</div>
+				
+				<section><h2>Constructors</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/tokenizer/Tokenizer.this.html" class="public">
+									<code>this</code>
+								</a>
+								<span class="tableEntryAnnotation">(document, sink)</span>
+							</td>
+							<td>Tokens go to <code class="lang-d"><a href="../../../parserino/html/tokenizer/Tokenizer.this.html#sink"><span class="pln">sink</span></a></code>; the tag names are interned in <code class="lang-d"><a href="../../../parserino/html/tokenizer/Tokenizer.this.html#document"><span class="pln">document</span></a></code>
+</td>
+						</tr>
+					</table>
+				</section>
+				<section><h2>Fields</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Type</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/tokenizer/Tokenizer.collectErrors.html" class="public"><code>collectErrors</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">bool</span></code></td><td>Collect the parse errors in <code class="lang-d"><a href="../../../parserino/html/tokenizer/Tokenizer.errors.html"><span class="pln">errors</span></a></code> (off by default: then they cost nothing)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/tokenizer/Tokenizer.decoder.html" class="public"><code>decoder</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../../../parserino/html/decoder/Utf8Decoder.html"><span class="typ">Utf8Decoder</span></a></code></td><td>The UTF-8 decoding of the input (set <code class="lang-d"><span class="pln">decoder<wbr/></span><span class="pun">.</span><span class="pln">stripBom</span></code> for documents)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/tokenizer/Tokenizer.errors.html" class="public"><code>errors</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../../../parserino/arena/Buffer.html"><span class="typ">Buffer</span></a>!(parserino.html.errors.RawParseError)</code></td><td>The parse errors found so far (with <code class="lang-d"><a href="../../../parserino/html/tokenizer/Tokenizer.collectErrors.html"><span class="pln">collectErrors</span></a></code>), in the order they were found
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/tokenizer/Tokenizer.failed.html" class="public"><code>failed</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">bool</span></code></td><td>Out of memory (or stopped by the sink)
+</td>
+						</tr>
+					</table>
+				</section>
+				<section><h2>Methods</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/tokenizer/Tokenizer.error.html" class="public">
+									<code>error</code>
+								</a>
+								<span class="tableEntryAnnotation">(code)</span>
+							</td>
+							<td>A parse error at the current position (the tree builder reports its errors here too)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/tokenizer/Tokenizer.feed.html" class="public">
+									<code>feed</code>
+								</a>
+								<span class="tableEntryAnnotation">(chunk)</span>
+							</td>
+							<td>Tokenize a chunk. It returns false on errors (out of memory).
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/tokenizer/Tokenizer.finish.html" class="public">
+									<code>finish</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>End of input: the pending data is completed and an EOF token is emitted
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/tokenizer/Tokenizer.setLastStartTag.html" class="public">
+									<code>setLastStartTag</code>
+								</a>
+								<span class="tableEntryAnnotation">(name)</span>
+							</td>
+							<td>Set the last start tag, which closes RCDATA, RAWTEXT and script data (for tests of the tokenizer alone)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/tokenizer/Tokenizer.switchTo.html" class="public">
+									<code>switchTo</code>
+								</a>
+								<span class="tableEntryAnnotation">(s)</span>
+							</td>
+							<td>Set by the tree builder, while it processes a start tag (or before the input for fragments).
+ For RCDATA, RAWTEXT and script data, the current start tag is the one that closes them.
+</td>
+						</tr>
+					</table>
+				</section>
+			</div>
+			<footer>
+				<div id="license-info">
+					
+				</div>
+			</footer>
+		</div>
+	</body>
+</html>

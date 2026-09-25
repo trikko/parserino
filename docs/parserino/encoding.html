@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+		<title>Module parserino.encoding</title>
+		<link rel="stylesheet" href="../css/style.min.css"/>
+		<script type="text/javascript" src="../js/script.min.js"></script>
+	</head>
+	<body onload="setupDdox();">
+		<header></header>
+		<nav id="main-nav">
+			<div>
+				<noscript>
+					<p style="color: red">The search functionality needs JavaScript enabled</p>
+				</noscript>
+				<div id="symbolSearchPane" style="display: none">
+					<form action="#" method="GET">
+						<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(24);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" autofocus/>
+					</form>
+					<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../";
+document.getElementById('symbolSearchPane').style.display = 'block';</script>
+				</div>
+				<ul class="tree-view">
+					<li class="tree-view ">
+						<a class="package" href="#">parserino</a>
+				<ul class="tree-view">
+					<li class="tree-view collapsed">
+						<a class="package" href="#">css</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../parserino/css/matcher.html">matcher</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/css/selector.html">selector</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/css/tokenizer.html">tokenizer</a>
+					</li>
+				</ul>
+					</li>
+					<li class="tree-view collapsed">
+						<a class="package" href="#">html</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../parserino/html/decoder.html">decoder</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/html/entities.html">entities</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/html/errors.html">errors</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/html/parser.html">parser</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/html/serializer.html">serializer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/html/tokenizer.html">tokenizer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/html/treebuilder.html">treebuilder</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/arena.html">arena</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/dom.html">dom</a>
+					</li>
+					<li>
+						<a class="module selected" href="../parserino/encoding.html">encoding</a>
+				<ul class="tree-view">
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../parserino/encoding/encodingForLabel.html">encodingForLabel</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../parserino/encoding/sniffEncoding.html">sniffEncoding</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../parserino/encoding/toUtf8.html">toUtf8</a>
+				</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/names.html">names</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/snapshot.html">snapshot</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino.html">parserino</a>
+					</li>
+				</ul>
+			</div>
+			<p id="main-nav-footer">
+				Built with<a href="https://github.com/MartinNowak/scod">scod</a>
+			</p>
+		</nav>
+		<div id="main-contents">
+			<div>
+				<h1>Module parserino.encoding</h1><p>Encodings other than UTF-8.
+</p><section><p><code class="lang-d"><span class="typ">Document</span></code> takes UTF-8. For html in another encoding (old pages, files saved as windows-1252,
+ UTF-16, ...) convert the bytes first:
+</p>
+<pre class="code"><code class="lang-d"><span class="kwd">import <a href="../parserino.html"></span><span class="pln">parserino</span></a><span class="pun">, </span><span class="pln">parserino<wbr/></span><span class="pun">.</span><span class="pln">encoding</span><span class="pun">;
+</span><span class="kwd">auto </span><span class="pln">doc </span><span class="pun">= </span><span class="typ">Document</span><span class="pun">(<a href="../parserino/encoding/toUtf8.html"></span><span class="pln">toUtf8</span></a><span class="pun">(</span><span class="kwd">cast</span><span class="pun">(</span><span class="kwd">const</span><span class="pun">(</span><span class="typ">ubyte</span><span class="pun">)[]) </span><span class="pln">std<wbr/></span><span class="pun">.</span><span class="pln">file<wbr/></span><span class="pun">.</span><span class="pln">read</span><span class="pun">(</span><span class="str">"page.html"</span><span class="pun">)));</span></code></pre>
+<p> <code class="lang-d"><a href="../parserino/encoding/toUtf8.html"><span class="pln">toUtf8</span></a></code> finds the encoding as the HTML standard does ("encoding sniffing"): the byte order
+ mark, then the <code class="lang-d"><span class="pun">&lt;</span><span class="pln">meta charset</span><span class="pun">&gt;</span></code> (or <code class="lang-d"><span class="pln">http</span><span class="pun">-</span><span class="pln">equiv</span><span class="pun">=</span><span class="pln">content</span><span class="pun">-</span><span class="pln">type</span></code>) in the first 1024 bytes. If
+ nothing says it, valid UTF-8 is UTF-8, anything else windows-1252 (what browsers use for
+ western pages). With the <code class="lang-d"><span class="typ">Content</span><span class="pun">-</span><span class="typ">Type</span></code> of an HTTP response, pass its charset: it wins over
+ the <code class="lang-d"><span class="pun">&lt;</span><span class="pln">meta</span><span class="pun">&gt;</span></code>.
+</p>
+</section>
+<section><section><h2>Supported</h2>
+<p>UTF-8, UTF-16LE, UTF-16BE, windows-1252 (also for the labels <code class="lang-d"><span class="pln">iso</span><span class="pun">-</span><span class="lit">8859</span><span class="pun">-</span><span class="lit">1</span></code>,
+ <code class="lang-d"><span class="pln">latin1</span></code>, <code class="lang-d"><span class="pln">us</span><span class="pun">-</span><span class="pln">ascii</span></code>, as the Encoding standard says), ISO-8859-2, windows-1250, windows-1251.
+</p>
+</section>
+</section>
+				<section>
+					<h2>Functions</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<code>
+									<a id="encodingForLabel" class="public" href="../parserino/encoding/encodingForLabel.html">encodingForLabel</a><span class="tableEntryAnnotation">(label)</span>
+								</code>
+							</td>
+							<td>The canonical name of an encoding label ("latin1" is "windows-1252"), or null if not supported
+</td>
+						</tr>
+						<tr>
+							<td>
+								<code>
+									<a id="sniffEncoding" class="public" href="../parserino/encoding/sniffEncoding.html">sniffEncoding</a><span class="tableEntryAnnotation">(bytes, transportCharset)</span>
+								</code>
+							</td>
+							<td>The encoding of the html in <code class="lang-d"><a href="../parserino/encoding/sniffEncoding.html#bytes"><span class="pln">bytes</span></a></code>, as its canonical name ("UTF-8", "windows-1252", ...).
+ <code class="lang-d"><a href="../parserino/encoding/sniffEncoding.html#transportCharset"><span class="pln">transportCharset</span></a></code> is the charset of the HTTP <code class="lang-d"><span class="typ">Content</span><span class="pun">-</span><span class="typ">Type</span></code>, if known: it comes after the BOM
+ and before the <code class="lang-d"><span class="pun">&lt;</span><span class="pln">meta</span><span class="pun">&gt;</span></code>.
+</td>
+						</tr>
+						<tr>
+							<td>
+								<code>
+									<a id="toUtf8" class="public" href="../parserino/encoding/toUtf8.html">toUtf8</a><span class="tableEntryAnnotation">(bytes, encoding, transportCharset)</span>
+								</code>
+							</td>
+							<td>Convert html to UTF-8. <code class="lang-d"><a href="../parserino/encoding/toUtf8.html#encoding"><span class="pln">encoding</span></a></code> is a label ("utf-8", "latin1", "windows-1251", ...); if
+ null it's found with <code class="lang-d"><a href="../parserino/encoding/sniffEncoding.html"><span class="pln">sniffEncoding</span></a></code> (<code class="lang-d"><a href="../parserino/encoding/toUtf8.html#transportCharset"><span class="pln">transportCharset</span></a></code> is the charset of the HTTP
+ Content-Type, if known). Invalid sequences become U+FFFD. It throws <code class="lang-d"><span class="typ">ParserinoException</span></code> for
+ unsupported encodings.
+</td>
+						</tr>
+					</table>
+				</section>
+			</div>
+			<footer>
+				<div id="license-info">
+					
+				</div>
+			</footer>
+		</div>
+	</body>
+</html>

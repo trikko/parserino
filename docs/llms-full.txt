@@ -18,7 +18,7 @@ The root of the DOM tree.
 - `this(string html, Parsing parsing = Parsing.Eager, size_t chunkSize = DefaultChunkSize)`: Parses the document. With `Parsing.Lazy` it parses incrementally, only as far as queries and accessors need. Results are identical to a full parse. Mutations complete the parsing first.
 - `this(string html, ParseOptions options)`: `ParseOptions` has `parsing`, `chunkSize` and `scripting` (with `scripting: true` the content of `<noscript>` is text, as in a browser; by default it's parsed as html).
 - `ctDocument!(html, ParseOptions options = ParseOptions.init)`: A document parsed at compile time. Each call returns a new mutable document, rebuilt from the stored tree without parsing (e.g. `ctDocument!(import("page.html"))`).
-- `Snapshot snapshot`, `this(Snapshot)`: A compact copy of the tree; `Document(snap)` makes a new independent document from it much faster than parsing. Snapshots can be shared between threads.
+- `Snapshot snapshot`, `this(Snapshot)`: A compact, immutable copy of the tree; `Document(snap)` makes a new independent document from it much faster than parsing. Use it for a page filled many times (a template, for each request): parse once, then `Document(snap)` each time. Snapshots can be shared between threads; the documents borrow their strings (the snapshot is kept alive as long as needed).
 - `Document dup`: A deep copy.
 - `void finishParsing()`, `bool isParsing`, `size_t bytesParsed`: Lazy parsing.
 - `bool isValid`: True if the document is initialized.
@@ -49,7 +49,7 @@ The root of the DOM tree.
 
 ### `Element` (a `Node` too)
 - `string localName` ("div", "foreignObject"), `string tagName` ("DIV" for html elements), `localNameView`.
-- `string id` (get/set), `idView`, `auto classes`, `classesView`.
+- `string id` (get/set), `idView`, `classes` (a range of `string`s), `classesView` (of slices).
 - `auto attributes` (a range of `Element.Attribute {name, value}`), `attributesView` (`Element.AttributeView`).
 - `string getAttribute(name)` (`null` if missing, `""` if empty), `getAttributeView(name)`, `setAttribute(name, value)`, `hasAttribute(name)`, `removeAttribute(name)`. Names are case-insensitive.
 - `string innerHTML` (get/set; for `<template>` the content), `string outerHTML` (get/set, parsed in the context of the parent), `string innerText` (the same as `textContent`), `string startTag` (`<a href="x">`).
@@ -64,8 +64,9 @@ The root of the DOM tree.
 
 ### Encodings (`parserino.encoding`)
 - The input of `Document` is UTF-8: a leading BOM is removed, invalid bytes become U+FFFD.
-- `string toUtf8(const(ubyte)[] bytes, string encoding = null, string transportCharset = null)`: converts to UTF-8; without `encoding` it uses `sniffEncoding`.
-- `string sniffEncoding(const(ubyte)[] bytes, string transportCharset = null)`: BOM, then the HTTP charset, then `<meta charset>` in the first 1024 bytes, else UTF-8 if valid, else windows-1252.
+- `string toUtf8(const(ubyte)[] bytes, const(char)[] encoding = null, const(char)[] transportCharset = null)`: converts to UTF-8; without `encoding` it uses `sniffEncoding`.
+- `string sniffEncoding(const(ubyte)[] bytes, const(char)[] transportCharset = null)`: BOM, then the HTTP charset, then `<meta charset>` in the first 1024 bytes, else UTF-8 if valid, else windows-1252.
+- `string encodingForLabel(label)`: The canonical name of an encoding label (`"latin1"` is `"windows-1252"`), or `null` if not supported.
 - Supported: UTF-8, UTF-16LE/BE, windows-1252 (labels latin1, iso-8859-1, us-ascii, ...), ISO-8859-2, windows-1250, windows-1251.
 
 ### `Show` (Enum, flags)
@@ -79,6 +80,7 @@ A compiled CSS selector, reusable with any document.
 - `this(string css)`: Compiles the selector (throws `ParserinoException` on invalid syntax).
 - `bool isValid`.
 - `ctSelector!css`: Compiled at compile time (syntax errors are compile errors).
+- `bool isValidSelector(css)`: Checks the syntax without throwing; it works at compile time too.
 
 ```d
 auto sel = Selector("div > a[href]");

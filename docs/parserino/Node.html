@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+		<title>Struct Node</title>
+		<link rel="stylesheet" href="../css/style.min.css"/>
+		<script type="text/javascript" src="../js/script.min.js"></script>
+	</head>
+	<body onload="setupDdox();">
+		<header></header>
+		<nav id="main-nav">
+			<div>
+				<noscript>
+					<p style="color: red">The search functionality needs JavaScript enabled</p>
+				</noscript>
+				<div id="symbolSearchPane" style="display: none">
+					<form action="#" method="GET">
+						<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(24);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" autofocus/>
+					</form>
+					<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../";
+document.getElementById('symbolSearchPane').style.display = 'block';</script>
+				</div>
+				<ul class="tree-view">
+					<li class="tree-view ">
+						<a class="package" href="#">parserino</a>
+				<ul class="tree-view">
+					<li class="tree-view collapsed">
+						<a class="package" href="#">css</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../parserino/css/matcher.html">matcher</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/css/selector.html">selector</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/css/tokenizer.html">tokenizer</a>
+					</li>
+				</ul>
+					</li>
+					<li class="tree-view collapsed">
+						<a class="package" href="#">html</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../parserino/html/decoder.html">decoder</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/html/entities.html">entities</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/html/errors.html">errors</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/html/parser.html">parser</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/html/serializer.html">serializer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/html/tokenizer.html">tokenizer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/html/treebuilder.html">treebuilder</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/arena.html">arena</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/dom.html">dom</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/encoding.html">encoding</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/names.html">names</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/snapshot.html">snapshot</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module selected" href="../parserino.html">parserino</a>
+				<ul class="tree-view">
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../parserino/asFragment.html">asFragment</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/AttributeRange.html">AttributeRange</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/ClassRange.html">ClassRange</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../parserino/ctDocument.html">ctDocument</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../parserino/ctSelector.html">ctSelector</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(EnumMember))" href="../parserino/DefaultChunkSize.html">DefaultChunkSize</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/Document.html">Document</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/Element.html">Element</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../parserino/frontOr.html">frontOr</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../parserino/frontOrInit.html">frontOrInit</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../parserino/frontOrThrow.html">frontOrThrow</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../parserino/isValidSelector.html">isValidSelector</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/Node.html">Node</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Alias))" href="../parserino/NodeOf.html">NodeOf</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/NodeRange.html">NodeRange</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/ParseError.html">ParseError</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/ParseOptions.html">ParseOptions</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Class))" href="../parserino/ParserinoException.html">ParserinoException</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../parserino/Parsing.html">Parsing</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/Selector.html">Selector</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../parserino/Show.html">Show</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/Snapshot.html">Snapshot</a>
+				</li>
+				</ul>
+					</li>
+				</ul>
+			</div>
+			<p id="main-nav-footer">
+				Built with<a href="https://github.com/MartinNowak/scod">scod</a>
+			</p>
+		</nav>
+		<div id="main-contents">
+			<div>
+				<h1>Struct Node</h1><p>A node of a document: an element, a text, a comment, a doctype, the document itself, ...
+ See the module documentation for the navigation (<code class="lang-d"><a href="../parserino/Show.html"><span class="typ">Show</span></a></code>) and the rules on errors.
+</p>
+				<div class="prototype">
+					<code class="lang-d">
+						<div class="single-prototype">
+				<span class="kwd">struct</span> <span class="typ">Node</span><span class="pun">;</span>
+						</div>
+					</code>
+				</div>
+				
+				<section><h2>Properties</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Type</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.dataView.html" class="public property"><code>dataView</code></a><span class="tableEntryAnnotation">[get]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="kwd">const</span><span class="pun">(</span><span class="typ">char</span><span class="pun">)</span><span class="pun">[]</span></code></td><td>The data of a text, comment or processing instruction without copying it; <code class="lang-d"><span class="kwd">null</span></code> for other nodes
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.isComment.html" class="public property"><code>isComment</code></a><span class="tableEntryAnnotation">[get]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">bool</span></code></td><td>Is this a comment?
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.isElement.html" class="public property"><code>isElement</code></a><span class="tableEntryAnnotation">[get]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">bool</span></code></td><td>Is this node an element?
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.isText.html" class="public property"><code>isText</code></a><span class="tableEntryAnnotation">[get]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">bool</span></code></td><td>Is this a text node?
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.isValid.html" class="public property"><code>isValid</code></a><span class="tableEntryAnnotation">[get]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">bool</span></code></td><td>Is this a valid node?
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.nodeName.html" class="public property"><code>nodeName</code></a><span class="tableEntryAnnotation">[get]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">string</span></code></td><td>The name of the node, as in the DOM: the tag name for elements (uppercase for html
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.nodeType.html" class="public property"><code>nodeType</code></a><span class="tableEntryAnnotation">[get]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../parserino/dom/NodeType.html"><span class="typ">NodeType</span></a></code></td><td>The type of the node (<code class="lang-d"><span class="typ">NodeType<wbr/></span><span class="pun">.</span><span class="typ">Element</span></code>, <code class="lang-d"><span class="typ">NodeType<wbr/></span><span class="pun">.</span><span class="typ">Text</span></code>, ...)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.ownerDocument.html" class="public property"><code>ownerDocument</code></a><span class="tableEntryAnnotation">[get]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../parserino/Document.html"><span class="typ">Document</span></a></code></td><td>The document of this node
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.textContent.html" class="public property"><code>textContent</code></a><span class="tableEntryAnnotation">[get]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">string</span></code></td><td>The text of the node (DOM <code class="lang-d"><span class="pln">textContent</span></code>): the text of all the descendants for elements
+ and fragments, the data for texts, comments and processing instructions, <code class="lang-d"><span class="kwd">null</span></code> for the
+ document and the doctype.
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.textContent.html" class="public property"><code>textContent</code></a><span class="tableEntryAnnotation">[set]</span>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="kwd">const</span><span class="pun">(</span><span class="typ">char</span><span class="pun">)</span><span class="pun">[]</span></code></td><td>Set the text: for elements and fragments it replaces all the children with a text node,
+ for texts, comments and processing instructions it replaces the data. It does nothing on
+ the document and the doctype (as in the DOM).
+</td>
+						</tr>
+					</table>
+				</section>
+				<section><h2>Methods</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.after.html" class="public">
+									<code>after</code>
+								</a>
+								<span class="tableEntryAnnotation">(what)</span>
+							</td>
+							<td>Insert a node (or a text, or a fragment) after this one
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.append.html" class="public">
+									<code>append</code>
+								</a>
+								<span class="tableEntryAnnotation">(what)</span>
+							</td>
+							<td>Append a node (or a text, or a fragment) as the last child.
+ Strings become text nodes; <code class="lang-d"><span class="str">"&lt;b&gt;x&lt;/b&gt;"<a href="../parserino/asFragment.html"></span><wbr/><span class="pun">.</span><span class="pln">asFragment</span></a></code> is parsed as html (in the context of
+ this element); a <code class="lang-d"><span class="typ">DocumentFragment</span></code> (see <code class="lang-d"><a href="../parserino/Document.fragment.html"><span class="typ">Document<wbr/></span><span class="pun">.</span><span class="pln">fragment</span></a></code>) gives its children.
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.appendChild.html" class="public">
+									<code>appendChild</code>
+								</a>
+								<span class="tableEntryAnnotation">(child)</span>
+							</td>
+							<td>Append a child node (as <code class="lang-d"><a href="../parserino/Node.append.html"><span class="pln">append</span></a></code>, only for nodes)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.asElement.html" class="public">
+									<code>asElement</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>This node as an <code class="lang-d"><a href="../parserino/Element.html"><span class="typ">Element</span></a></code>, or an invalid element if it isn't one
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.before.html" class="public">
+									<code>before</code>
+								</a>
+								<span class="tableEntryAnnotation">(what)</span>
+							</td>
+							<td>Insert a node (or a text, or a fragment) before this one
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.byClass.html" class="public">
+									<code>byClass</code>
+								</a>
+								<span class="tableEntryAnnotation">(name)</span>
+							</td>
+							<td>Search for elements by class
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.byComment.html" class="public">
+									<code>byComment</code>
+								</a>
+								<span class="tableEntryAnnotation">(text)</span>
+							</td>
+							<td>Search for comments by text (whitespace at the ends ignored)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.byCommentExact.html" class="public">
+									<code>byCommentExact</code>
+								</a>
+								<span class="tableEntryAnnotation">(text)</span>
+							</td>
+							<td>Search for comments with exactly this text
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.byId.html" class="public">
+									<code>byId</code>
+								</a>
+								<span class="tableEntryAnnotation">(id)</span>
+							</td>
+							<td>Search for an element by id. It returns an invalid element (<code class="lang-d"><span class="pun">== </span><span class="kwd">null</span></code>) if not found.
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.bySelector.html" class="public">
+									<code>bySelector</code>
+								</a>
+								<span class="tableEntryAnnotation">(selector)</span>
+							</td>
+							<td>Search for elements by css selector
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.bySelector.html" class="public">
+									<code>bySelector</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>ditto, parsed at compile time
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.byTagName.html" class="public">
+									<code>byTagName</code>
+								</a>
+								<span class="tableEntryAnnotation">(name)</span>
+							</td>
+							<td>Search for elements by tag name (case-insensitive for html elements; <code class="lang-d"><span class="str">"*"</span></code> gives all the elements)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.children.html" class="public">
+									<code>children</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>The children that match <code class="lang-d"><span class="pln">show</span></code>, as a lazy (bidirectional) range
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.contains.html" class="public">
+									<code>contains</code>
+								</a>
+								<span class="tableEntryAnnotation">(other)</span>
+							</td>
+							<td>Is <code class="lang-d"><a href="../parserino/Node.contains.html#other"><span class="pln">other</span></a></code> this node or one of its descendants? (as in the DOM)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.descendants.html" class="public">
+									<code>descendants</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>All the descendants that match <code class="lang-d"><span class="pln">show</span></code>, in tree order, as a lazy (bidirectional) range
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.dup.html" class="public">
+									<code>dup</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>A deep copy of this node (with all the descendants), not attached to the document
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.firstChild.html" class="public">
+									<code>firstChild</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>The first child that matches <code class="lang-d"><span class="pln">show</span></code>
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.hasChildNodes.html" class="public">
+									<code>hasChildNodes</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>Does this node have children? (any kind of node)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.lastChild.html" class="public">
+									<code>lastChild</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>The last child that matches <code class="lang-d"><span class="pln">show</span></code>
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.nextSibling.html" class="public">
+									<code>nextSibling</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>The next sibling that matches <code class="lang-d"><span class="pln">show</span></code>
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.opAssign.html" class="public">
+									<code>opAssign</code>
+								</a>
+								<span class="tableEntryAnnotation">(__param_0)</span>
+							</td>
+							<td><code class="lang-d"><span class="pln">node </span><span class="pun">= </span><span class="kwd">null</span></code> makes it an invalid node (it releases its document)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.opCast.html" class="public">
+									<code>opCast</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td><code class="lang-d"><span class="kwd">cast</span><span class="pun">(</span><span class="typ">string</span><span class="pun">) </span><span class="pln">node</span></code> is the same as <code class="lang-d"><a href="../parserino/Node.toString.html"><span class="pln">toString</span></a></code>
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.opEquals.html" class="public">
+									<code>opEquals</code>
+								</a>
+								<span class="tableEntryAnnotation">(e)</span>
+							</td>
+							<td><code class="lang-d"><span class="pln">node </span><span class="pun">== </span><span class="kwd">null</span></code> is true for an invalid node, <code class="lang-d"><span class="pln">node </span><span class="pun">== </span><span class="str">"..."</span></code> compares the html of the
+ node, <code class="lang-d"><span class="pln">node </span><span class="pun">== </span><span class="pln">other</span></code> is true if they are the same node.
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.opOpAssign.html" class="public">
+									<code>opOpAssign</code>
+								</a>
+								<span class="tableEntryAnnotation">(what)</span>
+							</td>
+							<td><code class="lang-d"><span class="pln">node </span><span class="pun">~= </span><span class="pln">x</span></code> is <code class="lang-d"><span class="pln">node<wbr/></span><span class="pun">.</span><span class="pln">append</span><span class="pun">(</span><span class="pln">x</span><span class="pun">)</span></code>
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.parent.html" class="public">
+									<code>parent</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>The parent, if it matches <code class="lang-d"><span class="pln">show</span></code> (else an invalid node). By default the parent element:
+ the parent of <code class="lang-d"><span class="pun">&lt;</span><span class="pln">html</span><span class="pun">&gt;</span></code> is the document, so <code class="lang-d"><span class="pln">html<wbr/></span><span class="pun">.</span><span class="pln">parent</span></code> is invalid and
+ <code class="lang-d"><span class="pln">html<wbr/></span><span class="pun">.</span><span class="pln">parent</span><span class="pun">!(<a href="../parserino/Show.html#All"></span><span class="typ">Show<wbr/></span><span class="pun">.</span><span class="typ">All</span></a><span class="pun">)</span></code> is the document.
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.prepend.html" class="public">
+									<code>prepend</code>
+								</a>
+								<span class="tableEntryAnnotation">(what)</span>
+							</td>
+							<td>Insert a node (or a text, or a fragment) as the first child
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.previousSibling.html" class="public">
+									<code>previousSibling</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>The previous sibling that matches <code class="lang-d"><span class="pln">show</span></code>
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.remove.html" class="public">
+									<code>remove</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>Remove this node from its parent. The node is still valid and can be inserted again.
+ It returns false if the node had no parent.
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.replaceWith.html" class="public">
+									<code>replaceWith</code>
+								</a>
+								<span class="tableEntryAnnotation">(what)</span>
+							</td>
+							<td>Replace this node with another one (or with a text, or a fragment)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.shallowDup.html" class="public">
+									<code>shallowDup</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>A copy of this node alone (for an element: the tag and the attributes, without children)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.toHash.html" class="public">
+									<code>toHash</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>Nodes can be keys of associative arrays (the same node, the same key)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.toString.html" class="public">
+									<code>toString</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>The node as html (for an element: <code class="lang-d"><span class="pln">outerHTML</span></code>)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../parserino/Node.toString.html" class="public">
+									<code>toString</code>
+								</a>
+								<span class="tableEntryAnnotation">(sink)</span>
+							</td>
+							<td>Write the node as html to a sink
+</td>
+						</tr>
+					</table>
+				</section>
+			</div>
+			<footer>
+				<div id="license-info">
+					
+				</div>
+			</footer>
+		</div>
+	</body>
+</html>

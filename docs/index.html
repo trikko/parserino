@@ -3,7 +3,7 @@
 	<head>
 		<meta charset="UTF-8"/>
 		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
-		<title>Module parserino</title>
+		<title>API documentation</title>
 		<link rel="stylesheet" href="./css/style.min.css"/>
 		<script type="text/javascript" src="./js/script.min.js"></script>
 	</head>
@@ -22,161 +22,235 @@
 document.getElementById('symbolSearchPane').style.display = 'block';</script>
 				</div>
 				<ul class="tree-view">
+					<li class="tree-view ">
+						<a class="package" href="#">parserino</a>
+				<ul class="tree-view">
+					<li class="tree-view collapsed">
+						<a class="package" href="#">css</a>
+				<ul class="tree-view">
 					<li>
-						<div class="module selected">
-							<a href="./parserino.html">parserino</a>
-						</div>
+						<a class="module collapsed" href="./parserino/css/matcher.html">matcher</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="./parserino/css/selector.html">selector</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="./parserino/css/tokenizer.html">tokenizer</a>
+					</li>
+				</ul>
+					</li>
+					<li class="tree-view collapsed">
+						<a class="package" href="#">html</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="./parserino/html/decoder.html">decoder</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="./parserino/html/entities.html">entities</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="./parserino/html/errors.html">errors</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="./parserino/html/parser.html">parser</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="./parserino/html/serializer.html">serializer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="./parserino/html/tokenizer.html">tokenizer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="./parserino/html/treebuilder.html">treebuilder</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="./parserino/arena.html">arena</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="./parserino/dom.html">dom</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="./parserino/encoding.html">encoding</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="./parserino/names.html">names</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="./parserino/snapshot.html">snapshot</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="./parserino.html">parserino</a>
 					</li>
 				</ul>
 			</div>
 			<p id="main-nav-footer">
-				Built with
-				<a href="https://github.com/MartinNowak/scod">scod</a>
+				Built with<a href="https://github.com/MartinNowak/scod">scod</a>
 			</p>
 		</nav>
 		<div id="main-contents">
 			<div>
-				<h1>Module parserino</h1><p>HTML5 parser and DOM manipulation library.
-</p><section><p>Parserino is a fast html5 parser and DOM manipulation library based on the lexbor library.
- It's written in D and it's designed to be easy to use and fast.
-</p>
-<pre class="code"><code class="lang-d"><span class="kwd">import </span><span class="pln">parserino</span><span class="pun">;
-</span><span class="typ">void </span><span class="pln">main</span><span class="pun">()
-{
-   </span><span class="kwd">auto </span><span class="pln">doc </span><span class="pun">= <a href="./parserino/Document.html"></span><span class="typ">Document</span></a><span class="pun">(</span><span class="str">"&lt;html&gt;&lt;body&gt;&lt;p&gt;Hello World!&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;"</span><span class="pun">);
-   </span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">doc<wbr/></span><span class="pun">.</span><span class="pln">body<wbr/></span><span class="pun">.</span><span class="pln">firstChild<wbr/></span><span class="pun">.</span><span class="pln">innerText </span><span class="pun">== </span><span class="str">"Hello World!"</span><span class="pun">);
-   </span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">doc<wbr/></span><span class="pun">.</span><span class="pln">byTagName</span><span class="pun">(</span><span class="str">"p"</span><span class="pun">)<wbr/>.</span><span class="pln">front<wbr/></span><span class="pun">.</span><span class="pln">innerText </span><span class="pun">== </span><span class="str">"Hello World!"</span><span class="pun">);
-}</span></code></pre>
-<p> The main two types you will use are <code class="lang-d"><a href="./parserino/Document.html" title="parserino.Document"><span class="typ">Document</span></a></code> and <code class="lang-d"><a href="./parserino/Element.html" title="parserino.Element"><span class="typ">Element</span></a></code>.
-</p>
-</section>
+				<h1>API documentation</h1>
+				<table>
+					<col class="caption"/>
+					<tr>
+						<th>Module</th><th>Description</th>
+					</tr>
+				<tr>
+					<td>
+						<a href="./parserino/css/matcher.html">parserino.css.matcher</a>
+					</td>
+					<td>
+						Matching of CSS selectors against the DOM.
 
-				<section></section>
-				<section>
-					<h2>Functions</h2>
-					<table>
-						<col class="caption"/>
-						<tr>
-							<th>Name</th><th>Description</th>
-						</tr>
-						<tr>
-							<td>
-								<code>
-									<a id="asFragment" class="public" href="./parserino/asFragment.html">asFragment</a><span class="tableEntryAnnotation">(s)</span>
-								</code>
-							</td>
-							<td>Create a fragment from a string. The fragment is not attached to any document by default.
- The fragment is not a valid element or document, it's just a piece of html you can add to a document.
-</td>
-						</tr>
-						<tr>
-							<td>
-								<code>
-									<a id="frontOr" class="public" href="./parserino/frontOr.html">frontOr</a><span class="tableEntryAnnotation">(range, fallback)</span>
-								</code>
-							</td>
-							<td>Get the first element of a range or return the second args
-</td>
-						</tr>
-						<tr>
-							<td>
-								<code>
-									<a id="frontOrInit" class="public" href="./parserino/frontOrInit.html">frontOrInit</a><span class="tableEntryAnnotation">(range)</span>
-								</code>
-							</td>
-							<td>Get the first element of a range or return Element.init
-</td>
-						</tr>
-						<tr>
-							<td>
-								<code>
-									<a id="frontOrThrow" class="public" href="./parserino/frontOrThrow.html">frontOrThrow</a><span class="tableEntryAnnotation">(range)</span>
-								</code>
-							</td>
-							<td>Get the first element of a range or throw an exception
-</td>
-						</tr>
-					</table>
-				</section>
-				<section>
-					<h2>Classes</h2>
-					<table>
-						<col class="caption"/>
-						<tr>
-							<th>Name</th><th>Description</th>
-						</tr>
-						<tr>
-							<td>
-								<code>
-									<a id="ChildrenElementRange" class="public" href="./parserino/ChildrenElementRange.html">ChildrenElementRange</a>
-								</code>
-							</td>
-							<td>A lazy range of elements
-</td>
-						</tr>
-						<tr>
-							<td>
-								<code>
-									<a id="SelectorElementRange" class="public" href="./parserino/SelectorElementRange.html">SelectorElementRange</a>
-								</code>
-							</td>
-							<td>A lazy range of elements
-</td>
-						</tr>
-					</table>
-				</section>
-				<section>
-					<h2>Structs</h2>
-					<table>
-						<col class="caption"/>
-						<tr>
-							<th>Name</th><th>Description</th>
-						</tr>
-						<tr>
-							<td>
-								<code>
-									<a id="Document" class="public" href="./parserino/Document.html">Document</a>
-								</code>
-							</td>
-							<td>The HTML5 Document
-</td>
-						</tr>
-						<tr>
-							<td>
-								<code>
-									<a id="Element" class="public" href="./parserino/Element.html">Element</a>
-								</code>
-							</td>
-							<td>A html element
-</td>
-						</tr>
-					</table>
-				</section>
-				<section>
-					<h2>Enums</h2>
-					<table>
-						<col class="caption"/>
-						<tr>
-							<th>Name</th><th>Description</th>
-						</tr>
-						<tr>
-							<td>
-								<code>
-									<a id="VisitOrder" class="public" href="./parserino/VisitOrder.html">VisitOrder</a>
-								</code>
-							</td>
-							<td>Order of visit
-</td>
-						</tr>
-					</table>
-				</section>
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<a href="./parserino/css/selector.html">parserino.css.selector</a>
+					</td>
+					<td>
+						CSS selectors: syntax tree and parser.
+
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<a href="./parserino/css/tokenizer.html">parserino.css.tokenizer</a>
+					</td>
+					<td>
+						CSS tokenizer (CSS Syntax Level 3), limited to what selectors need.
+ It works at runtime and at compile time.
+
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<a href="./parserino/html/decoder.html">parserino.html.decoder</a>
+					</td>
+					<td>
+						UTF-8 decoding of the input, as the Encoding standard (the "UTF-8 decode" of the HTML parser):
+ invalid bytes become U+FFFD (one for each "maximal subpart", as browsers do) and a leading
+ byte order mark is removed. The input comes in chunks: a sequence can span two chunks.
+
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<a href="./parserino/html/entities.html">parserino.html.entities</a>
+					</td>
+					<td>
+						Named character references of HTML (<code class="lang-d"><span class="pun">&amp;</span><span class="pln">amp</span><span class="pun">;</span></code>, <code class="lang-d"><span class="pun">&amp;</span><span class="pln">nbsp</span><span class="pun">;</span></code>, ...).
+ Generated by tools/gen/gen_names.py (the list comes from lexbor, Apache-2.0: see NOTICE-lexbor).
+
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<a href="./parserino/html/errors.html">parserino.html.errors</a>
+					</td>
+					<td>
+						The parse errors of the HTML parser.
+
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<a href="./parserino/html/parser.html">parserino.html.parser</a>
+					</td>
+					<td>
+						The HTML parser: tokenizer + tree builder, for documents (also chunk by chunk) and fragments.
+
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<a href="./parserino/html/serializer.html">parserino.html.serializer</a>
+					</td>
+					<td>
+						HTML serialization ("serializing HTML fragments" in the HTML spec).
+
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<a href="./parserino/html/tokenizer.html">parserino.html.tokenizer</a>
+					</td>
+					<td>
+						HTML tokenizer (HTML Living Standard, "Tokenization").
+
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<a href="./parserino/html/treebuilder.html">parserino.html.treebuilder</a>
+					</td>
+					<td>
+						HTML tree construction (HTML Living Standard, "Tree construction").
+
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<a href="./parserino/arena.html">parserino.arena</a>
+					</td>
+					<td>
+						A bump allocator: many small allocations, freed all together.
+
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<a href="./parserino/dom.html">parserino.dom</a>
+					</td>
+					<td>
+						The document tree.
+
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<a href="./parserino/encoding.html">parserino.encoding</a>
+					</td>
+					<td>
+						Encodings other than UTF-8.
+
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<a href="./parserino/names.html">parserino.names</a>
+					</td>
+					<td>
+						Names of tags, attributes and namespaces.
+
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<a href="./parserino/snapshot.html">parserino.snapshot</a>
+					</td>
+					<td>
+						A document tree as plain arrays, without pointers.
+
+					</td>
+				</tr>
+				<tr>
+					<td>
+						<a href="./parserino.html">parserino</a>
+					</td>
+					<td>
+						HTML5 parser and DOM manipulation library.
+
+					</td>
+				</tr>
+				</table>
 			</div>
 			<footer>
-				<div id="license-info">
-
-
-
-				</div>
+				<div id="license-info"></div>
 			</footer>
 		</div>
 	</body>

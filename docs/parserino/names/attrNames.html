@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+		<title>Variable attrNames</title>
+		<link rel="stylesheet" href="../../css/style.min.css"/>
+		<script type="text/javascript" src="../../js/script.min.js"></script>
+	</head>
+	<body onload="setupDdox();">
+		<header></header>
+		<nav id="main-nav">
+			<div>
+				<noscript>
+					<p style="color: red">The search functionality needs JavaScript enabled</p>
+				</noscript>
+				<div id="symbolSearchPane" style="display: none">
+					<form action="#" method="GET">
+						<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(24);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" autofocus/>
+					</form>
+					<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../../";
+document.getElementById('symbolSearchPane').style.display = 'block';</script>
+				</div>
+				<ul class="tree-view">
+					<li class="tree-view ">
+						<a class="package" href="#">parserino</a>
+				<ul class="tree-view">
+					<li class="tree-view collapsed">
+						<a class="package" href="#">css</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../../parserino/css/matcher.html">matcher</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/css/selector.html">selector</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/css/tokenizer.html">tokenizer</a>
+					</li>
+				</ul>
+					</li>
+					<li class="tree-view collapsed">
+						<a class="package" href="#">html</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../../parserino/html/decoder.html">decoder</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/entities.html">entities</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/errors.html">errors</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/parser.html">parser</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/serializer.html">serializer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/tokenizer.html">tokenizer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/html/treebuilder.html">treebuilder</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/arena.html">arena</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/dom.html">dom</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/encoding.html">encoding</a>
+					</li>
+					<li>
+						<a class="module selected" href="../../parserino/names.html">names</a>
+				<ul class="tree-view">
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../parserino/names/AttrName.html">AttrName</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Variable))" href="../../parserino/names/attrNames.html">attrNames</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../parserino/names/Category.html">Category</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../../parserino/names/hash.html">hash</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../../parserino/names/knownAttr.html">knownAttr</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../../parserino/names/knownTag.html">knownTag</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../parserino/names/NameTable.html">NameTable</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../parserino/names/Ns.html">Ns</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../../parserino/names/Tag.html">Tag</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Variable))" href="../../parserino/names/tagCategories.html">tagCategories</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Variable))" href="../../parserino/names/tagNames.html">tagNames</a>
+				</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino/snapshot.html">snapshot</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../parserino.html">parserino</a>
+					</li>
+				</ul>
+			</div>
+			<p id="main-nav-footer">
+				Built with<a href="https://github.com/MartinNowak/scod">scod</a>
+			</p>
+		</nav>
+		<div id="main-contents">
+			<div>
+				<h1>Variable attrNames</h1><p>Names of the known attributes
+</p>
+				<div class="prototype">
+					<code class="lang-d">
+						<div class="single-prototype">
+				<span class="kwd">immutable</span><span class="pun">(</span><span class="typ">char</span><span class="pun">[]</span><span class="pun">[</span><span class="lit">73</span><span class="pun">]</span><span class="pun">)</span> <span class="pln">attrNames</span> <span class="pun">=</span> <span class="pun">[</span><span class="str">"#undef"</span><span class="pun">, </span><span class="str">"accept"</span><span class="pun">, </span><span class="str">"accept-charset"</span><span class="pun">, </span><span class="str">"active"</span><span class="pun">, </span><span class="str">"align"</span><span class="pun">, </span><span class="str">"alink"</span><span class="pun">, </span><span class="str">"alt"</span><span class="pun">, </span><span class="str">"axis"</span><span class="pun">, </span><span class="str">"bgcolor"</span><span class="pun">, </span><span class="str">"charset"</span><span class="pun">, </span><span class="str">"checked"</span><span class="pun">, </span><span class="str">"class"</span><span class="pun">, </span><span class="str">"clear"</span><span class="pun">, </span><span class="str">"codetype"</span><span class="pun">, </span><span class="str">"color"</span><span class="pun">, </span><span class="str">"compact"</span><span class="pun">, </span><span class="str">"content"</span><span class="pun">, </span><span class="str">"declare"</span><span class="pun">, </span><span class="str">"defer"</span><span class="pun">, </span><span class="str">"dir"</span><span class="pun">, </span><span class="str">"direction"</span><span class="pun">, </span><span class="str">"disabled"</span><span class="pun">, </span><span class="str">"enctype"</span><span class="pun">, </span><span class="str">"face"</span><span class="pun">, </span><span class="str">"focus"</span><span class="pun">, </span><span class="str">"for"</span><span class="pun">, </span><span class="str">"frame"</span><span class="pun">, </span><span class="str">"height"</span><span class="pun">, </span><span class="str">"hover"</span><span class="pun">, </span><span class="str">"href"</span><span class="pun">, </span><span class="str">"hreflang"</span><span class="pun">, </span><span class="str">"html"</span><span class="pun">, </span><span class="str">"http-equiv"</span><span class="pun">, </span><span class="str">"id"</span><span class="pun">, </span><span class="str">"is"</span><span class="pun">, </span><span class="str">"lang"</span><span class="pun">, </span><span class="str">"language"</span><span class="pun">, </span><span class="str">"link"</span><span class="pun">, </span><span class="str">"maxlength"</span><span class="pun">, </span><span class="str">"media"</span><span class="pun">, </span><span class="str">"method"</span><span class="pun">, </span><span class="str">"multiple"</span><span class="pun">, </span><span class="str">"nohref"</span><span class="pun">, </span><span class="str">"noresize"</span><span class="pun">, </span><span class="str">"noshade"</span><span class="pun">, </span><span class="str">"nowrap"</span><span class="pun">, </span><span class="str">"placeholder"</span><span class="pun">, </span><span class="str">"pool"</span><span class="pun">, </span><span class="str">"public"</span><span class="pun">, </span><span class="str">"readonly"</span><span class="pun">, </span><span class="str">"rel"</span><span class="pun">, </span><span class="str">"required"</span><span class="pun">, </span><span class="str">"rev"</span><span class="pun">, </span><span class="str">"rules"</span><span class="pun">, </span><span class="str">"scheme"</span><span class="pun">, </span><span class="str">"scope"</span><span class="pun">, </span><span class="str">"scrolling"</span><span class="pun">, </span><span class="str">"selected"</span><span class="pun">, </span><span class="str">"shape"</span><span class="pun">, </span><span class="str">"size"</span><span class="pun">, </span><span class="str">"slot"</span><span class="pun">, </span><span class="str">"src"</span><span class="pun">, </span><span class="str">"style"</span><span class="pun">, </span><span class="str">"system"</span><span class="pun">, </span><span class="str">"target"</span><span class="pun">, </span><span class="str">"text"</span><span class="pun">, </span><span class="str">"title"</span><span class="pun">, </span><span class="str">"type"</span><span class="pun">, </span><span class="str">"valign"</span><span class="pun">, </span><span class="str">"valuetype"</span><span class="pun">, </span><span class="str">"vlink"</span><span class="pun">, </span><span class="str">"width"</span><span class="pun">, </span><span class="str">"xmlns"</span><span class="pun">]</span><span class="pun">;</span>
+						</div>
+					</code>
+				</div>
+				
+			</div>
+			<footer>
+				<div id="license-info">
+					
+				</div>
+			</footer>
+		</div>
+	</body>
+</html>

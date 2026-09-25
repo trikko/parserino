@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+		<title>Function Document.parseErrors</title>
+		<link rel="stylesheet" href="../css/style.min.css"/>
+		<script type="text/javascript" src="../js/script.min.js"></script>
+	</head>
+	<body onload="setupDdox();">
+		<header></header>
+		<nav id="main-nav">
+			<div>
+				<noscript>
+					<p style="color: red">The search functionality needs JavaScript enabled</p>
+				</noscript>
+				<div id="symbolSearchPane" style="display: none">
+					<form action="#" method="GET">
+						<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(24);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" autofocus/>
+					</form>
+					<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../";
+document.getElementById('symbolSearchPane').style.display = 'block';</script>
+				</div>
+				<ul class="tree-view">
+					<li class="tree-view ">
+						<a class="package" href="#">parserino</a>
+				<ul class="tree-view">
+					<li class="tree-view collapsed">
+						<a class="package" href="#">css</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../parserino/css/matcher.html">matcher</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/css/selector.html">selector</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/css/tokenizer.html">tokenizer</a>
+					</li>
+				</ul>
+					</li>
+					<li class="tree-view collapsed">
+						<a class="package" href="#">html</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../parserino/html/decoder.html">decoder</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/html/entities.html">entities</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/html/errors.html">errors</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/html/parser.html">parser</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/html/serializer.html">serializer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/html/tokenizer.html">tokenizer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/html/treebuilder.html">treebuilder</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/arena.html">arena</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/dom.html">dom</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/encoding.html">encoding</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/names.html">names</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../parserino/snapshot.html">snapshot</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module selected" href="../parserino.html">parserino</a>
+				<ul class="tree-view">
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../parserino/asFragment.html">asFragment</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/AttributeRange.html">AttributeRange</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/ClassRange.html">ClassRange</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../parserino/ctDocument.html">ctDocument</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../parserino/ctSelector.html">ctSelector</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(EnumMember))" href="../parserino/DefaultChunkSize.html">DefaultChunkSize</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/Document.html">Document</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/Element.html">Element</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../parserino/frontOr.html">frontOr</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../parserino/frontOrInit.html">frontOrInit</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../parserino/frontOrThrow.html">frontOrThrow</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Function))" href="../parserino/isValidSelector.html">isValidSelector</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/Node.html">Node</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Alias))" href="../parserino/NodeOf.html">NodeOf</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/NodeRange.html">NodeRange</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/ParseError.html">ParseError</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/ParseOptions.html">ParseOptions</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Class))" href="../parserino/ParserinoException.html">ParserinoException</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../parserino/Parsing.html">Parsing</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/Selector.html">Selector</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Enum))" href="../parserino/Show.html">Show</a>
+				</li>
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../parserino/Snapshot.html">Snapshot</a>
+				</li>
+				</ul>
+					</li>
+				</ul>
+			</div>
+			<p id="main-nav-footer">
+				Built with<a href="https://github.com/MartinNowak/scod">scod</a>
+			</p>
+		</nav>
+		<div id="main-contents">
+			<div>
+				<h1>Function Document.parseErrors</h1><p>The parse errors, in the order of the input (it completes the parsing). They are collected
+ only with <code class="lang-d"><a href="../parserino/ParseOptions.collectErrors.html"><span class="typ">ParseOptions<wbr/></span><span class="pun">.</span><span class="pln">collectErrors</span></a></code>, else the list is empty. The errors of the tree
+ construction are at the end of the token that causes them.
+</p>
+				<div class="prototype">
+					<code class="lang-d">
+						<div class="single-prototype"><a href="../parserino/ParseError.html"><span class="typ">ParseError</span></a><span class="pun">[]</span> <span class="pln">parseErrors</span><span class="pun">(</span><span class="pun">)</span><span class="pln"> </span><span class="kwd">@property</span><span class="pun">;</span>
+						</div>
+					</code>
+				</div>
+				<section><pre class="code"><code class="lang-d"><a href="../parserino/ParseOptions.html"><span class="typ">ParseOptions</span></a><span class="pln"> options </span><span class="pun">= { </span><span class="pln">collectErrors</span><span class="pun">: </span><span class="kwd">true </span><span class="pun">};
+</span><span class="kwd">auto </span><span class="pln">doc </span><span class="pun">= <a href="../parserino/Document.html"></span><span class="typ">Document</span></a><span class="pun">(</span><span class="str">"&lt;p&gt;unclosed &lt;b&gt;tags"</span><span class="pun">, </span><span class="pln">options</span><span class="pun">);
+</span><span class="kwd">foreach </span><span class="pun">(</span><span class="pln">e</span><span class="pun">; </span><span class="pln">doc<wbr/></span><span class="pun">.</span><span class="pln">parseErrors</span><span class="pun">) </span><span class="pln">writeln</span><span class="pun">(</span><span class="pln">e</span><span class="pun">);    </span><span class="com">// 1:4: missing-doctype, 1:20: unclosed-element-at-eof</span></code></pre>
+</section>
+<section><h2>Example</h2>
+
+<pre class="code"><code class="lang-d"><span class="kwd">import </span><span class="pln">std<wbr/></span><span class="pun">.</span><span class="pln">algorithm </span><span class="pun">: </span><span class="pln">map</span><span class="pun">, </span><span class="pln">startsWith</span><span class="pun">;
+</span><span class="kwd">import </span><span class="pln">std<wbr/></span><span class="pun">.</span><span class="pln">array </span><span class="pun">: </span><span class="pln">array</span><span class="pun">;
+
+<a href="../parserino/ParseOptions.html"></span><span class="typ">ParseOptions</span></a><span class="pln"> options </span><span class="pun">= { </span><span class="pln">collectErrors</span><span class="pun">: </span><span class="kwd">true </span><span class="pun">};
+
+</span><span class="kwd">auto </span><span class="pln">doc </span><span class="pun">= <a href="../parserino/Document.html"></span><span class="typ">Document</span></a><span class="pun">(</span><span class="str">"&lt;!DOCTYPE html&gt;&lt;p&gt;a&lt;/b&gt;\0&lt;p x=1 x=2&gt;"</span><span class="pun">, </span><span class="pln">options</span><span class="pun">);
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">doc<wbr/></span><span class="pun">.</span><span class="pln">parseErrors<wbr/></span><span class="pun">.</span><span class="pln">map</span><span class="pun">!(</span><span class="pln">e </span><span class="pun">=&gt; </span><span class="pln">e<wbr/></span><span class="pun">.</span><span class="pln">name</span><span class="pun">)<wbr/>.</span><span class="pln">array
+    </span><span class="pun">== [</span><span class="str">"unexpected-end-tag"</span><span class="pun">, </span><span class="str">"unexpected-null-character"</span><span class="pun">, </span><span class="str">"duplicate-attribute"</span><span class="pun">, </span><span class="str">"unexpected-null-character"</span><span class="pun">]);
+</span><span class="kwd">assert</span><span class="pun">(</span><span class="pln">doc<wbr/></span><span class="pun">.</span><span class="pln">parseErrors</span><span class="pun">[</span><span class="lit">0</span><span class="pun">]<wbr/>.</span><span class="pln">line </span><span class="pun">== </span><span class="lit">1 </span><span class="pun">&amp;&amp; </span><span class="pln">doc<wbr/></span><span class="pun">.</span><span class="pln">parseErrors</span><span class="pun">[</span><span class="lit">0</span><span class="pun">]<wbr/>.</span><span class="pln">toString<wbr/></span><span class="pun">.</span><span class="pln">startsWith</span><span class="pun">(</span><span class="str">"1:"</span><span class="pun">));
+
+</span><span class="com">// A valid document, lazy parsing, errors not collected
+</span><span class="kwd">assert</span><span class="pun">(<a href="../parserino/Document.html"></span><span class="typ">Document</span></a><span class="pun">(</span><span class="str">"&lt;!DOCTYPE html&gt;&lt;title&gt;ok&lt;/title&gt;&lt;p&gt;fine"</span><span class="pun">, </span><span class="pln">options</span><span class="pun">)<wbr/>.</span><span class="pln">parseErrors<wbr/></span><span class="pun">.</span><span class="pln">length </span><span class="pun">== </span><span class="lit">0</span><span class="pun">);
+</span><span class="pln">options<wbr/></span><span class="pun">.</span><span class="pln">parsing </span><span class="pun">= <a href="../parserino/Parsing.html#Lazy"></span><span class="typ">Parsing<wbr/></span><span class="pun">.</span><span class="typ">Lazy</span></a><span class="pun">;
+</span><span class="pln">options<wbr/></span><span class="pun">.</span><span class="pln">chunkSize </span><span class="pun">= </span><span class="lit">3</span><span class="pun">;
+</span><span class="kwd">assert</span><span class="pun">(<a href="../parserino/Document.html"></span><span class="typ">Document</span></a><span class="pun">(</span><span class="str">"&lt;p&gt;\n\n&lt;b&gt;"</span><span class="pun">, </span><span class="pln">options</span><span class="pun">)<wbr/>.</span><span class="pln">parseErrors<wbr/></span><span class="pun">.</span><span class="pln">map</span><span class="pun">!(</span><span class="pln">e </span><span class="pun">=&gt; </span><span class="pln">e<wbr/></span><span class="pun">.</span><span class="pln">toString</span><span class="pun">)<wbr/>.</span><span class="pln">array
+    </span><span class="pun">== [</span><span class="str">"1:4: missing-doctype"</span><span class="pun">, </span><span class="str">"3:4: unclosed-element-at-eof"</span><span class="pun">]);
+</span><span class="kwd">assert</span><span class="pun">(<a href="../parserino/Document.html"></span><span class="typ">Document</span></a><span class="pun">(</span><span class="str">"&lt;p&gt;x&lt;/b&gt;"</span><span class="pun">)<wbr/>.</span><span class="pln">parseErrors<wbr/></span><span class="pun">.</span><span class="pln">length </span><span class="pun">== </span><span class="lit">0</span><span class="pun">);
+
+</span></code></pre>
+</section>
+
+			</div>
+			<footer>
+				<div id="license-info">
+					
+				</div>
+			</footer>
+		</div>
+	</body>
+</html>

@@ -61,7 +61,7 @@ void main() {
 - The input is UTF-8 (BOM removed, invalid bytes become U+FFFD). `parserino.encoding.toUtf8(bytes)` detects the encoding (BOM, `<meta charset>`) and converts UTF-16, windows-1252, ISO-8859-2, windows-1250/1251.
 
 ### Selector
-- `Selector(string css)`: A compiled css selector, reusable with any document (throws `ParserinoException` on invalid syntax). `ctSelector!css` and `bySelector!css` compile it at compile time.
+- `Selector(string css)`: A compiled css selector, reusable with any document (throws `ParserinoException` on invalid syntax). `ctSelector!css` and `bySelector!css` compile it at compile time. `isValidSelector(css)` checks the syntax without throwing.
 
 ### Range Helpers
 - `frontOrThrow(range)`: The first element; throws `ParserinoException` if the range is empty.

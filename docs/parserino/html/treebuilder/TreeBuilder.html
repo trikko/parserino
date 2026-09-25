@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8"/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0"/>
+		<title>Struct TreeBuilder</title>
+		<link rel="stylesheet" href="../../../css/style.min.css"/>
+		<script type="text/javascript" src="../../../js/script.min.js"></script>
+	</head>
+	<body onload="setupDdox();">
+		<header></header>
+		<nav id="main-nav">
+			<div>
+				<noscript>
+					<p style="color: red">The search functionality needs JavaScript enabled</p>
+				</noscript>
+				<div id="symbolSearchPane" style="display: none">
+					<form action="#" method="GET">
+						<input id="symbolSearch" type="text" name="q" placeholder="Search for symbols" autocomplete="off" onchange="performSymbolSearch(24);" onkeypress="this.onchange();" onpaste="this.onchange();" oninput="this.onchange();" autofocus/>
+					</form>
+					<ul id="symbolSearchResults" class="symbolList" style="display: none"></ul><script type="application/javascript" src="../../../symbols.js"></script><script type="application/javascript">var symbolSearchRootDir = "../../../";
+document.getElementById('symbolSearchPane').style.display = 'block';</script>
+				</div>
+				<ul class="tree-view">
+					<li class="tree-view ">
+						<a class="package" href="#">parserino</a>
+				<ul class="tree-view">
+					<li class="tree-view collapsed">
+						<a class="package" href="#">css</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../../../parserino/css/matcher.html">matcher</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/css/selector.html">selector</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/css/tokenizer.html">tokenizer</a>
+					</li>
+				</ul>
+					</li>
+					<li class="tree-view ">
+						<a class="package" href="#">html</a>
+				<ul class="tree-view">
+					<li>
+						<a class="module collapsed" href="../../../parserino/html/decoder.html">decoder</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/html/entities.html">entities</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/html/errors.html">errors</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/html/parser.html">parser</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/html/serializer.html">serializer</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/html/tokenizer.html">tokenizer</a>
+					</li>
+					<li>
+						<a class="module selected" href="../../../parserino/html/treebuilder.html">treebuilder</a>
+				<ul class="tree-view">
+				<li class="tree-view collapsed">
+					<a class="toLower(to!string(Struct))" href="../../../parserino/html/treebuilder/TreeBuilder.html">TreeBuilder</a>
+				</li>
+				</ul>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/arena.html">arena</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/dom.html">dom</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/encoding.html">encoding</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/names.html">names</a>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino/snapshot.html">snapshot</a>
+					</li>
+				</ul>
+					</li>
+					<li>
+						<a class="module collapsed" href="../../../parserino.html">parserino</a>
+					</li>
+				</ul>
+			</div>
+			<p id="main-nav-footer">
+				Built with<a href="https://github.com/MartinNowak/scod">scod</a>
+			</p>
+		</nav>
+		<div id="main-contents">
+			<div>
+				<h1>Struct TreeBuilder</h1><p>The tree construction: it gets the tokens from the tokenizer (see <code class="lang-d"><a href="../../../parserino/html/treebuilder/TreeBuilder.sink.html"><span class="pln">sink</span></a></code>) and builds the tree in <code class="lang-d"><a href="../../../parserino/html/treebuilder/TreeBuilder.doc.html"><span class="pln">doc</span></a></code>
+</p>
+				<div class="prototype">
+					<code class="lang-d">
+						<div class="single-prototype">
+				<span class="kwd">struct</span> <span class="typ">TreeBuilder</span><span class="pun">;</span>
+						</div>
+					</code>
+				</div>
+				
+				<section><h2>Fields</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Type</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/treebuilder/TreeBuilder.activeFormatting.html" class="public"><code>activeFormatting</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../../../parserino/arena/Buffer.html"><span class="typ">Buffer</span></a>!(parserino.dom.DomNode*)</code></td><td>The stack of open elements and the list of active formatting elements (null = marker)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/treebuilder/TreeBuilder.body.html" class="public"><code>body</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../../../parserino/dom/DomElement.html"><span class="typ">DomElement</span></a><span class="pun">*</span></code></td><td>The <code class="lang-d"><span class="pun">&lt;</span><span class="pln">body</span><span class="pun">&gt;</span></code> the parser inserted, or null
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/treebuilder/TreeBuilder.compatMode.html" class="public"><code>compatMode</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../../../parserino/dom/CompatMode.html"><span class="typ">CompatMode</span></a></code></td><td>The mode from the doctype (for fragments: the one of the document)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/treebuilder/TreeBuilder.context.html" class="public"><code>context</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../../../parserino/dom/DomNode.html"><span class="typ">DomNode</span></a><span class="pun">*</span></code></td><td>Fragment parsing: the context element and the root of the result
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/treebuilder/TreeBuilder.doc.html" class="public"><code>doc</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../../../parserino/dom/DomDocument.html"><span class="typ">DomDocument</span></a><span class="pun">*</span></code></td><td>The document being built
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/treebuilder/TreeBuilder.failed.html" class="public"><code>failed</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">bool</span></code></td><td>Out of memory
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/treebuilder/TreeBuilder.fragmentRoot.html" class="public"><code>fragmentRoot</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../../../parserino/dom/DomElement.html"><span class="typ">DomElement</span></a><span class="pun">*</span></code></td><td>Fragment parsing: the context element and the root of the result
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/treebuilder/TreeBuilder.framesetOk.html" class="public"><code>framesetOk</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><span class="typ">bool</span></code></td><td>The "frameset-ok" flag
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/treebuilder/TreeBuilder.head.html" class="public"><code>head</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../../../parserino/dom/DomElement.html"><span class="typ">DomElement</span></a><span class="pun">*</span></code></td><td>The head element pointer
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/treebuilder/TreeBuilder.openElements.html" class="public"><code>openElements</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../../../parserino/arena/Buffer.html"><span class="typ">Buffer</span></a>!(parserino.dom.DomNode*)</code></td><td>The stack of open elements and the list of active formatting elements (null = marker)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/treebuilder/TreeBuilder.tokenizer.html" class="public"><code>tokenizer</code></a>
+							</td>
+							<td class="typecol"><code class="prettyprint lang-d"><a href="../../../parserino/html/tokenizer/Tokenizer.html"><span class="typ">Tokenizer</span></a><span class="pun">*</span></code></td><td>The tokenizer that feeds it (to switch its state and report errors)
+</td>
+						</tr>
+					</table>
+				</section>
+				<section><h2>Methods</h2>
+					<table>
+						<col class="caption"/>
+						<tr>
+							<th>Name</th><th>Description</th>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/treebuilder/TreeBuilder.beginDocument.html" class="public">
+									<code>beginDocument</code>
+								</a>
+								<span class="tableEntryAnnotation">(d, t)</span>
+							</td>
+							<td>Start parsing a document
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/treebuilder/TreeBuilder.beginFragment.html" class="public">
+									<code>beginFragment</code>
+								</a>
+								<span class="tableEntryAnnotation">(d, t, contextElement)</span>
+							</td>
+							<td>Start parsing a fragment in the context of <code class="lang-d"><a href="../../../parserino/html/treebuilder/TreeBuilder.beginFragment.html#contextElement"><span class="pln">contextElement</span></a></code> (an element of <code class="lang-d"><a href="../../../parserino/html/treebuilder/TreeBuilder.beginFragment.html#d"><span class="pln">d</span></a></code>)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/treebuilder/TreeBuilder.finish.html" class="public">
+									<code>finish</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>The end of the input: pop everything
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/treebuilder/TreeBuilder.process.html" class="public">
+									<code>process</code>
+								</a>
+								<span class="tableEntryAnnotation">(t)</span>
+							</td>
+							<td>Process a token (the tokenizer calls it)
+</td>
+						</tr>
+						<tr>
+							<td>
+								<a href="../../../parserino/html/treebuilder/TreeBuilder.sink.html" class="public">
+									<code>sink</code>
+								</a>
+								<span class="tableEntryAnnotation">()</span>
+							</td>
+							<td>The sink for the tokenizer
+</td>
+						</tr>
+					</table>
+				</section>
+			</div>
+			<footer>
+				<div id="license-info">
+					
+				</div>
+			</footer>
+		</div>
+	</body>
+</html>

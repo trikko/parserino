@@ -4,5 +4,7 @@
 	"description": "A super-fast HTML (HTML5!) parser and DOM editor, for D. Pure D, lazy parsing, CSS selectors.",
 	"license": "MIT",
 	"name": "parserino",
-	"targetType": "library"
+	"targetType": "library",
+	"-ddoxTool": "scod",
+	"-ddoxFilterArgs": ["--min-protection=Public", "--only-documented"]
 }
