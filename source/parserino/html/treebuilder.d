@@ -1,7 +1,8 @@
 /++
  HTML tree construction (HTML Living Standard, "Tree construction").
 
- Derived from lexbor (https://github.com/lexbor/lexbor), Apache-2.0: see NOTICE-lexbor.
+ Derived from lexbor (https://github.com/lexbor/lexbor).
+ Copyright (C) 2018-2026 Alexander Borisov (lexbor), Apache-2.0: see LICENSE-lexbor and NOTICE-lexbor.
 +/
 module parserino.html.treebuilder;
 

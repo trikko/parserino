@@ -1,5 +1,5 @@
 # parserino [![Build & Test](https://github.com/trikko/parserino/actions/workflows/d.yml/badge.svg)](https://github.com/trikko/parserino/actions/workflows/d.yml)
-* HTML5 parser and DOM editor written in pure D (tree construction derived from [Lexbor](https://github.com/lexbor/lexbor))
+* HTML5 parser and DOM editor written in pure D, born as a D port of [lexbor](https://github.com/lexbor/lexbor)
 * No 3rd-party dependencies
 * Fast parsing; lazy parsing reads only what your queries need
 * CSS selectors (Selectors 4), DOM names and behaviour (`textContent`, `before`, `children`, ...)
@@ -10,10 +10,24 @@
 * Safe memory management: documents are reference counted, nodes keep them alive
 * The parser core (`parserino.html`, `parserino.dom`, `parserino.css`) is `@nogc nothrow` and works with `-betterC`
 
+# lexbor
+Up to 0.2.x parserino was a D wrapper of [lexbor](https://github.com/lexbor/lexbor), the C
+HTML engine by Alexander Borisov. Version 1.0 started as a translation of lexbor to D; that
+port was then rewritten piece by piece in idiomatic D, using it as the reference to test the
+new code against. What still comes from lexbor:
+
+* the HTML tree construction (`source/parserino/html/treebuilder.d`)
+* the tables of tag/attribute names and of character references (`source/parserino/names.d`,
+  `source/parserino/html/entities.d`)
+* for compatibility with parserino 0.2.x, which used the lexbor selectors: the `:lexbor-contains()`
+  pseudo-class and the way An+B (`:nth-child(2n+1)`) is read
+
+Thanks to Alexander Borisov and to the lexbor contributors: parserino owes them a lot.
+
 # license
-Parserino is MIT licensed. The HTML tree construction (`source/parserino/html/treebuilder.d`)
-and the tables of names and character references are derived from lexbor and keep its
-Apache 2.0 license: see `LICENSE-lexbor` and `NOTICE-lexbor`.
+Parserino is licensed under `MIT AND Apache-2.0`: the code derived from lexbor keeps its
+Apache 2.0 license (Copyright (C) 2018-2026 Alexander Borisov, see `LICENSE-lexbor` and
+`NOTICE-lexbor`), the rest is MIT.
 
 # documentation
 * [The API reference](https://trikko.github.io/parserino/parserino.html), generated from the

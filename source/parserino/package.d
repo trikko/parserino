@@ -24,7 +24,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 /++ HTML5 parser and DOM manipulation library.
  +
  + Parserino is a fast html5 parser and DOM manipulation library written in pure D
- + (the tree construction is derived from the lexbor library).
+ + (born as a D port of the lexbor library, from which the tree construction is derived).
  + ---
  + import parserino;
  + void main()

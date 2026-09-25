@@ -40,7 +40,7 @@ enum SimpleKind : ubyte
     NthLastChild,   /// `:nth-last-child(an+b [of list])`
     NthOfType,      /// `:nth-of-type(an+b)`
     NthLastOfType,  /// `:nth-last-of-type(an+b)`
-    Contains,       /// `:lexbor-contains(text [i])`
+    Contains,       /// `:lexbor-contains(text [i])`, kept for compatibility with parserino 0.2.x (which used the lexbor selectors)
     Lang,           /// `:lang(en, "fr-CH")`
     Dir,            /// `:dir(ltr)`, `:dir(rtl)`: `name` is the direction (lowercase)
     Never,          /// states of a live document (`:hover`), pseudo-elements (`::before`)
@@ -757,7 +757,7 @@ struct Parser
         return isEnd();
     }
 
-    /+ An+B, as lexbor reads it (css-syntax-3 with a few differences):
+    /+ An+B, read as parserino 0.2.x (lexbor) did, for compatibility (css-syntax-3 with a few differences):
      + `odd`, `even`, `5`, `n`, `-n`, `+n`, `2n`, `2n+1`, `2n + 1`, `2n- 1`, `-n-3`, ...
      +/
     bool parseAnb(ref Simple s)

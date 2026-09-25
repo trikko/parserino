@@ -1,6 +1,6 @@
 # Parserino: Fast HTML5 Parser and DOM Manipulation for D
 
-Parserino is a high-performance HTML5 parser and DOM manipulation library for the D programming language, written in pure D (no C dependencies; the tree construction is derived from Lexbor). Names and behaviour follow the DOM, HTML and Selectors 4 standards; the parser passes the tree construction tests of the web-platform-tests.
+Parserino is a high-performance HTML5 parser and DOM manipulation library for the D programming language, written in pure D (no C dependencies; born as a D port of lexbor, from which the tree construction is derived). Names and behaviour follow the DOM, HTML and Selectors 4 standards; the parser passes the tree construction tests of the web-platform-tests.
 
 ## Rules
 
