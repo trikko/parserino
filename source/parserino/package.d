@@ -1130,6 +1130,7 @@ struct Node
 
         if (raw.type != NodeType.Element && raw.type != NodeType.DocumentFragment) return;
 
+        impl.idsChangedIfAnyChild(raw);
         removeChildren();
 
         if (text.length > 0)
@@ -1389,7 +1390,8 @@ struct Node
     {
         onlyValid();
 
-        // On a whole parsed document, from the second search on: an index (until a mutation)
+        // On a whole parsed document, from the second search on: an index, valid until an id is added,
+        // removed or moved (texts and other attributes can change: filling a template keeps it)
         if (raw is &impl.dom.node && !impl.parsing && impl.idSearches++ > 0)
         {
             auto e = impl.elementById(id);
@@ -1487,6 +1489,55 @@ struct Node
 
     unittest
     {
+        // Filling a template: texts and attributes don't rebuild the index, the changes of the ids do
+        Document doc = `<div id=list><p id=a>1</p><p id=b>2</p></div><span id=c>3</span>`;
+        doc.byId("a"); doc.byId("a");                  // the index is built from the second search
+        auto version_ = doc.impl.idMutations;
+
+        doc.byId("a").textContent = "one";
+        doc.byId("b").setAttribute("class", "x");
+        doc.byId("b").removeAttribute("class");
+        doc.byId("c").textContent = "three";
+        doc.byId("list").append(doc.createElement("em"));
+        doc.byId("list").append("text");
+        doc.byTagName("em").front.remove();
+        assert(doc.impl.idMutations == version_);
+        assert(doc.byId("a").textContent == "one" && doc.byId("c").textContent == "three");
+
+        // An element with an id moved before another one with the same id: the first one changes
+        auto other = doc.createElement("p");
+        other.id = "c";
+        other.textContent = "other";
+        assert(doc.impl.idMutations != version_);
+        doc.byId("list").prepend(other);
+        assert(doc.byId("c").textContent == "other");
+
+        // Moving it back
+        doc.body.append(other);
+        assert(doc.byId("c").textContent == "three");
+
+        // textContent removes a child with an id
+        doc.byId("list").textContent = "gone";
+        assert(doc.byId("a") == null && doc.byId("b") == null);
+
+        // innerHTML adds some
+        doc.byId("list").innerHTML = "<i><b id=deep>d</b></i>";
+        assert(doc.byId("deep").textContent == "d");
+
+        // The id attribute, in any case
+        doc.byId("deep").setAttribute("ID", "renamed");
+        assert(doc.byId("deep") == null && doc.byId("renamed").textContent == "d");
+        doc.byId("renamed").removeAttribute("Id");
+        assert(doc.byId("renamed") == null);
+
+        // copyFrom brings tag and attributes, the id too: the copy comes first in tree order
+        auto list = doc.byId("list");
+        list.copyFrom(doc.byId("c"));
+        assert(doc.byId("list") == null && doc.byId("c") == list && list.localName == "span");
+    }
+
+    unittest
+    {
         Document doc = Document(`<html><body><p id="test"/><p id="another" class="hello world">this is a text`);
 
         {
@@ -1528,7 +1579,10 @@ struct Node
         impl.mutate();
 
         foreach (n; nodesToInsert(what, raw, raw))
+        {
+            impl.idsChangedIfAny(n);
             raw.appendChild(n);
+        }
     }
 
     /// Insert a node (or a text, or a fragment) as the first child
@@ -1540,6 +1594,7 @@ struct Node
         auto first = raw.firstChild;
         foreach (n; nodesToInsert(what, raw, raw))
         {
+            impl.idsChangedIfAny(n);
             if (first is null) raw.appendChild(n);
             else first.insertBefore(n);
         }
@@ -1552,7 +1607,10 @@ struct Node
         impl.mutate();
 
         foreach (n; nodesToInsert(what, raw.parent, raw))
+        {
+            impl.idsChangedIfAny(n);
             raw.insertBefore(n);
+        }
     }
 
     /// Insert a node (or a text, or a fragment) after this one
@@ -1564,6 +1622,7 @@ struct Node
         DomNode* last = raw;
         foreach (n; nodesToInsert(what, raw.parent, raw))
         {
+            impl.idsChangedIfAny(n);
             last.insertAfter(n);
             last = n;
         }
@@ -1598,6 +1657,7 @@ struct Node
         impl.mutate();
 
         if (raw.parent is null) return false;
+        impl.idsChangedIfAny(raw);
         raw.remove();
         return true;
     }
@@ -2028,6 +2088,7 @@ struct Element
     {
         onlyValid();
         impl.mutate();
+        if (isIdAttribute(attr)) impl.idsChanged();
         if (auto a = attributeByName(element, attr)) element.removeAttribute(a);
     }
 
@@ -2036,6 +2097,7 @@ struct Element
     {
         onlyValid();
         impl.mutate();
+        if (isIdAttribute(name)) impl.idsChanged();
         auto dom = impl.dom;
         if (auto a = attributeByName(element, name))
         {
@@ -2222,6 +2284,8 @@ struct Element
 
         // The old children are detached (not destroyed): other `Node`s may still point to them.
         auto target = element.templateContent !is null ? &element.templateContent.node : raw;
+        impl.idsChangedIfAnyChild(target);
+        impl.idsChangedIfAnyChild(&frag.node);
         while (target.firstChild !is null) target.firstChild.remove();
         frag.node.moveChildrenTo(target);
     }
@@ -2422,6 +2486,7 @@ struct Element
         onlyValid();
         e.onlyValid();
         impl.mutate();
+        impl.idsChanged();
 
         if (e.raw is raw) return;
 
@@ -3145,6 +3210,12 @@ template NodeOf(Show show)
 // Does the filter accept this node?
 private bool shown(Show show, const(DomNode)* n) @safe nothrow pure @nogc { return ((1u << (n.type - 1)) & show) != 0; }
 
+// Is it the `id` attribute? (html attribute names are case-insensitive)
+private bool isIdAttribute(scope const(char)[] name) @safe nothrow pure @nogc
+{
+    return name.length == 2 && (name[0] | 0x20) == 'i' && (name[1] | 0x20) == 'd';
+}
+
 /// A step of `walk`: the walk enters or leaves `node`
 struct WalkStep(Show show)
 {
@@ -3821,8 +3892,12 @@ struct DocImpl
     bool collectErrors;
     Buffer!RawParseError errors;
 
-    // byId: an index of the ids, valid while `mutations` doesn't change
+    // Changes of the tree, for the caches that depend on it
     size_t mutations;
+
+    // byId: an index of the ids, valid while `idMutations` doesn't change. Only the changes that can
+    // add, remove or move an id count: setting texts and the other attributes keeps the index.
+    size_t idMutations;
     size_t idSearches;
     IdIndex ids;
 
@@ -3930,17 +4005,38 @@ struct DocImpl
         borrowed = false;
     }
 
-    // Before a change of the tree: the parsing ends, the index of the ids is no longer valid
+    // Before a change of the tree: the parsing ends
     void mutate()
     {
         finish();
         mutations++;
     }
 
+    // An id is added, removed or changed: the index of the ids is no longer valid
+    void idsChanged() { idMutations++; }
+
+    // `n` is going to be inserted, removed or moved: the ids change if it or one of its descendants
+    // has one. Nothing to check while there is no valid index.
+    void idsChangedIfAny(const(DomNode)* n)
+    {
+        if (!ids.built || ids.version_ != idMutations) return;
+        if (hasId(n)) { idMutations++; return; }
+        for (const(DomNode)* c = n.firstChild; c !is null; c = c.nextInTree(n))
+            if (hasId(c)) { idMutations++; return; }
+    }
+
+    // The same for all the children of `n`
+    void idsChangedIfAnyChild(const(DomNode)* n)
+    {
+        for (const(DomNode)* c = n.firstChild; c !is null; c = c.next) idsChangedIfAny(c);
+    }
+
+    static bool hasId(const(DomNode)* n) { return n.type == NodeType.Element && n.as!DomElement.idAttr !is null; }
+
     // The first element with this id, in tree order (the document must be parsed)
     DomElement* elementById(scope const(char)[] id)
     {
-        if (!ids.built || ids.version_ != mutations)
+        if (!ids.built || ids.version_ != idMutations)
         {
             ids.clear();
             for (auto n = dom.node.firstChild; n !is null; n = n.nextInTree(&dom.node))
@@ -3950,7 +4046,7 @@ struct DocImpl
                 if (a !is null) ids.add(attrValue(a), n.as!DomElement);
             }
             ids.built = true;
-            ids.version_ = mutations;
+            ids.version_ = idMutations;
         }
         return ids.find(id);
     }
