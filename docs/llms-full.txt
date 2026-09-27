@@ -37,7 +37,8 @@ The root of the DOM tree.
 - Navigation, each with a `Show` filter (default `Show.Element`):
   - `parent!show`: the parent if it matches (`html.parent` is invalid, `html.parent!(Show.All)` is the document);
   - `firstChild!show`, `lastChild!show`, `nextSibling!show`, `previousSibling!show`;
-  - `children!show`, `descendants!show`: lazy bidirectional ranges (`retro` = reverse document order).
+  - `children!show`, `descendants!show`: lazy bidirectional ranges (`retro` = reverse document order);
+  - `walk!(show, descend)`: a lazy bidirectional range of steps (`s.node`, `s.enter`/`s.leave`) in tree order, entering and leaving each element (texts, comments, ... only enter; the node itself gives no steps). `descend(element)` (default: always true) is called on every element, also the hidden ones, after its enter step: false skips its children, the element still gives both steps. With `retro` a leave comes before its enter and `descend` is called after the leave step: with a predicate that depends on what the loop did, the two directions can give different steps.
 - `bool hasChildNodes()`, `bool contains(Node other)` (true also for the node itself, as in the DOM).
 - Search: `byId`, `byClass`, `byTagName`, `bySelector`, `byComment`, `byCommentExact` (inside this node).
 - Mutations (`what` can be a `Node`/`Element`, a `string` added as text, `"<b>x</b>".asFragment` parsed as html in the context of the parent, a `DocumentFragment` node):
@@ -113,6 +114,23 @@ void main() {
     assert(div.descendants!(Show.Text).map!(t => t.textContent).join == "Hello worldtail");
     assert(div.lastChild!(Show.All).isText);
     assert(div.descendants.retro.front.localName == "b");
+}
+```
+
+### Walk: enter/leave steps, skipping subtrees
+```d
+import std, parserino;
+void main() {
+    Document doc = "<div><ul><li><b>x</b></li></ul></div>";
+
+    // The predicate sees what the loop did at the enter step of the element
+    int depth;
+    foreach (s; doc.body.walk!(Show.Element, e => depth < 3))
+    {
+        if (s.enter) { depth++; writeln(' '.repeat(depth * 2), s.node.localName); }
+        else depth--;
+    }
+    // div, ul, li are printed; the children of li are skipped
 }
 ```
 

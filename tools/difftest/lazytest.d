@@ -112,6 +112,17 @@ void main(string[] args)
         queries["retro"] = (Document d) => run(d.byTagName("div").take(2).map!(e => e.descendants!(Show.All).retro).joiner, 50);
         queries["children"] = (Document d) => d.body.isValid ? run(d.body.children!(Show.All)) : ["nobody"];
         queries["body+title"] = (Document d) => [d.body.isValid ? ident(d.body) : "nobody", d.title];
+        queries["walk"] = (Document d) => d.walk!(Show.All).map!(s => (s.enter ? "+" : "-") ~ ident(s.node)).array;
+        queries["walk-skip"] = (Document d) => d.walk!(Show.All, e => e.localName != "table" && e.localName != "b")
+            .map!(s => (s.enter ? "+" : "-") ~ ident(s.node)).array;
+        queries["walk-retro"] = (Document d) => d.walk!(Show.All).retro.map!(s => (s.enter ? "+" : "-") ~ ident(s.node)).array;
+        queries["walk-skip-retro"] = (Document d) => d.walk!(Show.All, e => e.localName != "table" && e.localName != "b")
+            .retro.map!(s => (s.enter ? "+" : "-") ~ ident(s.node)).array;
+
+        // retro must be the forward walk reversed
+        auto fwd = eager.walk!(Show.All).map!(s => (s.enter ? "+" : "-") ~ ident(s.node)).array;
+        auto bwd = eager.walk!(Show.All).retro.map!(s => (s.enter ? "+" : "-") ~ ident(s.node)).array;
+        if (fwd.retro.array != bwd) { failures++; writeln("DIFF ", fname.baseName, " walk retro"); }
 
         foreach (name, q; queries)
         {

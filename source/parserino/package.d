@@ -3145,6 +3145,370 @@ template NodeOf(Show show)
 // Does the filter accept this node?
 private bool shown(Show show, const(DomNode)* n) @safe nothrow pure @nogc { return ((1u << (n.type - 1)) & show) != 0; }
 
+/// A step of `walk`: the walk enters or leaves `node`
+struct WalkStep(Show show)
+{
+    NodeOf!show node;   /// The node
+    bool enter;         /// Entering the node; texts, comments, ... have only this step
+
+    /// Leaving an element, after its children
+    @property bool leave() const @safe nothrow pure @nogc { return !enter; }
+}
+
+/++ A visit of the descendants of `root` in tree order, entering and leaving each element:
++ an element gives a step with `enter` before its children and one with `leave` after them,
++ the other nodes give only the `enter` step. `show` selects the nodes that give steps.
++
++ `descend(element)` decides whether to go into the children of an element; it's called on
++ every element, also those that `show` hides. If it returns false the element still gives its
++ steps, but its children are skipped. It's called when the walk leaves the `enter` step of the
++ element, so it sees what the loop did at that step:
++ ---
++ int depth;
++ foreach (s; doc.body.walk!(Show.Element, e => depth < 3))
++ {
++     if (s.enter) { depth++; writeln(' '.repeat(depth * 2), s.node.localName); }
++     else depth--;
++ }
++ ---
++ The elements at depth 3 are printed, their children are skipped. On a lazy document the
++ walk parses only as far as it goes. `root` itself gives no steps.
++
++ It's a bidirectional range: `retro` gives the steps in reverse order, a `leave` before its
++ `enter`. Going backwards `descend` is called after the `leave` step, the first one met for
++ the element. With a predicate that depends only on the element the two directions give the
++ same steps; with one that depends on what the loop did they can differ.
++/
+auto walk(Show show = Show.Element, alias descend = e => true, T)(T root)
+if (is(T : Node) || is(T == Document))
+{
+    static if (is(T == Document)) Node n = root.node;
+    else Node n = root;
+
+    n.onlyValid();
+    return WalkRange!(show, descend)(n.doc, n.raw);
+}
+
+///
+unittest
+{
+    import std.algorithm : map;
+    import std.array : join;
+
+    Document doc = "<div><p>a<b>b</b></p><!--c--><i>d</i></div>";
+    auto steps(R)(R r) { return r.map!(s => (s.enter ? "+" : "-") ~ s.node.nodeName).join(" "); }
+
+    assert(steps(doc.body.walk) == "+DIV +P +B -B -P +I -I -DIV");
+    assert(steps(doc.body.walk!(Show.All)) == "+DIV +P +#text +B +#text -B -P +#comment +I +#text -I -DIV");
+    assert(steps(doc.body.walk!(Show.Text)) == "+#text +#text +#text");
+
+    // Skip the children of <p>: its own steps are still there
+    assert(steps(doc.body.walk!(Show.All, e => e.localName != "p")) == "+DIV +P -P +#comment +I +#text -I -DIV");
+
+    // The predicate is called also on the hidden elements
+    assert(doc.body.walk!(Show.Text, e => e.localName != "p").map!(s => s.node.textContent).join == "d");
+}
+
+unittest
+{
+    import std.algorithm : map;
+    import std.array : join;
+
+    // The decision can depend on what the loop saw: skip the element after <!--noindex-->
+    Document doc = "<p>one</p><!--noindex--><div>menu <a>link</a></div><p>two</p>";
+    bool pending, skip;
+    string text;
+
+    foreach (s; doc.body.walk!(Show.All, e => !skip))
+    {
+        if (s.node.isComment) { if (s.node.textContent == "noindex") pending = true; }
+        else if (s.node.isElement) { if (s.enter) { skip = pending; pending = false; } }
+        else if (s.node.isText) text ~= s.node.textContent;
+    }
+    assert(text == "onetwo");
+
+    // Depth limit
+    int depth;
+    string[] seen;
+    Document d = "<div><ul><li><b>x</b></li></ul></div>";
+    foreach (s; d.body.walk!(Show.Element, e => depth < 3))
+    {
+        if (s.enter) { depth++; seen ~= s.node.nodeName; }
+        else depth--;
+    }
+    assert(seen == ["DIV", "UL", "LI"]);
+
+    // Empty elements, the whole document, a leaf as root
+    assert(Document("<br><hr>").body.walk.map!(s => s.node.localName).join(",") == "br,br,hr,hr");
+    assert(Document("<!--x--><p>").walk!(Show.All).map!(s => s.node.nodeName).join(",")
+        == "#comment,HTML,HEAD,HEAD,BODY,P,P,BODY,HTML");
+    assert(Document("<p>t").body.firstChild.firstChild!(Show.All).walk!(Show.All).empty);
+
+    // save gives an independent copy
+    auto r = Document("<p><b></b></p>").body.walk;
+    auto c = r.save;
+    r.popFront();
+    assert(c.front.node.localName == "p" && r.front.node.localName == "b");
+}
+
+unittest
+{
+    import std.algorithm : map;
+    import std.array : join, replicate;
+    import std.conv : to;
+
+    // Lazy parsing: the same steps as an eager document, whatever the chunk size
+    string html = "<body class=x><table><tr><td>1<td>2</table>moved<b>bold<p>adopted</b>tail</p>"
+        ~ "<ul><li>a<li>b</ul><select><option>o</select><!--end-->";
+    auto steps(Document d) { return d.walk!(Show.All).map!(s => (s.enter ? "+" : "-") ~ s.node.nodeName).join(" "); }
+
+    auto expected = steps(Document(html));
+    foreach (chunk; [1, 2, 3, 7, 64])
+        assert(steps(Document(html, Parsing.Lazy, chunk)) == expected, chunk.to!string);
+
+    // It stops parsing a little after where it stops
+    auto doc = Document("<p>first</p>" ~ "<p>x</p>".replicate(10_000), Parsing.Lazy, 64);
+    assert(doc.body.walk.front.node.textContent == "first");
+    assert(doc.isParsing);
+
+    // Skipped children are parsed (to find where they end) but not visited
+    auto big = Document("<div>" ~ "<p>x</p>".replicate(1000) ~ "</div><i>after</i>", Parsing.Lazy, 64);
+    assert(big.body.walk!(Show.Element, e => e.localName != "div").map!(s => s.node.localName).join(",") == "div,div,i,i");
+}
+
+///
+unittest
+{
+    import std.algorithm : map;
+    import std.array : join;
+    import std.range : retro;
+
+    Document doc = "<div><p>a<b>b</b></p><!--c--><i>d</i></div>";
+    auto steps(R)(R r) { return r.map!(s => (s.enter ? "+" : "-") ~ s.node.nodeName).join(" "); }
+
+    // Reverse order: a leave comes before its enter
+    assert(steps(doc.body.walk.retro) == "-DIV -I +I -P -B +B +P +DIV");
+    assert(steps(doc.body.walk!(Show.All, e => e.localName != "p").retro) == "-DIV -I +#text +I +#comment -P +P +DIV");
+}
+
+unittest
+{
+    import std.algorithm : map;
+    import std.array : array, join, replicate;
+    import std.range : retro;
+    import std.conv : to;
+
+    string[] steps(R)(R r) { return r.map!(s => (s.enter ? "+" : "-") ~ s.node.nodeName).array; }
+
+    string[] pages = [
+        "<div><p>a<b>b</b></p><!--c--><i>d</i></div>", "", "<br>", "text", "<p><p><p>",
+        "<table><tr><td>1<td>2</table>moved<b>bold<p>adopted</b>tail</p><ul><li>a<li>b</ul><!--end-->",
+    ];
+
+    foreach (html; pages)
+    {
+        auto doc = Document(html);
+
+        // retro is the reverse of the forward steps, with any filter and a pure predicate
+        void check(Show show, alias descend)()
+        {
+            auto fwd = steps(doc.walk!(show, descend));
+            assert(steps(doc.walk!(show, descend).retro) == fwd.retro.array, html);
+
+            // front and back mixed meet in the middle
+            foreach (skip; 0 .. fwd.length + 1)
+            {
+                auto r = doc.walk!(show, descend);
+                string[] head, tail;
+                foreach (i; 0 .. skip) { if (r.empty) break; tail ~= steps([r.back]); r.popBack(); }
+                while (!r.empty)
+                {
+                    head ~= steps([r.front]); r.popFront();
+                    if (r.empty) break;
+                    tail ~= steps([r.back]); r.popBack();
+                }
+                assert(head ~ tail.retro.array == fwd, html ~ " " ~ skip.to!string);
+            }
+        }
+
+        check!(Show.All, e => true);
+        check!(Show.Element, e => true);
+        check!(Show.Text | Show.Comment, e => true);
+        check!(Show.All, e => e.localName != "p" && e.localName != "td");
+
+        // Lazy: the same reverse steps
+        foreach (chunk; [1, 3, 64])
+            assert(steps(Document(html, Parsing.Lazy, chunk).walk!(Show.All).retro) == steps(doc.walk!(Show.All).retro));
+    }
+
+    // back on a lazy document completes the parsing of the subtree only
+    auto lazyDoc = Document("<div><p>x</p></div>" ~ "<p>y</p>".replicate(10_000), Parsing.Lazy, 64);
+    assert(lazyDoc.body.firstChild.walk.back.node.localName == "p");
+    assert(lazyDoc.isParsing);
+}
+
+/// The range of `walk`
+struct WalkRange(Show show, alias descend)
+{
+    ///
+    @property bool empty() { prime(); return current is null; }
+
+    ///
+    @property WalkStep!show front()
+    {
+        prime();
+        if (current is null) throw new ParserinoException("Range is empty.");
+        return WalkStep!show(NodeOf!show(doc, current), entering);
+    }
+
+    ///
+    void popFront()
+    {
+        prime();
+        if (current is null) throw new ParserinoException("Range is empty.");
+        if (primedBack && current is last && entering == lastEntering) current = last = null;
+        else next();
+        if (current is null) last = null;
+    }
+
+    ///
+    @property WalkStep!show back()
+    {
+        primeBack();
+        if (last is null) throw new ParserinoException("Range is empty.");
+        return WalkStep!show(NodeOf!show(doc, last), lastEntering);
+    }
+
+    ///
+    void popBack()
+    {
+        primeBack();
+        if (last is null) throw new ParserinoException("Range is empty.");
+        if (current is last && entering == lastEntering) current = last = null;
+        else nextBack();
+        if (last is null) current = null;
+    }
+
+    ///
+    @property typeof(this) save() { return this; }
+
+    private:
+
+    Document doc;
+    DomNode* root;
+    DomNode* current;       // the node of the front step (null: empty)
+    DomNode* last;          // the node of the back step, once known (null: not known yet, or empty)
+    bool entering;          // the front step enters `current`
+    bool lastEntering;      // the back step enters `last`
+    bool primed;
+    bool primedBack;
+
+    this(ref Document doc, DomNode* root)
+    {
+        this.doc = doc;
+        this.root = root;
+    }
+
+    void prime()
+    {
+        if (primed) return;
+        primed = true;
+        current = root;
+        entering = true;
+        next();
+    }
+
+    // The back needs the whole subtree: from then on the range knows both ends
+    void primeBack()
+    {
+        prime();
+        if (primedBack) return;
+        primedBack = true;
+        if (current is null) return;
+
+        doc.impl.ensureClosed(root);
+        last = root;
+        lastEntering = false;
+        nextBack();
+        if (last is null) current = null;
+    }
+
+    // The next step that `show` accepts
+    void next()
+    {
+        do step(); while (current !is null && !shown(show, current));
+    }
+
+    // The previous step that `show` accepts
+    void nextBack()
+    {
+        do stepBack(); while (last !is null && !shown(show, last));
+    }
+
+    // The next step, shown or not
+    void step()
+    {
+        auto d = doc.impl;
+        bool into = entering && (current is root || (current.type == NodeType.Element && descend(Element(doc, current))));
+
+        while (true)
+        {
+            DomNode* n;
+            bool enter;
+
+            if (entering && (current is root || current.type == NodeType.Element))
+            {
+                if (into && current.firstChild is null && d.isOpen(current)) { d.advance(); continue; }
+                if (into && current.firstChild !is null) { n = current.firstChild; enter = true; }
+                else { n = current; enter = false; }
+            }
+            else if (current.next !is null) { n = current.next; enter = true; }
+            else if (current.parent !is null && d.isOpen(current.parent)) { d.advance(); continue; }
+            else { n = current.parent; enter = false; }
+
+            // The end, or a node removed while walking
+            if (n is null || (n is root && !enter)) { current = null; return; }
+
+            if (d.parsing && !ready(d, n, enter)) { d.advance(); continue; }
+
+            current = n;
+            entering = enter;
+            return;
+        }
+    }
+
+    // The previous step, shown or not (the subtree is already parsed)
+    void stepBack()
+    {
+        DomNode* n;
+        bool enter;
+
+        if (!lastEntering)
+        {
+            bool into = last is root || descend(Element(doc, last));
+            if (into && last.lastChild !is null) { n = last.lastChild; enter = n.type != NodeType.Element; }
+            else { n = last; enter = true; }
+        }
+        else if (last.prev !is null) { n = last.prev; enter = n.type != NodeType.Element; }
+        else { n = last.parent; enter = true; }
+
+        // The beginning, or a node removed while walking
+        if (n is null || (n is root && enter)) { last = null; return; }
+
+        last = n;
+        lastEntering = enter;
+    }
+
+    // Could the parser still change the node (for an enter) or its children (for a leave)?
+    static bool ready(DocImpl* d, DomNode* n, bool enter)
+    {
+        if (!d.isStable(n)) return false;
+        if (!enter) return !d.isOpen(n);
+
+        // A later <html> or <body> tag can still add attributes to these elements
+        return !isRootElement(n) || d.rootAttrsFinal();
+    }
+}
 
 private:
 

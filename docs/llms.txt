@@ -43,7 +43,7 @@ void main() {
 ### Node
 - `isValid`, `nodeType`, `nodeName`, `isElement`, `isText`, `isComment`, `asElement`, `ownerDocument`.
 - `textContent` (get/set), `dataView`.
-- Navigation (all with `!(Show...)`): `parent`, `firstChild`, `lastChild`, `nextSibling`, `previousSibling`, `children`, `descendants`; `hasChildNodes`, `contains(node)` (inclusive).
+- Navigation (all with `!(Show...)`): `parent`, `firstChild`, `lastChild`, `nextSibling`, `previousSibling`, `children`, `descendants`; `walk!(show, descend)` (enter/leave steps, `descend(element)` false skips the children); `hasChildNodes`, `contains(node)` (inclusive).
 - Search: `byId`, `byClass`, `byTagName`, `bySelector`, `byComment`, `byCommentExact`.
 - Mutations: `append`, `prepend`, `before`, `after`, `replaceWith` (accept a `Node`, a `string` as text, `"<b>x</b>".asFragment` as html, a fragment), `appendChild(node)`, `remove()`, `~=`.
 - `dup`, `shallowDup`, `toString`, `toPrettyString`.
