@@ -26,3 +26,5 @@ tools/corpus/wpt/
 tools/corpus/html5lib-tests/
 lexbor.dll
 libparserino.a
+tools/gen/spec
+tools/gen/gen_names

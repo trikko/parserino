@@ -17,10 +17,11 @@ port was then rewritten piece by piece in idiomatic D, using it as the reference
 new code against. What still comes from lexbor:
 
 * the HTML tree construction (`source/parserino/html/treebuilder.d`)
-* the tables of tag/attribute names and of character references (`source/parserino/names.d`,
-  `source/parserino/html/entities.d`)
 * for compatibility with parserino 0.2.x, which used the lexbor selectors: the `:lexbor-contains()`
   pseudo-class and the way An+B (`:nth-child(2n+1)`) is read
+
+In 1.0.0 the tables of tag/attribute names and of character references came from lexbor too;
+they are now generated from the HTML standard (`tools/gen/spec.d`).
 
 Thanks to Alexander Borisov and to the lexbor contributors: parserino owes them a lot.
 
