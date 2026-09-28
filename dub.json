@@ -1,7 +1,7 @@
 {
 	"authors": [ "Andrea Fontana" ],
 	"copyright": "Copyright © 2022-2026, Andrea Fontana",
-	"description": "A super-fast HTML (HTML5!) parser and DOM editor, for D. Pure D, lazy parsing, CSS selectors.",
+	"description": "Fast HTML5 parser and DOM editor in pure D, zero dependencies: CSS selectors, lazy parsing, scraping. Parses like a browser; @nogc/betterC core.",
 	"license": "MIT AND Apache-2.0",
 	"name": "parserino",
 	"targetType": "library",
