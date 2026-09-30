@@ -6,7 +6,7 @@ description: Official reference for parserino, the HTML5 parser and DOM editor f
 # Parserino
 
 Parserino is an HTML5 parser and DOM editor for the D programming language, in pure D,
-with no dependencies. Version 1.0.0.
+with no dependencies. Version 1.0.1.
 
 Read the reference before writing parserino code. It is two files:
 
