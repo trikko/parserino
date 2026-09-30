@@ -12,6 +12,9 @@ dub run -q scod -- generate-html --navigation-type=DeclarationTree \
     --sitemap-url=https://trikko.github.io/parserino/ docs.json docs
 rm -f docs.json __dummy.html
 
+# served as they are: without this Jekyll turns SKILL.md, which has front matter, into html
+touch docs/.nojekyll
+
 # SKILL.md is AGENTS.md with the front matter that makes it an installable skill
 {
     printf -- '---\nname: parserino\n'
