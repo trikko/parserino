@@ -277,3 +277,11 @@ UTF-16, windows-1252 (also as `latin1`, `iso-8859-1`), ISO-8859-2, windows-1250 
   `idView`, `classesView`, `attributesView`, `dataView`) return slices of the document memory.
 * `toString` can write to any output range or delegate, without building a string.
 * Different documents can be used from different threads.
+
+# feedback & support
+Using parserino? I'd love to hear what you're building with it, or what's missing.
+Write to me: the address is just **oss**, at the domain of [my website](https://andreafontana.it).
+
+parserino is built in my spare time. If it's useful to you or your company,
+consider [sponsoring me on GitHub](https://github.com/sponsors/trikko)
+or [buying me a beer on PayPal](https://paypal.me/andreafontana) ❤️
