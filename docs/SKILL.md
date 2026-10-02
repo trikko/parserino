@@ -54,6 +54,13 @@ no "invalid html" exception.
   `p.firstChild!(Show.Text)`, `div.children!(Show.All)`,
   `doc.descendants!(Show.Comment)`. With a filter other than `Show.Element` you
   get `Node`s, not `Element`s.
+- `walk!(show, descend)` visits in tree order with a step to enter and one to
+  leave each element (`s.node`, `s.enter`/`s.leave`; texts, comments, ...
+  have only the enter step). `descend(element)` returning false skips its
+  children; it's called after the enter step, so it can use what the loop set:
+  `foreach (s; doc.body.walk!(Show.All, e => !skip))`.
+  `retro` works; backwards `descend` is called after the leave step, so keep
+  it a pure function of the element if you walk backwards.
 - Use `localName` (`"div"`) to compare names: `tagName` is uppercase for html
   elements (`"DIV"`), as in the DOM.
 - `textContent` is the text; `innerText` is the very same thing (no layout,
