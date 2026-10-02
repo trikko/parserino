@@ -1,3 +1,5 @@
+<img align="left" alt="parserino logo" width="100" height="100" src="https://trikko.github.io/parserino/logo.svg">
+
 # parserino [![Build & Test](https://github.com/trikko/parserino/actions/workflows/d.yml/badge.svg)](https://github.com/trikko/parserino/actions/workflows/d.yml)
 * HTML5 parser and DOM editor written in pure D, born as a D port of [lexbor](https://github.com/lexbor/lexbor)
 * No 3rd-party dependencies
