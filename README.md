@@ -7,7 +7,7 @@
   [web-platform-tests](https://github.com/web-platform-tests/wpt/tree/master/html/syntax/parsing)
   and the tokenizer tests of [html5lib](https://github.com/html5lib/html5lib-tests)
 * Documents can be parsed at compile time, for fast html templates
-* Safe memory management: documents are reference counted, nodes keep them alive
+* Safe memory management: nodes keep their document alive, the GC frees the tree when nothing uses it
 * The parser core (`parserino.html`, `parserino.dom`, `parserino.css`) is `@nogc nothrow` and works with `-betterC`
 
 # lexbor
@@ -270,7 +270,9 @@ UTF-16, windows-1252 (also as `latin1`, `iso-8859-1`), ISO-8859-2, windows-1250 
 
 # memory
 
-* `Document` is reference counted: copies are cheap, the tree is freed with the last copy.
+* Copies of a `Document` are cheap and share the tree. The tree is freed by the GC when no `Document`,
+  `Node` or `Element` uses it anymore, also when they are kept in arrays or other GC memory; when
+  the trees have grown too much since the last collection, a new document triggers one first.
 * Every `Node` keeps its document alive, so it is always safe to use.
 * Removed nodes stay valid (they are freed with their document) and can be inserted again.
 * Getters return copies (`string`); the `...View` variants (`getAttributeView`, `localNameView`,

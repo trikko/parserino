@@ -125,6 +125,14 @@ struct Arena
 
     ~this() { release(); }
 
+    /// The bytes taken from the system (all the blocks, used or not)
+    size_t allocated() const @trusted
+    {
+        size_t total;
+        for (const(Block)* b = head; b !is null; b = b.next) total += b.size;
+        return total;
+    }
+
     private:
 
     // The blocks start small (small documents) and double up to 16 KB: bigger blocks are not faster

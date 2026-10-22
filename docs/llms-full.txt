@@ -8,7 +8,7 @@ Parserino is a high-performance HTML5 parser and DOM manipulation library for th
 - **Navigation filter**: navigation methods take the kinds of nodes to see as a template parameter `Show` (the bits of DOM `NodeFilter.whatToShow`, combine them with `|`). The default is `Show.Element`, and then the result is an `Element` or a range of `Element`s; with other filters the results are `Node`s.
 - **Errors**: searches and navigation give an invalid node (`== null`, `isValid == false`) or an empty range when nothing is found; nodes that can't have children (texts, comments) just have none. Calling a method on an invalid node or document, or an impossible mutation (a child of a text, a node inside itself, a node of another document, a sibling of a node without parent), throws `ParserinoException`.
 - **Views**: getters that copy a stored string have a `...View` variant returning a slice of the document memory (valid until the value changes or the document is destroyed): `localNameView`, `idView`, `getAttributeView`, `classesView`, `attributesView`, `dataView`. Computed values (`textContent` of an element, `innerHTML`, `title`) have none.
-- **Memory**: `Document` is reference counted; every `Node` keeps its document alive; removed nodes stay valid and can be inserted again.
+- **Memory**: every `Node` keeps its document alive; the GC frees the tree when no `Document`/`Node`/`Element` uses it, also from arrays or other GC memory; removed nodes stay valid and can be inserted again.
 
 ## Core Types
 

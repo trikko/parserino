@@ -11,7 +11,7 @@ Parserino is a high-performance HTML5 parser and DOM manipulation library for th
 - **Lazy Ranges**: Search and navigation ranges (`byTagName`, `bySelector`, `children`, `descendants`, ...) are lazy bidirectional struct ranges (`retro` gives reverse document order).
 - **Lazy Parsing**: `Document(html, Parsing.Lazy)` builds the tree only as far as the queries need (`doc.byClass("x").take(3)` stops early). Results are identical to a full parse.
 - **Errors**: searches and navigation return an invalid node (`== null`) or an empty range when nothing is found; invalid operations throw `ParserinoException`.
-- **Memory**: `Document` is reference counted; each `Node` keeps its document alive. Removed nodes stay valid. Getters return `string` copies; `...View` variants return slices of the document memory.
+- **Memory**: each `Node` keeps its document alive; the GC frees the tree when nothing uses it (also from arrays or other GC memory). Removed nodes stay valid. Getters return `string` copies; `...View` variants return slices of the document memory.
 
 ## Installation & Basic Usage
 

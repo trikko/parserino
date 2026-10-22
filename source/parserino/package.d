@@ -66,9 +66,12 @@ OTHER DEALINGS IN THE SOFTWARE.
  + the document is destroyed. Computed values (`textContent` of an element, `innerHTML`, `title`)
  + have no view.
  +
- + Memory: a `Document` is reference counted. Every `Node` keeps its document alive, so nodes are
- + always safe to use, even after the `Document` variable goes out of scope. Nodes removed from
- + the tree stay valid (they are released with their document).
+ + Memory: the tree of a `Document` (malloc'd) is freed by the GC when no `Document`, `Node` or
+ + `Element` reaches it anymore, also when they are kept in GC memory (arrays, closures, ...). Every
+ + `Node` keeps its document alive, so nodes are always safe to use, even after the `Document`
+ + variable goes out of scope. Nodes removed from the tree stay valid (they are released with their
+ + document). The GC doesn't see the memory of the trees: when it has grown too much since the last
+ + collection, a new document triggers one first.
  +
  + Lazy parsing: `Document(html, Parsing.Lazy)` builds the tree only as far as your queries need.
  + `doc.byClass("x").take(3)` stops parsing a little after the third match.
@@ -97,7 +100,7 @@ import parserino.arena : Buffer;
 
 import core.stdc.stdlib : calloc, realloc, free, malloc;
 import core.stdc.string : memchr, memcpy;
-import core.atomic : atomicOp;
+import core.atomic : atomicOp, atomicLoad, atomicStore;
 import std.range.primitives : isInputRange, isOutputRange, ElementType;
 import std.traits : isSomeString;
 
@@ -211,14 +214,19 @@ struct Document
 
     private void start(const(char)[] html, ParseOptions options, bool immutableInput)
     {
-        impl = DocImpl.create();
-        scope(failure) { DocImpl.release(impl); impl = null; }
+        own(DocImpl.create());
+        scope(failure) disown();
 
         impl.dom.scripting = options.scripting;
         impl.collectErrors = options.collectErrors;
         if (options.parsing == Parsing.Lazy)
+        {
+            // an immutable input is used without a copy: the owner keeps it alive for the GC
+            if (immutableInput) owner.input = cast(immutable(char)[]) html;
             impl.beginLazy(html, options.chunkSize == 0 ? DefaultChunkSize : options.chunkSize, immutableInput);
+        }
         else impl.parseAll(html);
+        owner.account();
     }
 
     ///
@@ -341,13 +349,14 @@ struct Document
     {
         if (!snapshot.isValid) throw new ParserinoException("Invalid snapshot");
 
-        impl = DocImpl.create();
-        scope(failure) { DocImpl.release(impl); impl = null; }
+        own(DocImpl.create());
+        scope(failure) disown();
 
-        // The document uses the strings of the snapshot: keep it alive
-        impl.keepSnapshot(snapshot.data);
+        // The document uses the strings of the snapshot: the owner keeps it alive
+        owner.snapshot = snapshot.data;
         if (!snapshot.data.restore(impl.dom)) throw new ParserinoException("Out of memory");
         impl.fed = snapshot.inputLength;
+        owner.account();
     }
 
     ///
@@ -402,17 +411,10 @@ struct Document
         assert(d.byTagName("p").front.getAttribute("title") == "t");
     }
 
-    // Postblit (not a copy constructor): copy constructors break ranges like `map!(x => ...)`
-    this(this) { if (impl !is null) impl.retain(); }
-
-    ~this() { if (impl !is null) DocImpl.release(impl); impl = null; }
-
-    /// Copies share the same document (reference counted)
+    /// Copies share the same document (freed by the GC when nothing uses it anymore)
     ref Document opAssign(Document rhs) return
     {
-        auto tmp = impl;
-        impl = rhs.impl;
-        rhs.impl = tmp;
+        owner = rhs.owner;
         return this;
     }
 
@@ -517,8 +519,8 @@ struct Document
         impl.finish();
 
         Document d;
-        d.impl = DocImpl.create();
-        scope(failure) { DocImpl.release(d.impl); d.impl = null; }
+        d.own(DocImpl.create());
+        scope(failure) d.disown();
 
         auto from = impl.dom;
         auto to = d.impl.dom;
@@ -534,6 +536,7 @@ struct Document
         }
 
         d.impl.fed = impl.fed;
+        d.owner.account();
         return d;
     }
 
@@ -979,7 +982,19 @@ struct Document
 
     private:
 
-    DocImpl* impl;
+    // The document belongs to a small object in GC memory, not to the copies: `Document`, `Node`
+    // and `Element` copies just share it. When nothing reaches it anymore the GC finalizes it and
+    // the tree (malloc'd) is freed. A reference count kept by the destructors leaked the whole tree
+    // whenever a copy ended up in GC memory (`.array`, `~=`, ...): the GC doesn't run those destructors.
+    DocOwner owner;
+
+    @property inout(DocImpl)* impl() inout @safe nothrow pure @nogc { return owner is null ? null : owner.impl; }
+
+    // A new document, owned by a new `DocOwner` (and maybe a garbage collection first: see `DocOwner`)
+    void own(DocImpl* d) { owner = new DocOwner(d); }
+
+    // Free a document that failed while being built
+    void disown() { if (owner !is null) owner.dispose(); owner = null; }
 
     DocImpl* mutableImpl() { onlyValid(); return impl; }
 
@@ -2906,11 +2921,12 @@ template ctDocument(string html, ParseOptions options = ParseOptions.init)
     Document ctDocument()
     {
         Document d;
-        d.impl = DocImpl.create();
-        scope(failure) { DocImpl.release(d.impl); d.impl = null; }
+        d.own(DocImpl.create());
+        scope(failure) d.disown();
 
         if (!tree.restore(d.impl.dom)) throw new ParserinoException("Out of memory");
         d.impl.fed = html.length;
+        d.owner.account();
         return d;
     }
 }
@@ -3860,12 +3876,67 @@ struct Bloom
 
 // ---------------------------------------------------------------- document state
 
+/++ The owner of a document, in GC memory: `Document`, `Node` and `Element` hold a reference to it.
+ + Its finalizer frees the tree. The GC doesn't see the malloc'd memory of the trees: `liveBytes`
+ + counts it, and when it has grown too much since the last collection a new document asks for one
+ + first (the trees nobody uses anymore are freed there).
+ +/
+final class DocOwner
+{
+    DocImpl* impl;
+    immutable(DomSnapshot)* snapshot;   // the strings of a document restored from a snapshot
+    immutable(char)[] input;            // the input of a lazy parsing, used without a copy
+    size_t counted;                     // the bytes of this document in `liveBytes`
+
+    this(DocImpl* d)
+    {
+        maybeCollect();
+        impl = d;
+        account();
+    }
+
+    // Update the bytes of this document in the count (after the parsing, a copy, ...)
+    void account()
+    {
+        if (impl is null) return;
+        auto now = impl.bytes();
+        if (now > counted) atomicOp!"+="(liveBytes, now - counted);
+        else atomicOp!"-="(liveBytes, counted - now);
+        counted = now;
+    }
+
+    void dispose()
+    {
+        if (impl is null) return;
+        atomicOp!"-="(liveBytes, counted);
+        counted = 0;
+        DocImpl.release(impl);
+        impl = null;
+    }
+
+    ~this() { dispose(); }
+}
+
+private shared size_t liveBytes;
+private shared size_t collectAt = MinCollectBytes;
+private enum size_t MinCollectBytes = 64 * 1024 * 1024;
+
+// A garbage collection if the trees have grown too much since the last one (twice as much, at least
+// 64 MB): with the GC alone, that doesn't see their memory, they could pile up for a long time
+private void maybeCollect()
+{
+    if (atomicLoad(liveBytes) < atomicLoad(collectAt)) return;
+    import core.memory : GC;
+    GC.collect();
+    auto live = atomicLoad(liveBytes);
+    atomicStore(collectAt, live * 2 > MinCollectBytes ? live * 2 : MinCollectBytes);
+}
+
 __gshared DomNode waitSentinelNode;
 @property DomNode* waitSentinel() @trusted nothrow @nogc { return &waitSentinelNode; }
 
 struct DocImpl
 {
-    shared size_t refs;
     DomDocument* dom;
 
     // Incremental parsing
@@ -3885,9 +3956,6 @@ struct DocImpl
     NodeList formatting;    // open formatting elements: the adoption agency moves their descendants
     NodeList selects;       // open selects: they can fill their <selectedcontent>
 
-    // The snapshot this document was restored from: the document uses its strings
-    immutable(DomSnapshot)* snapshot;
-
     // The parse errors (see `ParseOptions.collectErrors`)
     bool collectErrors;
     Buffer!RawParseError errors;
@@ -3906,7 +3974,6 @@ struct DocImpl
         auto d = cast(DocImpl*) calloc(1, DocImpl.sizeof);
         if (d is null) throw new ParserinoException("Out of memory");
         *d = DocImpl.init;
-        d.refs = 1;
 
         d.dom = cast(DomDocument*) calloc(1, DomDocument.sizeof);
         if (d.dom is null) { free(d); throw new ParserinoException("Out of memory"); }
@@ -3914,12 +3981,9 @@ struct DocImpl
         return d;
     }
 
-    void retain() { atomicOp!"+="(refs, 1); }
-
+    // Free everything. Called by the finalizer of `DocOwner`: no GC calls here
     static void release(DocImpl* d)
     {
-        if (atomicOp!"-="(d.refs, 1) != 0) return;
-
         if (d.parser !is null) freeParser(d.parser);
         d.releaseSource();
         d.dom.release();
@@ -3929,20 +3993,13 @@ struct DocImpl
         d.selects.dispose();
         destroy(d.errors);
         d.ids.dispose();
-        if (d.snapshot !is null)
-        {
-            import core.memory : GC;
-            GC.removeRoot(cast(void*) d.snapshot);
-        }
         free(d);
     }
 
-    // Keep a snapshot alive (the GC doesn't see this malloc'd struct)
-    void keepSnapshot(immutable(DomSnapshot)* s)
+    // The memory of the document, for the pressure on the GC (see `DocOwner`)
+    size_t bytes() const
     {
-        import core.memory : GC;
-        GC.addRoot(cast(void*) s);
-        snapshot = s;
+        return DocImpl.sizeof + DomDocument.sizeof + dom.arena.allocated() + (borrowed ? 0 : sourceLength);
     }
 
     void parseAll(const(char)[] input)
@@ -3975,9 +4032,8 @@ struct DocImpl
 
         if (immutableInput && input.length)
         {
-            import core.memory : GC;
+            // kept alive by `DocOwner.input`
             source = cast(ubyte*) input.ptr;
-            GC.addRoot(source);
             borrowed = true;
         }
         else
@@ -3995,12 +4051,7 @@ struct DocImpl
     void releaseSource()
     {
         if (source is null) return;
-        if (borrowed)
-        {
-            import core.memory : GC;
-            GC.removeRoot(source);
-        }
-        else free(source);
+        if (!borrowed) free(source);
         source = null;
         borrowed = false;
     }
